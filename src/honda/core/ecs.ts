@@ -39,6 +39,7 @@ export class ECS {
         this._systems.forEach((x) => x.lateUpdate());
     }
 
+    // TOOD(mbabnik): add a mechanism to override system(s)
     public getSystem<T extends System>(
         sysctor: new (...args: never[]) => T
     ): T {

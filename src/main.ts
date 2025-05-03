@@ -65,20 +65,7 @@ setInterval(
     500
 );
 
-document.addEventListener("keypress", (e) => {
-    if (e.code === "KeyP") {
-        document.querySelector("#perf")!.classList.toggle("hidden");
-        document.querySelector("muigui-element")!.classList.toggle("hidden");
-    }
-});
-
-document.querySelector("muigui-element")!.classList.add("hidden");
-document.querySelector("#perf")!.classList.toggle("hidden");
-
-const play = async () => {
-    const selected = document.querySelector<HTMLInputElement>("input:checked")!
-        .value as "low" | "medium" | "high";
-
+const play = async (preset: "low" | "medium" | "high") => {
     Game.flags = new Set<Flags>(
         (
             {
@@ -86,15 +73,18 @@ const play = async () => {
                 medium: ["shadowLow"],
                 high: [],
             } satisfies Record<string, Flags[]>
-        )[selected]
+        )[preset]
     );
+
     const canvas = document.querySelector("canvas")!;
+
     try {
         Game.gpu = await WebGpu.obtainForCanvas(canvas);
     } catch (e) {
         setError((e as object).toString());
         throw e;
     }
+
     Game.input = new Input(canvas);
     Game.ecs.addSystem(new NavSystem());
     Game.ecs.addSystem(new ScriptSystem());
@@ -119,8 +109,9 @@ const play = async () => {
     setStatus(undefined);
     Game.cmdEncoder = Game.gpu.device.createCommandEncoder();
 
-    document.querySelector(".menu")!.classList.add("hidden");
     Game.time = performance.now() / 1000; //get inital timestamp so delta isnt broken
     requestAnimationFrame(frame);
 };
-document.querySelector("#play")!.addEventListener("click", play);
+
+const h = window.location.hash.replace(/^#/, "");
+play(h == "low" || h == "medium" || h == "high" ? h : "high");

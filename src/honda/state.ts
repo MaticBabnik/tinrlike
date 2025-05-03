@@ -24,14 +24,6 @@ export const Game = {
     flags: new Set<Flags>(),
 
     passes: [] as IPass[],
-
-    finish: (win: boolean) => {
-        if (win) {
-            document.querySelector(".win")?.classList.remove("hidden");
-        } else {
-            document.querySelector(".lose")?.classList.remove("hidden");
-        }
-    },
 };
 
 //@ts-expect-error expose state to the console

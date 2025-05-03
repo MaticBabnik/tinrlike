@@ -24,7 +24,7 @@ export class WebGpu {
 
     public shadowmaps = new ShadowMapTexture(
         Limits.MAX_SHADOWMAPS,
-        Game.flags.has("shadowLow") ? 512 : 1024,
+        Game.flags.has("shadowLow") ? 512 : 2048,
         "shadowmaps"
     );
 

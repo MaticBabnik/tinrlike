@@ -23,6 +23,14 @@ import {
     LAYER_QUERY,
     StaticAABBColider,
 } from "@/honda/systems/physics/colider.component";
+import {
+    AnimInterp,
+    ASampler,
+    V4Sampler,
+    SSampler,
+    V3Sampler,
+} from "./animationsampler";
+import { HAnimation } from "./animation";
 
 export type TTypedArrayCtor<T> = {
     new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): T;
@@ -70,7 +78,7 @@ export class GltfBinary {
 
     public static readonly supportedExtensions: string[] = [
         "EXT_texture_webp",
-        "EXT_texture_avif", // i think?
+        "EXT_texture_avif",
         "KHR_lights_punctual",
     ];
 
@@ -104,6 +112,17 @@ export class GltfBinary {
         interact: LAYER_INTERACT,
         pickup: LAYER_PICKUP,
         query: LAYER_QUERY,
+    };
+
+    static readonly SCALARS_PER_ELEMENT: Record<TG.TAccessorType, number> = {
+        SCALAR: 1,
+        MAT2: 2 * 2,
+        MAT3: 3 * 3,
+        MAT4: 4 * 4,
+        VEC2: 2,
+        VEC3: 3,
+        VEC4: 4,
+        STRING: -1, // TODO(mbabnik): strings?
     };
 
     static getWebGpuSamplerFilter(
@@ -170,8 +189,14 @@ export class GltfBinary {
 
     private bin: ArrayBufferView;
     private imageCache: ImageBitmap[] = [];
+    private static gltfid = 0;
 
-    protected constructor(buf: ArrayBuffer, protected name = "<unknown glTF>") {
+    public readonly id = GltfBinary.gltfid++;
+
+    protected constructor(
+        buf: ArrayBuffer,
+        protected name = `<unknown glTF ${this.id}>`
+    ) {
         const bufU32 = new Uint32Array(buf);
 
         const [magic, version] = bufU32;
@@ -292,8 +317,8 @@ export class GltfBinary {
 
         const accessor = new TypedArrayCtor(
             bv.buffer,
-            bv.bOffset + this.bin.byteOffset,
-            Math.floor(bv.bLength / TypedArrayCtor.BYTES_PER_ELEMENT)
+            bv.bOffset + this.bin.byteOffset + (gAccessor.byteOffset ?? 0),
+            gAccessor.count * GltfBinary.SCALARS_PER_ELEMENT[gAccessor.type]
         );
 
         return {
@@ -385,7 +410,6 @@ export class GltfBinary {
 
         const source =
             gTexture?.extensions?.EXT_texture_webp?.source ??
-            //@ts-expect-error asdsad
             gTexture?.extensions?.EXT_texture_avif?.source ??
             gTexture.source;
 
@@ -410,7 +434,6 @@ export class GltfBinary {
 
         const source =
             gTexture?.extensions?.EXT_texture_webp?.source ??
-            //@ts-expect-error fuck
             gTexture?.extensions?.EXT_texture_avif?.source ??
             gTexture.source;
 
@@ -701,6 +724,8 @@ export class GltfBinary {
     public nodeConvert(index: number): SceneNode | undefined {
         const gNode = nn(this.json.nodes?.[index]);
         const node = new SceneNode();
+        node.meta.gltfId = this.id;
+        node.meta.gltfNodeId = index;
         node.name = gNode.name ?? `${this.name}.nodes.${index}`;
 
         if (gNode.matrix) console.warn("glTF Matrices unsupported");
@@ -956,5 +981,76 @@ export class GltfBinary {
             );
 
         return this.convertNavmesh(idxAccessor, posAccessor);
+    }
+
+    public convertAnimationSampler(gas: TG.IAnimationSampler): ASampler {
+        if (gas.interpolation && !(gas.interpolation in AnimInterp)) {
+            throw new Error(`Unknown Interpolation type ${gas.interpolation}`);
+        }
+
+        const interp = (gas.interpolation ?? AnimInterp.LINEAR) as AnimInterp;
+
+        const inAcc = this.getAccessorAndAssertType(
+            gas.input,
+            "SCALAR",
+            Float32Array
+        );
+        const outAcc = this.getAccessor(gas.output);
+
+        if (!(outAcc.accessor instanceof Float32Array)) {
+            throw new Error("Refusing to sample non-float accessor");
+        }
+
+        switch (outAcc.type) {
+            case "SCALAR":
+                return new SSampler(
+                    interp,
+                    inAcc,
+                    outAcc as FavelaAccesor<Float32Array, "SCALAR">
+                );
+            case "VEC3":
+                return new V3Sampler(
+                    interp,
+                    inAcc,
+                    outAcc as FavelaAccesor<Float32Array, "VEC3">
+                );
+            case "VEC4":
+                return new V4Sampler(
+                    interp,
+                    inAcc,
+                    outAcc as FavelaAccesor<Float32Array, "VEC4">
+                );
+            default:
+                throw new Error(`Cannot animate ${outAcc.type}`);
+        }
+    }
+
+    /**
+     * Converts an animation.
+     * The animation is a no-op by default
+     * call .attach() first
+     */
+    public getAnimation(index: number): HAnimation {
+        const gAnimation = nn(
+            this.json.animations[index],
+            "Animation not found"
+        );
+
+        return new HAnimation(
+            gAnimation.samplers.map((x) => this.convertAnimationSampler(x)),
+            gAnimation.channels,
+            this.id,
+            gAnimation.name ?? `${this.name}>anim>${index}`
+        );
+    }
+
+    /**
+     * Converts an animation.
+     * The animation is a no-op by default
+     * call .attach() first
+     */
+    public getAnimationByName(name: string): HAnimation {
+        const index = this.json.animations.findIndex((x) => x.name == name);
+        return this.getAnimation(index);
     }
 }

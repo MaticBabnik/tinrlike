@@ -11,6 +11,8 @@ export class SceneNode {
     public dynamic = true;
     public components: IComponent[] = [];
 
+    public meta: Record<string, unknown> = {};
+
     protected isNodeInScene(): boolean {
         if ((this as SceneNode) == Game.scene) return true;
         if (this.parent == Game.scene) return true;

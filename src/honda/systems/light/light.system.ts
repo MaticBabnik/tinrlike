@@ -26,7 +26,7 @@ const TYPE_MAP: Record<THondaLight["type"], number> = {
     spot: 2,
 };
 
-const DIR_RADIUS = 16;
+const DIR_RADIUS = 13;
 
 export class LightSystem extends System {
     public componentType = LightComponent;

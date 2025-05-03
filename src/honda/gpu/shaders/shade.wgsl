@@ -4,6 +4,7 @@ struct ShadeUniforms {
     VInv: mat4x4f,
     VPInv: mat4x4f,
     camera: mat4x4f,
+    shadowMapSize: u32,
     nLights: u32,
 };
 
@@ -187,14 +188,23 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
             let projected = light.VP * vec4(pos, 1.0);
             let ndc = projected.xyz / projected.w;
             let texCoords = vec2f(0.5, -0.5) * ndc.xy + 0.5;
+            
+            let offset = 1.0 / f32(uni.shadowMapSize);
+            var factor = 0.0;
 
-            atten *= textureSampleCompare(
-                shadowMaps,
-                shadowSampler,
-                texCoords,
-                light.shadowMap,
-                ndc.z - 0.000002
-            );
+            for (var y = -1 ; y <= 1 ; y++) {
+                for (var x = -1 ; x <= 1 ; x++) {
+                    factor += textureSampleCompare(
+                        shadowMaps,
+                        shadowSampler,
+                        texCoords + vec2(f32(x) * offset, f32(y) * offset),
+                        light.shadowMap,
+                        ndc.z - 0.000002
+                    );
+                }
+            }
+
+            atten *= factor / 9;
         }
 
 
@@ -210,7 +220,7 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
         ));
     }
     // lit /= 50.0;
-    lit += bas * 0.05; // very lazy ambient impl
+    lit += bas * 0.2; // very lazy ambient impl
 
     return vec4f(lit + 5 * ems, 1.0);
 }

@@ -93,6 +93,7 @@ export class ShadePass implements IPass {
             VInv: csys.viewMtxInv,
             VPInv: csys.viewProjMtxInv,
             camera: csys.viewMtx,
+            shadowMapSize: Game.gpu.shadowmaps.size,
             nLights: Game.ecs.getSystem(LightSystem).nLights,
         });
 

@@ -48,7 +48,7 @@ export interface IAnimtionChannelTarget extends IBase {
 export interface IAnimationSampler extends IBase {
     input: number;
     output: number;
-    interpolation: "LINEAR" | "STEP" | "CUBICSPLINE" | string;
+    interpolation?: "LINEAR" | "STEP" | "CUBICSPLINE" | string;
 }
 
 export interface IAsset extends IBase {
@@ -217,6 +217,9 @@ export interface ISkin extends INamed {
 export interface ITexture extends INamed {
     extensions?: {
         EXT_texture_webp?: {
+            source: number;
+        };
+        EXT_texture_avif?: {
             source: number;
         };
         [key: string]: unknown;
