@@ -26,7 +26,7 @@ const TYPE_MAP: Record<THondaLight["type"], number> = {
     spot: 2,
 };
 
-const DIR_RADIUS = 13;
+const DIR_RADIUS = 15;
 
 export class LightSystem extends System {
     public componentType = LightComponent;
@@ -112,13 +112,13 @@ export class LightSystem extends System {
                         DIR_RADIUS,
                         -DIR_RADIUS,
                         DIR_RADIUS,
-                        -DIR_RADIUS,
                         DIR_RADIUS,
+                        -DIR_RADIUS,
                         proj
                     );
                 } else {
                     //TODO(mbabnik): use maxRange or some function of intensity for far plane
-                    mat4.perspective(
+                    mat4.perspectiveReverseZ(
                         l.lightInfo.outerCone * 2,
                         1,
                         0.01,

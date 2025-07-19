@@ -22,11 +22,11 @@ export function createShadow(g: WebGpu) {
         },
         depthStencil: {
             format: "depth24plus",
-            depthCompare: "less",
+            depthCompare: "greater",
             depthWriteEnabled: true,
-            depthBias: 2,
-            depthBiasSlopeScale: 2.0,
-            depthBiasClamp: 0.5,
+            depthBias: -50,
+            depthBiasSlopeScale: -50,
+            depthBiasClamp: 50
         },
     });
 }

@@ -1,12 +1,17 @@
 import { nn } from "../util";
 import { Game } from "../state";
 import { Limits } from "../limits";
-import { createModules } from "./shaders";
+import { createModules, createShaderContext } from "./shaders";
 import { createPipelines } from "./pipelines";
-import { ViewportTexture } from "./textures/viewport";
-import { ShadowMapTexture } from "./textures";
+import { } from "./textures/viewport";
+import {
+    ViewportPingPongTexture,
+    ViewportTexture,
+    ShadowMapTexture,
+    CubemapTexture,
+} from "./textures";
 import { createBindGroupLayouts } from "./bindGroupLayouts";
-import { ViewportPingPongTexture } from "./textures/viewportPingPong";
+import { setError } from "../util/status";
 
 export class WebGpu {
     private ro: ResizeObserver;
@@ -17,10 +22,13 @@ export class WebGpu {
         mtlRgh: new ViewportTexture("rg8unorm", 1, "g-metal-rough"),
         emission: new ViewportTexture("rgba8unorm", 1, "g-emission"),
         depth: new ViewportTexture("depth24plus", 1, "g-depth"),
-        ssao: new ViewportTexture("r8unorm", 1, "ssao"),
+        ssao: new ViewportPingPongTexture("r8unorm", 1, "ssao"),
         shaded: new ViewportTexture("rgba16float", 1, "shaded"),
         bloom: new ViewportPingPongTexture("rgba16float", 1, "bloom"),
     };
+
+    public sky!: CubemapTexture;
+    public env?: CubemapTexture;
 
     public shadowmaps = new ShadowMapTexture(
         Limits.MAX_SHADOWMAPS,
@@ -35,13 +43,12 @@ export class WebGpu {
     public shaderModules = createModules(this);
     public bindGroupLayouts = createBindGroupLayouts(this);
     public pipelines = createPipelines(this);
-
     public wasResized = false;
 
     public renderScale = 1;
 
     protected gpuSamplerMap: Record<string, GPUSampler> = {};
-
+    protected _aspectRatio = 0;
     protected querySet: GPUQuerySet;
     protected queryIndex = 0;
     protected queryBuffer: GPUBuffer;
@@ -80,7 +87,7 @@ export class WebGpu {
 
     constructor(
         public readonly adapter: GPUAdapter,
-        public readonly device: GPUDevice,
+        public device: GPUDevice,
         public readonly canvas: HTMLCanvasElement,
         public readonly ctx: GPUCanvasContext
     ) {
@@ -99,7 +106,7 @@ export class WebGpu {
         console.table(device.limits);
         console.groupEnd();
 
-        this.resizeTextures();
+        this.resizeViewports();
         this.shadowmaps.alloc(this.device);
         this.ro = new ResizeObserver((e) => this.handleResize(e));
 
@@ -122,6 +129,22 @@ export class WebGpu {
 
         this.renderScale = Game.flags.has("rsHalf") ? 0.5 : 1;
 
+        this.device.lost.then((x) => {
+            setError("Lost device");
+            console.error("lost device", x);
+            device.destroy();
+            this.device = null!; // cause device accesses to error out
+        });
+
+        const old = this.device.onuncapturederror;
+        this.device.onuncapturederror = (err) => {
+            old?.call(this.device, err);
+            setError(`Lost device ${err.error.message}`);
+            console.error("gpu error", err);
+            device.destroy();
+            this.device = null!;
+        };
+
         /*
             FIXME:  Safari (matter reference) doesn't support this.
             TODO:   a lah nekdo figure-a out ta scaling,
@@ -129,32 +152,38 @@ export class WebGpu {
                     (think about retina, scaling)
         */
         this.ro.observe(canvas, { box: "device-pixel-content-box" });
+
+        console.log(createShaderContext())
     }
 
     public get aspectRatio() {
-        return this.canvas.width / this.canvas.height;
+        return this._aspectRatio;
     }
 
-    protected resizeTextures() {
+    public resizeViewports(override?: [number, number]) {
+        const w = override?.[0] ?? this.canvas.width;
+        const h = override?.[1] ?? this.canvas.height;
+        this._aspectRatio = w / h;
+
         Object.values(this.textures).forEach((t) =>
-            t.resize(this.device, this.canvas.width, this.canvas.height)
+            t.resize(this.device, w, h)
         );
+        this.wasResized = true;
     }
 
     private handleResize([e]: ResizeObserverEntry[]) {
         this.canvas.width =
             Math.round(
                 nn(e.devicePixelContentBoxSize?.[0].inlineSize) *
-                    this.renderScale
+                this.renderScale
             ) & ~1;
         this.canvas.height =
             Math.round(
                 nn(e.devicePixelContentBoxSize?.[0].blockSize) *
-                    this.renderScale
+                this.renderScale
             ) & ~1;
 
-        this.resizeTextures();
-        this.wasResized = true;
+        this.resizeViewports();
     }
 
     public frameStart() {
@@ -176,7 +205,7 @@ export class WebGpu {
      *  - we aim for a single queue push per frame
      *  - gpu timing code assumes we do everything in one queue push
      */
-    public endFrame() {
+    public async endFrame() {
         Game.cmdEncoder.resolveQuerySet(
             this.querySet,
             0,
@@ -197,15 +226,16 @@ export class WebGpu {
 
             this.device.queue.submit([Game.cmdEncoder.finish()]);
 
-            readBuf.mapAsync(GPUMapMode.READ).then(() => {
-                const times = new BigInt64Array(readBuf.getMappedRange());
-                Game.perf.sumbitGpuTimestamps(
-                    this.timestampLabels,
-                    times,
-                    this.queryIndex >> 1
-                );
-                readBuf.unmap();
-            });
+            await readBuf.mapAsync(GPUMapMode.READ)
+
+            const times = new BigInt64Array(readBuf.getMappedRange());
+            Game.perf.sumbitGpuTimestamps(
+                this.timestampLabels,
+                times,
+                this.queryIndex >> 1
+            );
+            readBuf.unmap();
+            
         } else {
             this.device.queue.submit([Game.cmdEncoder.finish()]);
         }
@@ -228,12 +258,23 @@ export class WebGpu {
         } satisfies GPURenderPassTimestampWrites;
     }
 
+    /**
+     * Gets & caches a sampler; forces anisotropy when possible
+     */
     public getSampler(d: GPUSamplerDescriptor) {
-        const key = `${d.addressModeU!}${d.addressModeV!}${d.minFilter!}${d.magFilter!}`;
+        const key = Object.entries(d)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map((x) => x.join(":"))
+            .join(",");
+
         let h = this.gpuSamplerMap[key];
         if (h) return h;
 
-        this.gpuSamplerMap[key] = h = this.device.createSampler(d);
+        this.gpuSamplerMap[key] = h = this.device.createSampler({
+            maxAnisotropy:
+                d.minFilter == "linear" && d.mipmapFilter == "linear" ? 4 : 1,
+            ...d,
+        });
         return h;
     }
 }

@@ -70,7 +70,7 @@ export class PostprocessPass implements IPass {
                 },
                 {
                     binding: 3,
-                    resource: Game.gpu.textures.ssao.view,
+                    resource: Game.gpu.textures.ssao.views[0],
                 },
                 {
                     binding: 4,

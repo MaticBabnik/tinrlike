@@ -17,7 +17,6 @@ export class Input {
         rootElement.addEventListener("mousemove", (ev) => this.onMouseMove(ev));
         document.addEventListener("pointerlockchange", () => {
             if (!document.pointerLockElement) {
-                console.log("lost capture");
                 this.pointerLocked = false;
             }
         });

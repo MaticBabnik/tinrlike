@@ -7,7 +7,7 @@ export function createShade(g: WebGpu) {
     return g.device.createRenderPipeline({
         label: "shade",
         layout: g.device.createPipelineLayout({
-            bindGroupLayouts: [g.bindGroupLayouts.shade],
+            bindGroupLayouts: [g.bindGroupLayouts.shadeMain],
         }),
         primitive: TRI_LIST_CULLED,
         vertex: {

@@ -18,7 +18,8 @@ export class ViewportTexture<Tformat extends GPUTextureFormat> {
             ],
             usage:
                 GPUTextureUsage.RENDER_ATTACHMENT |
-                GPUTextureUsage.TEXTURE_BINDING,
+                GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.COPY_SRC ,
             dimension: "2d",
             label: this.label,
         });

@@ -31,7 +31,7 @@ export class BloomPass implements IPass {
         this.blur = new BlurPass(
             Game.gpu.textures.bloom,
             Game.gpu.pipelines.blurRgbaF16,
-            4, //9x9
+            5, // 21x21?
             "blur-bloom"
         );
     }
@@ -87,7 +87,6 @@ export class BloomPass implements IPass {
 
         // the seperable gaussian blur seems a lil boxy still
         // blur twice to fix this (shoutout Central Limit Theorem)
-        this.blur.apply();
         this.blur.apply();
     }
 }

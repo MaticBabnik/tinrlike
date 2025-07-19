@@ -36,7 +36,7 @@ fn fs(vo: Vert) -> @location(0) vec4f {
 
     for (var i = 0; i <= 2 * uni.size; i++) {
         // fries in bag
-        ax += textureSample(tex, smp, vo.uv + f32(i - uni.size) * uni.v) * uni.krnl[abs(i - uni.size)];
+        ax += textureSample(tex, smp, vo.uv + f32(i - uni.size) * uni.v) * uni.krnl[abs(uni.size - i)];
     }
 
     return ax;

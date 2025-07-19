@@ -41,7 +41,7 @@ export class ShadowMapPass implements IPass {
                 colorAttachments: [],
                 depthStencilAttachment: {
                     view: Game.gpu.shadowmaps.views[i],
-                    depthClearValue: 1,
+                    depthClearValue: 0,
                     depthLoadOp: "clear",
                     depthStoreOp: "store",
                 },

@@ -1,9 +1,9 @@
-export interface IBase {
-    extensions?: Record<string, unknown>;
-    extras?: Record<string, unknown>;
+export interface IBase<TExtesions = {}, TExtras = {}> {
+    extensions?: Record<string, unknown> & Partial<TExtesions>;
+    extras?: Record<string, unknown> & Partial<TExtras>;
 }
 
-export interface INamed extends IBase {
+export interface INamed<TExtesions = {}, TExtras = {}> extends IBase<TExtesions,TExtras> {
     name?: string;
 }
 
@@ -148,7 +148,11 @@ export interface IMesh extends INamed {
 //#region MeshPrimitive
 export type TTopologyType = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export interface IMeshPrimitive extends IBase {
+export interface IMeshPrimitive extends IBase<{
+    KHR_materials_emissive_strength: {
+        emissiviveStrength: number
+    }
+}> {
     attributes: Record<string, number | undefined>;
     indices?: number;
     material?: number;
@@ -158,19 +162,17 @@ export interface IMeshPrimitive extends IBase {
 //#endregion MeshPrimitive
 
 //#region Node
-export interface INodeBase extends INamed {
+export interface INodeBase extends INamed<{
+    KHR_lights_punctual: {
+            light: number;
+        };
+}> {
     camera?: number;
     children?: number[];
     name?: string;
     mesh?: number;
     skin?: number;
     weights?: number[];
-
-    extensions?: {
-        KHR_lights_punctual?: {
-            light: number;
-        };
-    };
 }
 
 export interface INodeWithMatrix extends INodeBase {
@@ -214,16 +216,9 @@ export interface ISkin extends INamed {
     joints: number[];
 }
 
-export interface ITexture extends INamed {
-    extensions?: {
-        EXT_texture_webp?: {
-            source: number;
-        };
-        EXT_texture_avif?: {
-            source: number;
-        };
-        [key: string]: unknown;
-    };
+export type TImageExts = Record<"EXT_texture_webp" | "EXT_texture_avif", {source:number}>;
+
+export interface ITexture extends INamed<TImageExts> {
     source?: number;
     sampler?: number;
 }
@@ -248,7 +243,11 @@ export interface IKhrLight extends INamed {
     spot?: IKhrLightSpot;
 }
 
-export interface IGltfRoot extends IBase {
+export interface IGltfRoot extends IBase<{
+    KHR_lights_punctual: {
+            lights: IKhrLight[];
+        };
+}> {
     extensionsUsed?: string[];
     extensionsRequired?: string[];
 
@@ -267,10 +266,4 @@ export interface IGltfRoot extends IBase {
     scenes?: IScene[];
     skins?: ISkin[];
     textures?: ITexture[];
-
-    extensions?: {
-        KHR_lights_punctual?: {
-            lights: IKhrLight[];
-        };
-    };
 }

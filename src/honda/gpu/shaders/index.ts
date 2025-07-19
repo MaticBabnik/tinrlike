@@ -2,9 +2,11 @@ import {
     makeShaderDataDefinitions,
     type ShaderDataDefinitions,
 } from "webgpu-utils";
+import { ParsedRegistry, parseIntoRegistry } from "wesl";
 import { WebGpu } from "..";
 
 type ShaderKey =
+    | "flipx"
     | "bloom"
     | "blur1d"
     | "g"
@@ -13,13 +15,22 @@ type ShaderKey =
     | "shade"
     | "shadow"
     | "sky"
-    | "ssao";
+    | "ssao"
+    | "rgbmload"
+    | "compute_ibl"
+    | "devsprite";
 
 const shaderSources = import.meta.glob("./*.wgsl", {
     eager: true,
     query: "raw",
     import: "default",
 }) as Record<ShaderKey, string>;
+
+const sources2 = import.meta.glob("./**/*.w(e|g)sl", {
+    eager: true,
+    query: "raw",
+    import: "default",
+});
 
 export default shaderSources;
 
@@ -37,11 +48,22 @@ export function createModules(g: WebGpu) {
 
         const module = g.device.createShaderModule({
             code,
-            label: key,
+            label: name,
         });
+
         const defs = makeShaderDataDefinitions(code);
         ax[name] = { module, defs };
     }
 
     return ax;
+}
+
+export function createShaderContext() {
+    const registry: ParsedRegistry = { modules: {} };
+
+    const pathsFixed = Object.fromEntries(Object.entries(sources2 as Record<string, string>).map(([k, v]) => [k.replace(/^\.\//, ''), v]));
+
+    parseIntoRegistry(pathsFixed, registry, "honda", "honda");
+
+    return registry;
 }

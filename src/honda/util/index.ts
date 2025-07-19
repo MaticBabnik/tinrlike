@@ -7,6 +7,18 @@ export function nn<T>(value: T | null | undefined, message?: string): T {
     return value;
 }
 
+/**
+ * Assertion
+ * @param assertion condition 
+ * @param message error message for fails
+ */
+export function assert<T>(
+    assertion: T,
+    message = "Assertion failed"
+): asserts assertion {
+    if (!assertion) throw new Error(message);
+}
+
 export function clamp(min: number, x: number, max: number) {
     if (x < min) return min;
     if (x > max) return max;
@@ -14,8 +26,8 @@ export function clamp(min: number, x: number, max: number) {
 }
 
 export function nMips(w: number, h: number) {
-    const maxSize = Math.max(w,h);
-    return 1 + Math.log2(maxSize) | 0
+    const maxSize = Math.max(w, h);
+    return (1 + Math.log2(maxSize)) | 0;
 }
 
 export const PI_2 = Math.PI / 2;

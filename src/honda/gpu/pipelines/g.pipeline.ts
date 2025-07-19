@@ -1,7 +1,7 @@
 import { WebGpu } from "..";
 import {
     TRI_LIST_CULLED,
-    DEPTHTEST_LESS_WRITE,
+    DEPTHTEST_GREATER_WRITE,
     VERTEX_POS_UV_NORM,
     VERTEX_POS_UV_NORM_TAN,
 } from "./constants";
@@ -26,7 +26,7 @@ export function createG(g: WebGpu) {
             module,
             targets: [{ format: "rgba8unorm-srgb" }, { format: "rgba8unorm" },{ format: "rg8unorm" },{ format: "rgba8unorm" }],
         },
-        depthStencil: DEPTHTEST_LESS_WRITE,
+        depthStencil: DEPTHTEST_GREATER_WRITE,
     });
 }
 
@@ -50,6 +50,6 @@ export function createGNorm(g: WebGpu) {
             module,
             targets: [{ format: "rgba8unorm-srgb" }, { format: "rgba8unorm" },{ format: "rg8unorm" },{ format: "rgba8unorm" }],
         },
-        depthStencil: DEPTHTEST_LESS_WRITE,
+        depthStencil: DEPTHTEST_GREATER_WRITE,
     });
 }

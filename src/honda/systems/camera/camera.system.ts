@@ -2,6 +2,7 @@ import { mat4 } from "wgpu-matrix";
 import { CameraComponent } from "./camera.component";
 import { System } from "@/honda/core/ecs";
 import { SceneNode } from "@/honda/core/node";
+import { Transform } from "@/honda/core/transform";
 
 export class CameraSystem extends System {
     public componentType = CameraComponent;
@@ -32,6 +33,25 @@ export class CameraSystem extends System {
         const cc = (this.activeCamera = activeCamera[0]);
         const tc = activeCamera[1].transform;
 
+        // V = T^-1
+        this.viewMtx.set(tc.$glbInvMtx);
+
+        // V^-1 = T
+        this.viewMtxInv.set(tc.$glbMtx);
+
+        // VP = P * V
+        mat4.multiply(cc.projMtx, this.viewMtx, this.viewProjMtx);
+
+        // (VP)^-1 = V^-1 * P^-1
+        mat4.mul(this.viewMtxInv, cc.projMtxInv, this.viewProjMtxInv);
+    }
+
+    /**
+     * Overrides camera until end of frame
+     */
+    public overrideCamera(cc: CameraComponent, tc: Transform) {
+        this.activeCamera = cc;
+        
         // V = T^-1
         this.viewMtx.set(tc.$glbInvMtx);
 

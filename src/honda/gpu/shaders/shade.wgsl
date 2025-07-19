@@ -23,25 +23,36 @@ struct Light {
     VP: mat4x4f,
 }
 
+struct IblInfo {
+    iblMaxMips: f32,
+};
+
 const bigTri = array(
     vec2f(-1, 3),
     vec2f(-1, -1),
     vec2f(3, -1),
 );
 
+// General info (camera, lights)
 @group(0) @binding(0) var<uniform> uni: ShadeUniforms;
 @group(0) @binding(1) var<uniform> lights: array<Light, 128>;  
 
+// Gbuffer
 @group(0) @binding(2) var gBase: texture_2d<f32>;
 @group(0) @binding(3) var gNorm: texture_2d<f32>;
 @group(0) @binding(4) var gMetRgh: texture_2d<f32>;
 @group(0) @binding(5) var gEms: texture_2d<f32>;
 @group(0) @binding(6) var gDepth: texture_depth_2d;
 
-@group(0) @binding(7) var smp: sampler;
+// Shadows
+@group(0) @binding(7) var shadowMaps: texture_depth_2d_array;
+@group(0) @binding(8) var shadowSampler: sampler_comparison;
 
-@group(0) @binding(8) var shadowMaps: texture_depth_2d_array;
-@group(0) @binding(9) var shadowSampler: sampler_comparison;
+// Group 1
+@group(1) @binding(0) var<uniform> ibl: IblInfo;
+@group(1) @binding(1) var ibl_sampler: sampler;
+@group(1) @binding(2) var ibl_specular: texture_cube<f32>;
+@group(1) @binding(3) var ibl_irradiance: texture_cube<f32>;
 
 
 const L_POINT = 0u;
@@ -67,6 +78,10 @@ fn reconstructPosition(screenCoord: vec2<f32>, depth: f32, invProj: mat4x4<f32>)
 
 fn schlick_fresnel(f0: vec3f, cos_theta: f32) -> vec3f {
     return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
+}
+
+fn schlick_fresnel_roughness(f0: vec3f, cos_theta: f32, roughness: f32) -> vec3f {
+    return f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(clamp(1.0 - cos_theta, 0.0, 1.0), 5.0);
 }
 
 fn ggx_distribution(ndh: f32, roughness: f32) -> f32 {
@@ -133,7 +148,7 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
     let fc = vec2u(fragCoord.xy);
 
     let dep = textureLoad(gDepth, fc, 0);
-    if dep == 1.0 { discard; }
+    if dep == 0.0 { discard; }
 
     // world pos
     let pos = reconstructPosition(
@@ -146,7 +161,7 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
     let N = normalize(textureLoad(gNorm, fc, 0).rgb * 2.0 - 1.0);
     let metRgh = textureLoad(gMetRgh, fc, 0).rg;
     let met = metRgh.r;
-    let rgh = metRgh.g;
+    let rgh = min(metRgh.g, 0.99);
     let ems = textureLoad(gEms, fc, 0).rgb;
     let V = normalize(uni.VInv[3].xyz - pos);
     var lit = vec3f(0.0);
@@ -166,7 +181,7 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
             let dist = length(delta);
             //TODO(mbabnik): uniformity BS
             // if dist > light.maxRange { continue; }
-            atten = 1.0 / max(pow(dist, 2), 0.0001);
+            atten = 1.0 / max(pow(dist, 2.0), 0.0001);
         }
 
         if light.ltype == L_SPOT {
@@ -199,7 +214,7 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
                         shadowSampler,
                         texCoords + vec2(f32(x) * offset, f32(y) * offset),
                         light.shadowMap,
-                        ndc.z - 0.000002
+                        ndc.z
                     );
                 }
             }
@@ -207,10 +222,8 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
             atten *= factor / 9;
         }
 
-
-
         lit += max(vec3(0.0),
-            light.color * atten * light.intensity * 0.1 * brdf_metallic_roughness(
+            light.color * atten * light.intensity * brdf_metallic_roughness(
             N,
             V,
             L,
@@ -219,8 +232,27 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
             rgh
         ));
     }
-    // lit /= 50.0;
-    lit += bas * 0.2; // very lazy ambient impl
+
+    // IBL
+    // var ks = schlick_fresnel_roughness(mix(vec3f(0.04), bas, met), max(dot(N, V), 0.0), rgh);
+
+    // irradiance
+    // lit += (1 - ks) * bas * textureSample(
+    //     envmap_irradiance,
+    //     smp,
+    //     N
+    // ).rgb;
+
+    // specular
+    // lit += ks * bas * textureSampleLevel(
+    //     envmap_specular,
+    //     smp,
+    //     reflect(-V, N),
+    //     mix(0.0, uni.iblMaxMips, rgh)
+    // ).rgb;
+
+    // ambient
+    lit += .5 * bas;
 
     return vec4f(lit + 5 * ems, 1.0);
 }

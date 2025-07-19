@@ -3,6 +3,11 @@ export const TRI_LIST_CULLED = {
     topology: "triangle-list",
 } satisfies GPUPrimitiveState;
 
+export const TRI_STRIP_CULLED = {
+    cullMode: "back",
+    topology: "triangle-strip",
+} satisfies GPUPrimitiveState;
+
 export const VERTEX_POS_UV = [
     {
         arrayStride: 12,
@@ -115,8 +120,8 @@ export const VERTEX_POS = [
     },
 ] satisfies GPUVertexBufferLayout[];
 
-export const DEPTHTEST_LESS_WRITE = {
+export const DEPTHTEST_GREATER_WRITE = {
     depthWriteEnabled: true,
-    depthCompare: "less",
+    depthCompare: "greater",
     format: "depth24plus",
 } satisfies GPUDepthStencilState;

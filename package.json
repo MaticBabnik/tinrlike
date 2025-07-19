@@ -26,7 +26,7 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.10.0",
     "unplugin-swc": "^1.5.1",
-    "vite": "^5.4.8"
+    "vite": "^6.3.4"
   },
   "dependencies": {
     "@types/node": "^22.7.7",
@@ -40,6 +40,7 @@
     "tinyqueue": "^3.0.0",
     "uuid": "^11.0.5",
     "webgpu-utils": "^1.9.3",
+    "wesl": "^0.6.7",
     "wgpu-matrix": "^3.2.0"
   }
 }

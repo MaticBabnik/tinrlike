@@ -52,7 +52,7 @@ export class CameraComponent implements IComponent {
     }
 
     protected recompute() {
-        mat4.perspective(
+        mat4.perspectiveReverseZ(
             (this._fov * Math.PI) / 180,
             Game.gpu.aspectRatio,
             this._near,

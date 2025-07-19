@@ -90,7 +90,7 @@ export class GBufferPass implements IPass {
                 view: Game.gpu.textures.depth.view,
                 depthLoadOp: "clear",
                 depthStoreOp: "store",
-                depthClearValue: 1,
+                depthClearValue: 0,
             },
         });
 

@@ -10,7 +10,7 @@ export class ShadePass implements IPass {
     );
 
     protected uniforms: GPUBuffer;
-    protected bindGroup!: GPUBindGroup;
+    protected shadeMainGroup!: GPUBindGroup;
 
     constructor() {
         this.uniforms = Game.gpu.device.createBuffer({
@@ -19,10 +19,10 @@ export class ShadePass implements IPass {
         });
     }
 
-    protected createBindGroup() {
-        this.bindGroup = Game.gpu.device.createBindGroup({
+    protected createMainBindGroup() {
+        this.shadeMainGroup = Game.gpu.device.createBindGroup({
             label: "shadebg",
-            layout: Game.gpu.bindGroupLayouts.shade,
+            layout: Game.gpu.bindGroupLayouts.shadeMain,
             entries: [
                 {
                     binding: 0,
@@ -36,7 +36,6 @@ export class ShadePass implements IPass {
                         buffer: Game.ecs.getSystem(LightSystem).lightsBuf,
                     },
                 },
-
                 {
                     binding: 2,
                     resource: Game.gpu.textures.base.view,
@@ -59,24 +58,15 @@ export class ShadePass implements IPass {
                 },
                 {
                     binding: 7,
-                    resource: Game.gpu.getSampler({
-                        addressModeU: "clamp-to-edge",
-                        addressModeV: "clamp-to-edge",
-                        magFilter: "linear",
-                        minFilter: "linear",
-                    }),
-                },
-                {
-                    binding: 8,
                     resource: Game.gpu.shadowmaps.view,
                 },
                 {
-                    binding: 9,
+                    binding: 8,
                     resource: Game.gpu.device.createSampler({
-                        compare: "less",
+                        label: "shadowSampler",
+                        compare: "greater",
                         minFilter: "linear",
                         magFilter: "linear",
-                        label: "shadowSampler",
                     }),
                 },
             ],
@@ -84,8 +74,8 @@ export class ShadePass implements IPass {
     }
 
     apply() {
-        if (!this.bindGroup || Game.gpu.wasResized) {
-            this.createBindGroup();
+        if (!this.shadeMainGroup || Game.gpu.wasResized) {
+            this.createMainBindGroup();
         }
 
         const csys = Game.ecs.getSystem(CameraSystem);
@@ -95,6 +85,7 @@ export class ShadePass implements IPass {
             camera: csys.viewMtx,
             shadowMapSize: Game.gpu.shadowmaps.size,
             nLights: Game.ecs.getSystem(LightSystem).nLights,
+            iblMaxMips: Game.gpu.sky.mips - 1,
         });
 
         const pass = Game.cmdEncoder.beginRenderPass({
@@ -115,8 +106,32 @@ export class ShadePass implements IPass {
             0,
             this.settings.arrayBuffer
         );
-        pass.setBindGroup(0, this.bindGroup);
+        pass.setBindGroup(0, this.shadeMainGroup);
         pass.draw(3);
         pass.end();
     }
 }
+
+/*
+
+
+                {
+                    binding: 7,
+                    resource: Game.gpu.getSampler({
+                        addressModeU: "clamp-to-edge",
+                        addressModeV: "clamp-to-edge",
+                        magFilter: "linear",
+                        minFilter: "linear",
+                        mipmapFilter: 'linear'
+                    }),
+                },
+                {
+                    binding: 10,
+                    resource: Game.gpu.env?.specularView ?? Game.gpu.sky.specularView,
+                },
+                {
+                    binding: 11,
+                    resource: Game.gpu.env?.irradianceView ??Game.gpu.sky.irradianceView,
+                },
+
+                */

@@ -3,6 +3,7 @@ import { makeStructuredView } from "webgpu-utils";
 import { vec3 } from "wgpu-matrix";
 import { IPass } from "./pass.interface";
 import { CameraSystem } from "@/honda/systems/camera";
+import { BlurPass } from "./blur.pass";
 
 function generateSampleHemisphere(nSamples: number) {
     const arr = new Float32Array(nSamples * 4);
@@ -41,6 +42,7 @@ export class SSAOPass implements IPass {
         Game.gpu.shaderModules.ssao.defs.structs["SSAOCfg"]
     );
 
+    protected ssaoBlur: BlurPass;
     protected settingsGpuBuffer: GPUBuffer;
     protected bindGroup!: GPUBindGroup;
     protected noiseTexture: GPUTexture;
@@ -50,7 +52,7 @@ export class SSAOPass implements IPass {
     protected guiSettings = {
         kernelSize: 32,
         radius: 0.35,
-        bias: 0.010,
+        bias: 0.01,
     };
 
     protected disable = false;
@@ -92,6 +94,13 @@ export class SSAOPass implements IPass {
     }
 
     constructor() {
+        this.ssaoBlur = new BlurPass(
+            Game.gpu.textures.ssao,
+            Game.gpu.pipelines.blurR8u,
+            4,
+            "ssao-blur"
+        );
+
         this.settingsGpuBuffer = Game.gpu.device.createBuffer({
             size: this.settings.arrayBuffer.byteLength,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
@@ -146,7 +155,7 @@ export class SSAOPass implements IPass {
             label: "ssao",
             colorAttachments: [
                 {
-                    view: Game.gpu.textures.ssao.view,
+                    view: Game.gpu.textures.ssao.views[0],
                     loadOp: "clear",
                     storeOp: "store",
                     clearValue: [1, 0, 0, 0],
@@ -164,5 +173,6 @@ export class SSAOPass implements IPass {
         post.setBindGroup(0, this.bindGroup);
         if (!this.disable) post.draw(3);
         post.end();
+        this.ssaoBlur.apply();
     }
 }

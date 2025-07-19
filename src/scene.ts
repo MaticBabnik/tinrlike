@@ -1,4 +1,3 @@
-import { createTextureFromImages } from "webgpu-utils";
 import {
     Game,
     SceneNode,
@@ -6,10 +5,12 @@ import {
     GltfBinary,
     ScriptComponent,
     Script,
+    LightComponent,
 } from "@/honda";
 import { clamp, PI_2 } from "@/honda/util";
 import { quat, vec3 } from "wgpu-matrix";
-import { AnimationPlayerScript } from "./animplayer.script";
+import { CubemapTexture } from "./honda/gpu/textures/cubemap";
+import { setStatus } from "./honda/util/status";
 
 // basic deadzone
 function dz(x: number) {
@@ -100,18 +101,22 @@ class FlyCameraScript extends Script {
 }
 
 export async function createScene() {
-    const skyTex = await createTextureFromImages(
-        Game.gpu.device,
-        [
-            "sky/px.avif",
-            "sky/nx.avif",
-            "sky/pyh.avif",
-            "sky/ny.avif",
-            "sky/pz.avif",
-            "sky/nz.avif",
-        ],
-        { mips: true }
+    setStatus("loading assets");
+    const sponza = await GltfBinary.fromUrl("./SponzaBS.glb");
+    const iblTest = await GltfBinary.fromUrl("./IBL2.glb");
+    const sky2 = await CubemapTexture.loadRGBM(
+        CubemapTexture.SIDES.map((x) => `hdrsky/${x}.rgbm`),
+        "sky2",
+        16
     );
+
+    setStatus("building scene");
+
+    sponza.json.extensions?.KHR_lights_punctual?.lights.forEach((light) => {
+        if (light.intensity) light.intensity /= 50;
+    });
+
+    Game.scene.addChild(sponza.sceneAsNode());
 
     {
         const camera = new SceneNode();
@@ -119,20 +124,56 @@ export async function createScene() {
         camera.addComponent(new CameraComponent(70, 0.1, 32, "MainCamera"));
         camera.addComponent(new ScriptComponent(new FlyCameraScript()));
         Game.scene.addChild(camera);
+        camera.transform.translation[1] = -6;
+        camera.transform.update();
+
+        const testNode = iblTest.sceneAsNode();
+        testNode.transform.translation[2] = -1;
+        testNode.transform.scale.set([0.2, 0.2, 0.2]);
+        testNode.transform.update();
+        camera.addChild(testNode);
     }
 
-    const file = await GltfBinary.fromUrl("./BoxAnim2.glb");
-    const node = file.sceneAsNode();
-    const anim = file.getAnimationByName("Anim_0");
-    anim.attach(node);
-    node.addComponent(new ScriptComponent(new AnimationPlayerScript(anim)));
-    Game.scene.addChild(node);
+    {
+        const roatatingLight = new SceneNode();
+        roatatingLight.name = "light";
+        roatatingLight.addComponent(
+            new LightComponent({
+                castShadows: true,
+                color: [1, 0, 0],
+                intensity: 1000,
+                type: "spot",
+                innerCone: 0.7,
+                outerCone: 0.9,
+                maxRange: 10,
+            })
+        );
 
-    // const file = await GltfBinary.fromUrl("./SponzaBS.glb");
-    // Game.scene.addChild(file.sceneAsNode());
+        roatatingLight.addComponent(
+            new ScriptComponent(
+                new (class extends Script {
+                    public onAttach(): void {
+                        this.node.transform.translation[1] = 4;
+                    }
 
-    console.log(file);
+                    public earlyUpdate(): void {
+                        quat.fromAxisAngle(
+                            [0, 1, 0],
+                            Game.time * 4,
+                            this.node.transform.rotation
+                        );
+                        this.node.transform.update();
+                    }
+                })()
+            )
+        );
+
+        // Game.scene.addChild(roatatingLight);
+    }
+
+    console.groupCollapsed("scene");
     console.log(Game.scene.tree());
+    console.groupEnd();
 
-    return { skyTex };
+    Game.gpu.sky = sky2;
 }

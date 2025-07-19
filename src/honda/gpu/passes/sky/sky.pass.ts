@@ -4,6 +4,7 @@ import { makeStructuredView } from "webgpu-utils";
 import { mat4 } from "wgpu-matrix";
 import { IPass } from "../pass.interface";
 import { CameraSystem } from "@/honda/systems/camera";
+import { CubemapTexture } from "../../textures";
 
 //TODO: move skybox out of ctor
 // (add scene system or make a global object (sth like Game.scene.envmap))
@@ -18,7 +19,7 @@ export class SkyPass implements IPass {
     protected bindGroup!: GPUBindGroup;
     protected verts!: GPUBuffer;
 
-    constructor(protected cubemap: GPUTexture) {
+    constructor(protected cubemap: CubemapTexture) {
         this.sampler = Game.gpu.getSampler({
             minFilter: "linear",
             magFilter: "linear",
@@ -57,14 +58,12 @@ export class SkyPass implements IPass {
                         addressModeV: "clamp-to-edge",
                         magFilter: "linear",
                         minFilter: "linear",
+                        mipmapFilter: 'linear',
                     }),
                 },
                 {
                     binding: 2,
-                    resource: cubemap.createView({
-                        label: cubemap.label,
-                        dimension: "cube",
-                    }),
+                    resource: cubemap.cubemapView
                 },
             ],
         });

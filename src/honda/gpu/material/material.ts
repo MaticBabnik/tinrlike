@@ -61,6 +61,8 @@ export class Material {
     }
 
     public readonly type: number;
+    public readonly type_v2: number;
+
     public readonly id: number;
 
     public bindGroup!: GPUBindGroup;
@@ -115,6 +117,11 @@ export class Material {
         this.type =
             (normal != undefined ? NORMALMAP_BIT : 0) |
             (this.alpha.mode == Mat.AlphaMode.BLEND ? TRANSPARENCY_BIT : 0);
+
+        this.type_v2 =
+            (this.alpha.mode << 10) |
+            ((this.normal ? 1 : 0) << 1) |
+            (vec3.len(this.emission.factor) > 0 ? 1 : 0);
 
         if (normal) {
             this.normal = {

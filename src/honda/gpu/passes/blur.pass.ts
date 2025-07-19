@@ -15,7 +15,7 @@ function halfGauss(n: number) {
         (_, x) => factor * Math.exp((-x * x) / (2 * sigma * sigma))
     );
     const sum = kernel.reduce((acc, v, i) => acc + (i === 0 ? v : 2 * v), 0);
-    return kernel.map((v) => [v / sum, v / sum, v / sum, v / sum]).reverse();
+    return kernel.map((v) => [v / sum, v / sum, v / sum, v / sum]);
 }
 
 export class BlurPass implements IPass {
@@ -39,6 +39,7 @@ export class BlurPass implements IPass {
                     addressModeV: "clamp-to-edge",
                     magFilter: "linear",
                     minFilter: "linear",
+                    mipmapFilter: 'linear'
                 }),
             },
         ];

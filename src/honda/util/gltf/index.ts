@@ -1,5 +1,5 @@
 import { Mesh } from "@/honda/gpu/meshes/mesh";
-import { nMips, nn } from "..";
+import { assert, nMips, nn } from "..";
 import type * as TG from "./gltf.types";
 import { Material } from "@/honda/gpu/material/material";
 import { Game } from "@/honda/state";
@@ -80,6 +80,7 @@ export class GltfBinary {
         "EXT_texture_webp",
         "EXT_texture_avif",
         "KHR_lights_punctual",
+        "KHR_materials_emissive_strength"
     ];
 
     static readonly COMP_TYPE_TO_CTOR: Record<
@@ -125,23 +126,14 @@ export class GltfBinary {
         STRING: -1, // TODO(mbabnik): strings?
     };
 
-    static getWebGpuSamplerFilter(
+    static convertSamplerFilter(
         n: TG.TFilterMag | TG.TFilterMin
     ): GPUFilterMode {
-        switch (n) {
-            case 9728:
-                return "nearest";
-            case 9729:
-                return "linear";
-            default:
-                // this just spams the console
-                // console.warn(
-                //     "Unsupported sampler filter mode:",
-                //     n,
-                //     "defaulting to linear"
-                // );
-                return "linear";
-        }
+        return n & 1 ? "linear" : "nearest";
+    }
+
+    static convertSamplerMipMapFilter(n: TG.TFilterMin): GPUMipmapFilterMode {
+        return n & 2 ? "linear" : "nearest";
     }
 
     public static async fromUrl(url: string) {
@@ -460,10 +452,13 @@ export class GltfBinary {
         return {
             addressModeU: GltfBinary.SAMPLER_TO_WGPU[gSampler.wrapS ?? 10497],
             addressModeV: GltfBinary.SAMPLER_TO_WGPU[gSampler.wrapT ?? 10497],
-            minFilter: GltfBinary.getWebGpuSamplerFilter(
+            minFilter: GltfBinary.convertSamplerFilter(
                 gSampler.minFilter ?? 9728
             ),
-            magFilter: GltfBinary.getWebGpuSamplerFilter(
+            magFilter: GltfBinary.convertSamplerFilter(
+                gSampler.magFilter ?? 9728
+            ),
+            mipmapFilter: GltfBinary.convertSamplerMipMapFilter(
                 gSampler.magFilter ?? 9728
             ),
         };
@@ -963,7 +958,7 @@ export class GltfBinary {
             `No navmesh nodes for scene ${scene}`
         );
 
-        console.assert(
+        assert(
             navMesh.primitives.length == 1,
             "MULTIPLE PRIMITIVES IN NAVMESH!"
         );

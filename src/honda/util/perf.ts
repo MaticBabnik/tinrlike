@@ -121,7 +121,7 @@ export function perfRenderer(
             .join("\n");
 
         const g = Game.perf.getGpuStats();
-        gpu.innerText = g
+        gpu.innerText = g.length == 0 ? '<GPU timings timed out>' : g
             .map(
                 ([n, t]) =>
                     `${n.padEnd(30)} ${(t / 1000)
