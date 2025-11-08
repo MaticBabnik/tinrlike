@@ -58,12 +58,12 @@ export class SkyPass implements IPass {
                         addressModeV: "clamp-to-edge",
                         magFilter: "linear",
                         minFilter: "linear",
-                        mipmapFilter: 'linear',
+                        mipmapFilter: "linear",
                     }),
                 },
                 {
                     binding: 2,
-                    resource: cubemap.cubemapView
+                    resource: cubemap.cubemapView,
                 },
             ],
         });
@@ -74,10 +74,7 @@ export class SkyPass implements IPass {
     apply(): void {
         const csys = Game.ecs.getSystem(CameraSystem);
 
-        mat4.copy(
-            csys.viewMtx,
-            this._viewProjNoTranslation
-        );
+        mat4.copy(csys.viewMtx, this._viewProjNoTranslation);
         this._viewProjNoTranslation[12] = 0;
         this._viewProjNoTranslation[13] = 0;
         this._viewProjNoTranslation[14] = 0;
@@ -94,7 +91,7 @@ export class SkyPass implements IPass {
                     view: Game.gpu.textures.shaded.view,
                     loadOp: "clear",
                     storeOp: "store",
-                    clearValue: [0, 0, 0, 1],
+                    clearValue: [0.7, 1, 2, 1],
                 },
             ],
             timestampWrites: Game.gpu.timestamp("sky"),
@@ -108,7 +105,7 @@ export class SkyPass implements IPass {
         );
         post.setVertexBuffer(0, this.verts);
         post.setBindGroup(0, this.bindGroup);
-        post.draw(SKYBOX_DRAW_COUNT);
+        // post.draw(SKYBOX_DRAW_COUNT);
         post.end();
     }
 }

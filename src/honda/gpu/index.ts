@@ -40,9 +40,10 @@ export class WebGpu {
     public canvasView!: GPUTextureView;
 
     public pFormat = navigator.gpu.getPreferredCanvasFormat();
-    public shaderModules = createModules(this);
-    public bindGroupLayouts = createBindGroupLayouts(this);
-    public pipelines = createPipelines(this);
+    public shaderModules: ReturnType<typeof createModules>;
+    public bindGroupLayouts: ReturnType<typeof createBindGroupLayouts>;
+    public pipelines: ReturnType<typeof createPipelines>;
+    private _queuedResize?: [number,number];
     public wasResized = false;
 
     public renderScale = 1;
@@ -82,6 +83,10 @@ export class WebGpu {
             format: navigator.gpu.getPreferredCanvasFormat(),
         });
 
+        console.log({
+            adapter, device, canvas, wg
+        })
+
         return new WebGpu(adapter, device, canvas, wg);
     }
 
@@ -106,9 +111,13 @@ export class WebGpu {
         console.table(device.limits);
         console.groupEnd();
 
+        this.shaderModules = createModules(this);
+        this.bindGroupLayouts = createBindGroupLayouts(this);
+        this.pipelines = createPipelines(this);
+
         this.resizeViewports();
         this.shadowmaps.alloc(this.device);
-        this.ro = new ResizeObserver((e) => this.handleResize(e));
+        this.ro = new ResizeObserver((e) => this.resizeCallback(e));
 
         this.querySet = device.createQuerySet({
             type: "timestamp",
@@ -171,22 +180,32 @@ export class WebGpu {
         this.wasResized = true;
     }
 
-    private handleResize([e]: ResizeObserverEntry[]) {
-        this.canvas.width =
-            Math.round(
+    private resize() {
+        if (this._queuedResize) {
+            this.canvas.width = this._queuedResize[0];
+            this.canvas.height = this._queuedResize[1];
+            this.resizeViewports();
+            this._queuedResize = undefined;
+        }
+    }
+
+    private resizeCallback([e]: ResizeObserverEntry[]) {
+        this._queuedResize = [
+             Math.round(
                 nn(e.devicePixelContentBoxSize?.[0].inlineSize) *
                 this.renderScale
-            ) & ~1;
-        this.canvas.height =
+            ) & ~1,
             Math.round(
                 nn(e.devicePixelContentBoxSize?.[0].blockSize) *
                 this.renderScale
-            ) & ~1;
-
-        this.resizeViewports();
+            ) & ~1
+        ]
+        
     }
 
     public frameStart() {
+        this.resize();
+        
         // Chrome seems to pass a "new?" frame every time, firefox reuses the same one
         if (this.canvasTexture != this.ctx.getCurrentTexture()) {
             this.canvasTexture = this.ctx.getCurrentTexture();
@@ -235,7 +254,7 @@ export class WebGpu {
                 this.queryIndex >> 1
             );
             readBuf.unmap();
-            
+
         } else {
             this.device.queue.submit([Game.cmdEncoder.finish()]);
         }

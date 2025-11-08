@@ -125,20 +125,10 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
     let p = vec2<u32>(fragCoord.xy);
 
     if post.mode == 0 { // Shade + SSAO + Post
-        let depthValue = textureLoad(depth, p, 0);
-        let d = getWorldDepth(depthValue, p);
-        let o = textureLoad(ssao, p, 0).x;
-        let shaded = textureLoad(shaded, p, 0) + textureLoad(bloom, p, 0) * post.bloom;
-
-        let fogD = clamp(d - post.fogStart, 0.0, post.fogEnd - post.fogStart);
-        let fogFactor = min(fogD * post.fogDensity, 1.0);
-
-        let shadedColor = (shaded.xyz * pow(o, post.occlusionPower)) * (1.0 - fogFactor) + post.fogColor * fogFactor;
-
+        let shaded = textureLoad(shaded, p, 0);
+        let shadedColor = (shaded.xyz);
         let toneMappedColor = agx_tonemap_punchy(shadedColor, post.exposure);
-
         let gammaCorrected = pow(toneMappedColor, vec3(1.0 / post.gamma));
-
         return vec4f(gammaCorrected, 1.0);
     } else if (post.mode == 1) {
         let zzz = (textureLoad(bloom, p, 0) * post.bloom) + textureLoad(shaded, p, 0);

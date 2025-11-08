@@ -52,13 +52,31 @@ export class CameraComponent implements IComponent {
     }
 
     protected recompute() {
-        mat4.perspectiveReverseZ(
-            (this._fov * Math.PI) / 180,
-            Game.gpu.aspectRatio,
-            this._near,
-            this._far,
-            this.projectionMtx
-        );
+        // mat4.perspectiveReverseZ(
+        //     (this._fov * Math.PI) / 180,
+        //     Game.gpu.aspectRatio,
+        //     this._near,
+        //     this._far,
+        //     this.projectionMtx
+        // );
+
+        const aspect = Game.gpu.aspectRatio;
+        const minRange = 10;
+        let wr = 0,
+            hr = 0;
+
+        if (aspect >= 1) {
+            // wider than tall
+            hr = minRange;
+            wr = hr * aspect;
+        } else {
+            // taller than wide
+            wr = minRange;
+            hr = wr / aspect;
+        }
+
+        mat4.ortho(-wr, wr, -hr, hr, 100, 0, this.projectionMtx);
+
         this.currentAspect = Game.gpu.aspectRatio;
         mat4.inverse(this.projectionMtx, this.invProjectionMtx);
         this.dirty = false;

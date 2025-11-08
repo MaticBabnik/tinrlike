@@ -9,6 +9,7 @@ import { createRgbmload } from "./rgbmload.pipeline";
 import { createShade } from "./shade.pipeline";
 import { createShadow } from "./shadow.pipeline";
 import { createSky } from "./sky.pipeline";
+import { createSprite } from "./sprite.pipeline";
 import { createSSAO } from "./ssao.pipeline";
 
 export function createPipelines(g: WebGpu) {
@@ -27,5 +28,6 @@ export function createPipelines(g: WebGpu) {
         cIblSpecular: createIblSpecular(g),
         bIblIrradiance: createIblIrradiance(g),
         flipx: creatFlipx(g),
+        sprite: createSprite(g),
     };
 }

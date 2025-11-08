@@ -92,6 +92,12 @@ const layouts = [
         .binding(2, "c", "sampler"),
 
     bindGroupLayout("flipx").binding(0, "f", "texture"),
+
+    bindGroupLayout("devsprite")
+        .binding(0, "v", "buffer", { type: "uniform" })
+        .binding(1, "v", "buffer", { type: "read-only-storage" })
+        .binding(2, "f", "texture")
+        .binding(3, "f", "sampler"),
 ] as const;
 
 export function createBindGroupLayouts(g: WebGpu) {
