@@ -11,8 +11,6 @@ import { quat, vec3 } from "wgpu-matrix";
 import { CubemapTexture } from "./honda/gpu/textures/cubemap";
 import { setStatus } from "./honda/util/status";
 import { nn } from "./honda/util";
-import { createTextureFromImage } from "webgpu-utils";
-import { Sprite2dSystem } from "./honda/systems/sprite2d/";
 
 // basic deadzone
 function dz(x: number) {
@@ -99,42 +97,6 @@ class LerpCameraScript extends Script {
     }
 }
 
-class SpriteDemoScript extends Script {
-    protected sprite2d!: Sprite2dSystem;
-
-    public onAttach(): void {
-        this.sprite2d = Game.ecs.getSystem(Sprite2dSystem);
-    }
-
-    public lateUpdate(): void {
-        for (let x = 0; x < 8; x++) {
-            for (let y = 0; y < 8; y++) {
-                this.sprite2d.sprite(
-                    "devatlas",
-                    x + y * 8,
-                    x / 8 - 0.5,
-                    y / 8 - 0.5,
-                    0.05,
-                    Game.time,
-                    0.5,
-                    Math.abs(Math.sin(Game.time)),
-                    Math.abs(Math.cos(Game.time)),
-                    Math.abs(Math.sinh(Game.time)),
-                    0.5
-                );
-            }
-        }
-
-        this.sprite2d.sprite(
-            "devatlas",
-            63,
-            0,
-            0,
-            Math.sin(Game.time) * 0.1 + 0.1,
-            0, 1
-        );
-    }
-}
 
 export async function createScene() {
     setStatus("loading assets");
@@ -145,21 +107,6 @@ export async function createScene() {
         "sky2",
         16
     );
-
-    const devAtlas = await createTextureFromImage(
-        Game.gpu.device,
-        './devatlas.png',
-        {
-            mips: true,
-            format: "rgba8unorm-srgb",
-            usage: GPUTextureUsage.TEXTURE_BINDING
-        }
-    );
-
-    Game.ecs.getSystem(Sprite2dSystem).registerAtlas(
-        "devatlas", devAtlas, 64
-    );
-
 
     setStatus("building scene");
 
@@ -217,11 +164,6 @@ export async function createScene() {
 
         Game.scene.addChild(sun);
     }
-
-    const spriteDemoNode = new SceneNode();
-    spriteDemoNode.name = "SpriteDemo";
-    spriteDemoNode.addComponent(new ScriptComponent(new SpriteDemoScript()));
-    Game.scene.addChild(spriteDemoNode);
 
     console.groupCollapsed("scene");
     console.log(Game.scene.tree());

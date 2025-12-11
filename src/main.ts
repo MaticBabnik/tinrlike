@@ -18,8 +18,6 @@ import { setError, setStatus } from "@/honda/util/status";
 
 import { createScene } from "./scene";
 import { Flags } from "./honda/util/flags";
-import { Sprite2dSystem } from "./honda/systems/sprite2d/sprite2d.system";
-import { SpritePass } from "./honda/gpu/passes/sprite.pass";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -89,7 +87,6 @@ const play = async (preset: "low" | "medium" | "high") => {
     Game.ecs.addSystem(new MeshSystem());
     Game.ecs.addSystem(new CameraSystem());
     Game.ecs.addSystem(new LightSystem());
-    Game.ecs.addSystem(new Sprite2dSystem());
 
     await createScene();
 
@@ -99,7 +96,6 @@ const play = async (preset: "low" | "medium" | "high") => {
         new SkyPass(Game.gpu.sky),
         new ShadePass(),
         new PostprocessPass(),
-        new SpritePass()
     ];
 
     setStatus(undefined);
