@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 import { TRI_LIST_CULLED } from "./constants";
 
 export function createSSAO(g: WebGpu) {
@@ -15,7 +15,7 @@ export function createSSAO(g: WebGpu) {
         },
         fragment: {
             module,
-            targets: [{ format: 'r8unorm' }],
+            targets: [{ format: "r8unorm" }],
         },
     });
 }

@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 import { TRI_LIST_CULLED } from "./constants";
 
 export function createPostProcess(g: WebGpu) {

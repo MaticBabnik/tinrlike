@@ -4,9 +4,9 @@ import type * as TG from "./gltf.types";
 import { Material } from "@/honda/gpu/material/material";
 import { Game } from "@/honda/state";
 import { generateMipmap } from "webgpu-utils";
-import { quat, vec3, vec4 } from "wgpu-matrix";
+import { vec3, vec4 } from "wgpu-matrix";
 import { AlphaMode } from "@/honda/gpu/material/material.types";
-import {
+import type {
     IDirectionalLight,
     IPointLight,
     ISpotLight,
@@ -16,16 +16,8 @@ import { SceneNode } from "@/honda/core/node";
 import { MeshComponent } from "@/honda/systems/mesh";
 import { LightComponent } from "@/honda/systems/light";
 import {
-    LAYER_ENEMY,
-    LAYER_INTERACT,
-    LAYER_PHYSICS,
-    LAYER_PICKUP,
-    LAYER_QUERY,
-    StaticAABBColider,
-} from "@/honda/systems/physics/colider.component";
-import {
     AnimInterp,
-    ASampler,
+    type ASampler,
     V4Sampler,
     SSampler,
     V3Sampler,
@@ -44,9 +36,9 @@ export type TypedArrays =
     | Uint32Array
     | Float32Array;
 
-export interface FavelaAccesor<
+export interface HondaAccesor<
     Tbuffer extends TypedArrays = TypedArrays,
-    Taccessor extends TG.TAccessorType = TG.TAccessorType
+    Taccessor extends TG.TAccessorType = TG.TAccessorType,
 > {
     accessor: Tbuffer;
     isElement: boolean;
@@ -55,7 +47,7 @@ export interface FavelaAccesor<
     count: number;
 }
 
-export interface FavelaBufferView {
+export interface HondaBufferView {
     buffer: ArrayBuffer;
     isElement: boolean;
     bOffset: number;
@@ -80,7 +72,7 @@ export class GltfBinary {
         "EXT_texture_webp",
         "EXT_texture_avif",
         "KHR_lights_punctual",
-        "KHR_materials_emissive_strength"
+        "KHR_materials_emissive_strength",
     ];
 
     static readonly COMP_TYPE_TO_CTOR: Record<
@@ -107,14 +99,6 @@ export class GltfBinary {
         OPAQUE: AlphaMode.OPAQUE,
     };
 
-    static readonly COLIDER_LAYER_MAP: Record<string, number> = {
-        physics: LAYER_PHYSICS,
-        enemy: LAYER_ENEMY,
-        interact: LAYER_INTERACT,
-        pickup: LAYER_PICKUP,
-        query: LAYER_QUERY,
-    };
-
     static readonly SCALARS_PER_ELEMENT: Record<TG.TAccessorType, number> = {
         SCALAR: 1,
         MAT2: 2 * 2,
@@ -127,7 +111,7 @@ export class GltfBinary {
     };
 
     static convertSamplerFilter(
-        n: TG.TFilterMag | TG.TFilterMin
+        n: TG.TFilterMag | TG.TFilterMin,
     ): GPUFilterMode {
         return n & 1 ? "linear" : "nearest";
     }
@@ -165,7 +149,7 @@ export class GltfBinary {
     protected static cacheOr<T extends WeakKey>(
         cache: Map<number, WeakRef<T>>,
         key: number,
-        fn: () => T
+        fn: () => T,
     ): T {
         const value = cache.get(key)?.deref();
 
@@ -187,35 +171,35 @@ export class GltfBinary {
 
     protected constructor(
         buf: ArrayBuffer,
-        protected name = `<unknown glTF ${this.id}>`
+        protected name = `<unknown glTF ${this.id}>`,
     ) {
         const bufU32 = new Uint32Array(buf);
 
         const [magic, version] = bufU32;
 
-        if (magic != GltfBinary.MAGIC) {
+        if (magic !== GltfBinary.MAGIC) {
             throw new Error("Invalid magic, this isn't glTF");
         }
 
-        if (version != 2) {
+        if (version !== 2) {
             throw new Error("Only version 2 is supported");
         }
 
-        let jsonView, binView: ArrayBufferView | undefined;
+        let jsonView: DataView | undefined, binView: DataView | undefined;
 
         for (let i = 3; i < bufU32.length; ) {
             const cLen = bufU32[i];
             const cType = bufU32[i + 1];
             const dv = new DataView(buf, (i + 2) * 4, cLen);
 
-            if (cType == GltfBinary.CHUNKYTPE_JSON) jsonView = dv;
-            else if (cType == GltfBinary.CHUNKTYPE_BIN) binView = dv;
+            if (cType === GltfBinary.CHUNKYTPE_JSON) jsonView = dv;
+            else if (cType === GltfBinary.CHUNKTYPE_BIN) binView = dv;
 
             i += Math.ceil(cLen / 4) + 2;
         }
 
         this.json = JSON.parse(
-            new TextDecoder().decode(nn(jsonView, "Missing JSON chunk"))
+            new TextDecoder().decode(nn(jsonView, "Missing JSON chunk")),
         );
         this.bin = nn(binView, "Missing Binary chunk");
 
@@ -230,34 +214,34 @@ export class GltfBinary {
                 const base = ibv.bOffset + this.bin.byteOffset;
                 const blob = new Blob(
                     [ibv.buffer.slice(base, base + ibv.bLength)],
-                    { type: imgDef.mimeType }
+                    { type: imgDef.mimeType },
                 );
 
                 return createImageBitmap(blob);
-            })
+            }),
         );
     }
 
     protected checkExt() {
         const unsupportedRequired =
             this.json?.extensionsRequired?.filter(
-                (ext) => !GltfBinary.supportedExtensions.includes(ext)
+                (ext) => !GltfBinary.supportedExtensions.includes(ext),
             ) ?? [];
         const unsupportedUsed =
             this.json?.extensionsRequired?.filter(
-                (ext) => !GltfBinary.supportedExtensions.includes(ext)
+                (ext) => !GltfBinary.supportedExtensions.includes(ext),
             ) ?? [];
 
         if (unsupportedRequired.length > 0) {
             console.error(
                 "Unsupported extensions required:",
-                unsupportedRequired.join(", ")
+                unsupportedRequired.join(", "),
             );
         }
         if (unsupportedUsed.length > 0) {
             console.warn(
                 "Unsupported extensions used:",
-                unsupportedUsed.join(", ")
+                unsupportedUsed.join(", "),
             );
         }
     }
@@ -265,40 +249,40 @@ export class GltfBinary {
     protected getBuffer(index: number) {
         if (index !== 0) {
             throw new Error(
-                `Multiple buffers not supported (requested buffer ${index})!`
+                `Multiple buffers not supported (requested buffer ${index})!`,
             );
         }
 
         const gBuffer = nn(this.json.buffers?.[index]);
 
-        if (gBuffer.byteLength != this.bin.byteLength) {
+        if (gBuffer.byteLength !== this.bin.byteLength) {
             console.warn(
-                `Buffer size mismatch (JSON: ${gBuffer.byteLength} BIN: ${this.bin.byteLength}) `
+                `Buffer size mismatch (JSON: ${gBuffer.byteLength} BIN: ${this.bin.byteLength}) `,
             );
         }
         return this.bin.buffer as ArrayBuffer;
     }
 
-    protected getBufferView(index: number): FavelaBufferView {
+    protected getBufferView(index: number): HondaBufferView {
         const gBufferView = nn(
             this.json.bufferViews?.[index],
-            "bufferView OOB"
+            "bufferView OOB",
         );
 
         return {
             buffer: this.getBuffer(gBufferView.buffer),
-            isElement: !!(gBufferView.target ?? 0 & 1),
+            isElement: !!((gBufferView.target ?? 0) & 1),
             bOffset: gBufferView.byteOffset ?? 0,
             bLength: gBufferView.byteLength,
         };
     }
 
-    protected getAccessor(index: number): FavelaAccesor {
+    protected getAccessor(index: number): HondaAccesor {
         const gAccessor = nn(this.json.accessors?.[index], "accessor OOB");
         if (
             gAccessor.normalized ||
             gAccessor.sparse ||
-            typeof gAccessor.bufferView != "number"
+            typeof gAccessor.bufferView !== "number"
         ) {
             throw new Error("Unsupported");
         }
@@ -310,7 +294,7 @@ export class GltfBinary {
         const accessor = new TypedArrayCtor(
             bv.buffer,
             bv.bOffset + this.bin.byteOffset + (gAccessor.byteOffset ?? 0),
-            gAccessor.count * GltfBinary.SCALARS_PER_ELEMENT[gAccessor.type]
+            gAccessor.count * GltfBinary.SCALARS_PER_ELEMENT[gAccessor.type],
         );
 
         return {
@@ -324,42 +308,42 @@ export class GltfBinary {
 
     protected getAccessorAndAssertType<
         Taccessor extends TG.TAccessorType,
-        Tbuffer extends TypedArrays
+        Tbuffer extends TypedArrays,
     >(
         index: number,
         expectedType: Taccessor,
-        expectedBufferType: TTypedArrayCtor<Tbuffer>
-    ): FavelaAccesor<Tbuffer, Taccessor> {
+        expectedBufferType: TTypedArrayCtor<Tbuffer>,
+    ): HondaAccesor<Tbuffer, Taccessor> {
         const accessor = this.getAccessor(index);
-        if (accessor.type != expectedType) {
+        if (accessor.type !== expectedType) {
             throw new Error(
-                `Accessor's type (${accessor.type}}) != expected type (${expectedType})`
+                `Accessor's type (${accessor.type}}) != expected type (${expectedType})`,
             );
         }
 
         if (!(accessor.accessor instanceof expectedBufferType)) {
             throw new Error(
-                `Underlaying buffer doesn't match expected TypedArray`
+                `Underlaying buffer doesn't match expected TypedArray`,
             );
         }
 
-        return accessor as unknown as FavelaAccesor<Tbuffer, Taccessor>;
+        return accessor as unknown as HondaAccesor<Tbuffer, Taccessor>;
     }
 
     protected uploadAccesorToGpuWithAssertType<
         Taccessor extends TG.TAccessorType,
-        Tbuffer extends TypedArrays
+        Tbuffer extends TypedArrays,
     >(
         index: number,
         expectedType: Taccessor,
         expectedBufferType: TTypedArrayCtor<Tbuffer>,
         usage: GPUBufferUsageFlags,
-        label?: string
+        label?: string,
     ) {
         const accessor = this.getAccessorAndAssertType(
             index,
             expectedType,
-            expectedBufferType
+            expectedBufferType,
         );
 
         const b = Game.gpu.device.createBuffer({
@@ -371,7 +355,7 @@ export class GltfBinary {
 
         //@ts-expect-error "God, I wish there was an easier way to do this"
         const dst = new accessor.accessor.constructor(
-            b.getMappedRange()
+            b.getMappedRange(),
         ) as TypedArrays;
         dst.set(accessor.accessor);
         b.unmap();
@@ -389,7 +373,7 @@ export class GltfBinary {
             console.warn(
                 `Unsupported: multiple primitives in mesh (index: ${index}, name: ${
                     gMesh.name || "<none>"
-                })`
+                })`,
             );
         }
 
@@ -405,18 +389,14 @@ export class GltfBinary {
             gTexture?.extensions?.EXT_texture_avif?.source ??
             gTexture.source;
 
-        if (source === undefined) {
-            throw new Error("No supported textures found.");
-        }
-
-        return this.getImage(source!);
+        return this.getImage(nn(source, "no supported textures found"));
     }
 
     protected getTextureSamplerDescriptor(texId: number): GPUSamplerDescriptor {
         const gTexture = nn(this.json.textures?.[texId], "Texture index OOB");
 
         return this.getWebgpuSamplerDescriptor(
-            nn(gTexture.sampler, "NO SAMPLER! Missing default?")
+            nn(gTexture.sampler, "NO SAMPLER! Missing default?"),
         );
     }
 
@@ -435,31 +415,31 @@ export class GltfBinary {
 
         return {
             samplerDescriptor: this.getWebgpuSamplerDescriptor(
-                nn(gTexture.sampler, "NO SAMPLER! Missing default?")
+                nn(gTexture.sampler, "NO SAMPLER! Missing default?"),
             ),
             image: this.getImage(source),
         };
     }
 
     protected getWebgpuSamplerDescriptor(
-        samplerIdx: number
+        samplerIdx: number,
     ): GPUSamplerDescriptor {
         const gSampler = nn(
             this.json.samplers?.[samplerIdx],
-            "Sampler idx OOB"
+            "Sampler idx OOB",
         );
 
         return {
             addressModeU: GltfBinary.SAMPLER_TO_WGPU[gSampler.wrapS ?? 10497],
             addressModeV: GltfBinary.SAMPLER_TO_WGPU[gSampler.wrapT ?? 10497],
             minFilter: GltfBinary.convertSamplerFilter(
-                gSampler.minFilter ?? 9728
+                gSampler.minFilter ?? 9728,
             ),
             magFilter: GltfBinary.convertSamplerFilter(
-                gSampler.magFilter ?? 9728
+                gSampler.magFilter ?? 9728,
             ),
             mipmapFilter: GltfBinary.convertSamplerMipMapFilter(
-                gSampler.magFilter ?? 9728
+                gSampler.magFilter ?? 9728,
             ),
         };
     }
@@ -467,7 +447,7 @@ export class GltfBinary {
     protected getImage(imageIdx: number) {
         return nn(
             this.imageCache[imageIdx],
-            "image OOB, did you forget to call prepareImages()"
+            "image OOB, did you forget to call prepareImages()",
         );
     }
 
@@ -477,24 +457,21 @@ export class GltfBinary {
         const name = `mp:${gm.name ?? mesh}.p${primitive}`;
 
         const position = nn(
-                gPrimitive.attributes["POSITION"],
-                "Position is required!"
+                gPrimitive.attributes.POSITION,
+                "Position is required!",
             ),
-            normal = nn(
-                gPrimitive.attributes["NORMAL"],
-                "Normals are required!"
-            ),
+            normal = nn(gPrimitive.attributes.NORMAL, "Normals are required!"),
             texCoord = nn(
-                gPrimitive.attributes["TEXCOORD_0"],
-                "TexCoord is required!"
+                gPrimitive.attributes.TEXCOORD_0,
+                "TexCoord is required!",
             ),
             indices = nn(
                 gPrimitive.indices,
-                "Non indexed geometry is not supported, unlucky."
+                "Non indexed geometry is not supported, unlucky.",
             ),
-            tangent = gPrimitive.attributes["TANGENT"];
+            tangent = gPrimitive.attributes.TANGENT;
 
-        if (gPrimitive.mode !== undefined && gPrimitive.mode != 4) {
+        if (gPrimitive.mode !== undefined && gPrimitive.mode !== 4) {
             throw new Error("Unsupported: non-triagle-list geometry");
         }
 
@@ -507,8 +484,8 @@ export class GltfBinary {
                         "SCALAR",
                         Uint16Array,
                         GPUBufferUsage.INDEX,
-                        `${name}:index`
-                    )
+                        `${name}:index`,
+                    ),
             ),
             posBuffer = GltfBinary.cacheOr(this.gpuBufferCache, position, () =>
                 this.uploadAccesorToGpuWithAssertType(
@@ -516,8 +493,8 @@ export class GltfBinary {
                     "VEC3",
                     Float32Array,
                     GPUBufferUsage.VERTEX,
-                    `${name}:position`
-                )
+                    `${name}:position`,
+                ),
             ),
             normBuffer = GltfBinary.cacheOr(this.gpuBufferCache, normal, () =>
                 this.uploadAccesorToGpuWithAssertType(
@@ -525,8 +502,8 @@ export class GltfBinary {
                     "VEC3",
                     Float32Array,
                     GPUBufferUsage.VERTEX,
-                    `${name}:normal`
-                )
+                    `${name}:normal`,
+                ),
             ),
             texCoordBuffer = GltfBinary.cacheOr(
                 this.gpuBufferCache,
@@ -537,8 +514,8 @@ export class GltfBinary {
                         "VEC2",
                         Float32Array,
                         GPUBufferUsage.VERTEX,
-                        `${name}:texCoord`
-                    )
+                        `${name}:texCoord`,
+                    ),
             ),
             tangentBuffer =
                 tangent === undefined
@@ -549,8 +526,8 @@ export class GltfBinary {
                               "VEC4",
                               Float32Array,
                               GPUBufferUsage.VERTEX,
-                              `${name}:tangent`
-                          )
+                              `${name}:tangent`,
+                          ),
                       );
 
         return new Mesh(
@@ -559,14 +536,14 @@ export class GltfBinary {
             texCoordBuffer,
             tangentBuffer,
             indexBuffer,
-            this.json.accessors![gPrimitive.indices!].count! // This is just scuffed
+            nn(nn(this.json.accessors)[nn(gPrimitive.indices)].count),
         );
     }
 
     public getMeshP(mesh: number, primitive: number) {
         //FIXME(mbabnik): fix caching bullshit
         return GltfBinary.cacheOr(this.meshCache, (mesh << 4) | primitive, () =>
-            this.getMeshNoCache(mesh, primitive)
+            this.getMeshNoCache(mesh, primitive),
         );
     }
 
@@ -588,7 +565,7 @@ export class GltfBinary {
         Game.gpu.device.queue.copyExternalImageToTexture(
             { source: image },
             { texture },
-            [image.width, image.height, 1]
+            [image.width, image.height, 1],
         );
 
         generateMipmap(Game.gpu.device, texture);
@@ -598,7 +575,7 @@ export class GltfBinary {
 
     protected getGpuTexture(index: number) {
         return GltfBinary.cacheOr(this.textureCache, index, () =>
-            this.uploadTexture(index)
+            this.uploadTexture(index),
         );
     }
 
@@ -612,7 +589,7 @@ export class GltfBinary {
             : undefined;
         const baseSampler = pbr.baseColorTexture
             ? Game.gpu.getSampler(
-                  this.getTextureSamplerDescriptor(pbr.baseColorTexture.index)
+                  this.getTextureSamplerDescriptor(pbr.baseColorTexture.index),
               )
             : undefined;
         const baseFactor = pbr.baseColorFactor
@@ -625,8 +602,8 @@ export class GltfBinary {
         const mrSampler = pbr.metallicRoughnessTexture
             ? Game.gpu.getSampler(
                   this.getTextureSamplerDescriptor(
-                      pbr.metallicRoughnessTexture.index
-                  )
+                      pbr.metallicRoughnessTexture.index,
+                  ),
               )
             : undefined;
         const metalFactor = pbr.metallicFactor;
@@ -637,7 +614,7 @@ export class GltfBinary {
             : undefined;
         const emSampler = gMat.emissiveTexture
             ? Game.gpu.getSampler(
-                  this.getTextureSamplerDescriptor(gMat.emissiveTexture.index)
+                  this.getTextureSamplerDescriptor(gMat.emissiveTexture.index),
               )
             : undefined;
         const emFactor = gMat.emissiveFactor
@@ -661,8 +638,8 @@ export class GltfBinary {
                       texture: this.getGpuTexture(gMat.normalTexture.index),
                       sampler: Game.gpu.getSampler(
                           this.getTextureSamplerDescriptor(
-                              gMat.normalTexture.index
-                          )
+                              gMat.normalTexture.index,
+                          ),
                       ),
                       scale: gMat.normalTexture.scale ?? 1,
                   }
@@ -676,30 +653,30 @@ export class GltfBinary {
                 alphaCutoff: gMat.alphaCutoff,
                 mode: GltfBinary.ALPHA_MODE_MAP[gMat.alphaMode ?? "OPAQUE"],
             },
-            gMat.name ?? "unknown"
+            gMat.name ?? "unknown",
         );
     }
 
     public getMaterial(idx: number): Material {
         return GltfBinary.cacheOr(this.materialCache, idx, () =>
-            this.getMaterialNoCache(idx)
+            this.getMaterialNoCache(idx),
         );
     }
 
     public defaultScene(): TG.IScene {
         return nn(
             this.json.scenes?.[nn(this.json.scene, "No default scene")],
-            "Default scene OOB"
+            "Default scene OOB",
         );
     }
 
     public getScene(id: number): TG.IScene;
     public getScene(name: string): TG.IScene;
     public getScene(arg: string | number) {
-        if (typeof arg == "string") {
+        if (typeof arg === "string") {
             return nn(
-                this.json.scenes?.find((x) => x.name == arg),
-                "No matching scene"
+                this.json.scenes?.find((x) => x.name === arg),
+                "No matching scene",
             );
         }
 
@@ -727,9 +704,9 @@ export class GltfBinary {
 
         if (gNode.extras) {
             // Don't load non-visual objects into scene
-            if (gNode.extras["poi"]) return undefined;
-            if (gNode.extras["colider"]) return undefined;
-            if (gNode.extras["navmesh"]) return undefined;
+            if (gNode.extras.poi) return undefined;
+            if (gNode.extras.colider) return undefined;
+            if (gNode.extras.navmesh) return undefined;
         }
 
         // transform
@@ -756,8 +733,8 @@ export class GltfBinary {
                 new LightComponent(
                     this.getLight(lightId),
                     this.json.extensions?.KHR_lights_punctual?.lights[lightId]
-                        ?.name ?? `Light${lightId}`
-                )
+                        ?.name ?? `Light${lightId}`,
+                ),
             );
         }
 
@@ -786,13 +763,13 @@ export class GltfBinary {
     public getLight(id: number): THondaLight {
         const gLight = nn(
             this.json.extensions?.KHR_lights_punctual?.lights[id],
-            "Light ID OOB"
+            "Light ID OOB",
         );
 
         const color = gLight.color ?? [1, 1, 1],
             intensity = gLight.intensity ?? 1,
             maxRange = gLight.range ?? 100000,
-            castShadows = !gLight.extras?.["_noshadow"];
+            castShadows = !gLight.extras?._noshadow;
 
         switch (gLight.type) {
             case "spot":
@@ -824,70 +801,8 @@ export class GltfBinary {
                 } satisfies IDirectionalLight;
 
             default:
-                throw new Error("Unknown light type" + gLight.type);
+                throw new Error(`Unknown light type ${gLight.type}`);
         }
-    }
-
-    public getStaticColiders(sceneIndex = 0): StaticAABBColider[] {
-        const scene = nn(this.json.scenes?.[sceneIndex], "Scene idx OOB");
-        const coliders: StaticAABBColider[] = [];
-
-        for (const nodeIdx of scene.nodes ?? []) {
-            const gColiderNode = nn(this.json.nodes?.[nodeIdx], "node idx OOB");
-
-            const coliderLayers = gColiderNode.extras?.["colider"];
-            if (!coliderLayers || typeof coliderLayers != "string") continue;
-
-            const layers = coliderLayers
-                .trim()
-                .split(",")
-                .reduce((p, c) => {
-                    const key = c.trim().toLowerCase();
-                    const bit = GltfBinary.COLIDER_LAYER_MAP[key] ?? 0;
-                    if (bit == 0) console.warn(`Unknown colider layer: ${key}`);
-
-                    return p | bit;
-                }, 0);
-
-            const pos = gColiderNode.translation;
-            if (!pos) continue;
-            const scale = gColiderNode.scale ?? [1, 1, 1];
-
-            const { angle, axis } = quat.toAxisAngle(
-                gColiderNode.rotation ?? [0, 0, 0, 0]
-            );
-            let flipXz = false;
-
-            if (angle > 0) {
-                if (
-                    vec3.equalsApproximately(axis, [0, 1, 0]) ||
-                    vec3.equalsApproximately(axis, [0, -1, 0])
-                ) {
-                    flipXz = !!(Math.round(angle / (Math.PI / 2)) % 2);
-                } else if (vec3.length(axis) > 0.5) {
-                    console.warn(
-                        "unsupported quaternion rotation on AABB:",
-                        gColiderNode.rotation,
-                        angle,
-                        axis
-                    );
-                    continue;
-                }
-            }
-
-            const scaleX = Math.abs(scale[flipXz ? 2 : 0]),
-                scaleY = Math.abs(scale[1]),
-                scaleZ = Math.abs(scale[flipXz ? 0 : 2]);
-
-            const colider = new StaticAABBColider(
-                [pos[0] - scaleX, pos[1] - scaleY, pos[2] - scaleZ],
-                [pos[0] + scaleX, pos[1] + scaleY, pos[2] + scaleZ],
-                layers
-            );
-            colider.name = gColiderNode.name ?? `S${sceneIndex}.${nodeIdx}`;
-            coliders.push(colider);
-        }
-        return coliders;
     }
 
     // eslint-disable-next-line class-methods-use-this
@@ -924,8 +839,8 @@ export class GltfBinary {
 
     // eslint-disable-next-line class-methods-use-this
     protected convertNavmesh(
-        idxAcc: FavelaAccesor<Uint16Array, "SCALAR">,
-        posAcc: FavelaAccesor<Float32Array, "VEC3">
+        idxAcc: HondaAccesor<Uint16Array, "SCALAR">,
+        posAcc: HondaAccesor<Float32Array, "VEC3">,
     ): [number, number][][] {
         const idx = idxAcc.accessor,
             pos = posAcc.accessor;
@@ -953,26 +868,26 @@ export class GltfBinary {
                 this.json.scenes?.[0]?.nodes
                     ?.map((x) => this.json?.nodes?.[x])
                     .filter((x) => x)
-                    .find((x) => x?.extras?.["navmesh"])?.mesh ?? -1
+                    .find((x) => x?.extras?.navmesh)?.mesh ?? -1
             ],
-            `No navmesh nodes for scene ${scene}`
+            `No navmesh nodes for scene ${scene}`,
         );
 
         assert(
-            navMesh.primitives.length == 1,
-            "MULTIPLE PRIMITIVES IN NAVMESH!"
+            navMesh.primitives.length === 1,
+            "MULTIPLE PRIMITIVES IN NAVMESH!",
         );
         const prim = navMesh.primitives[0];
 
         const idxAccessor = this.getAccessorAndAssertType(
                 nn(prim.indices, "namvesh indices missing"),
                 "SCALAR",
-                Uint16Array
+                Uint16Array,
             ),
             posAccessor = this.getAccessorAndAssertType(
-                nn(prim.attributes["POSITION"], "namvesh indices missing"),
+                nn(prim.attributes.POSITION, "namvesh indices missing"),
                 "VEC3",
-                Float32Array
+                Float32Array,
             );
 
         return this.convertNavmesh(idxAccessor, posAccessor);
@@ -988,7 +903,7 @@ export class GltfBinary {
         const inAcc = this.getAccessorAndAssertType(
             gas.input,
             "SCALAR",
-            Float32Array
+            Float32Array,
         );
         const outAcc = this.getAccessor(gas.output);
 
@@ -1001,19 +916,19 @@ export class GltfBinary {
                 return new SSampler(
                     interp,
                     inAcc,
-                    outAcc as FavelaAccesor<Float32Array, "SCALAR">
+                    outAcc as HondaAccesor<Float32Array, "SCALAR">,
                 );
             case "VEC3":
                 return new V3Sampler(
                     interp,
                     inAcc,
-                    outAcc as FavelaAccesor<Float32Array, "VEC3">
+                    outAcc as HondaAccesor<Float32Array, "VEC3">,
                 );
             case "VEC4":
                 return new V4Sampler(
                     interp,
                     inAcc,
-                    outAcc as FavelaAccesor<Float32Array, "VEC4">
+                    outAcc as HondaAccesor<Float32Array, "VEC4">,
                 );
             default:
                 throw new Error(`Cannot animate ${outAcc.type}`);
@@ -1028,14 +943,14 @@ export class GltfBinary {
     public getAnimation(index: number): HAnimation {
         const gAnimation = nn(
             this.json.animations[index],
-            "Animation not found"
+            "Animation not found",
         );
 
         return new HAnimation(
             gAnimation.samplers.map((x) => this.convertAnimationSampler(x)),
             gAnimation.channels,
             this.id,
-            gAnimation.name ?? `${this.name}>anim>${index}`
+            gAnimation.name ?? `${this.name}>anim>${index}`,
         );
     }
 
@@ -1045,7 +960,7 @@ export class GltfBinary {
      * call .attach() first
      */
     public getAnimationByName(name: string): HAnimation {
-        const index = this.json.animations.findIndex((x) => x.name == name);
+        const index = this.json.animations.findIndex((x) => x.name === name);
         return this.getAnimation(index);
     }
 }

@@ -1,14 +1,13 @@
 import { nn } from "../util";
 import { Game } from "../state";
 import { Limits } from "../limits";
-import { createModules, createShaderContext } from "./shaders";
+import { createModules } from "./shaders";
 import { createPipelines } from "./pipelines";
-import { } from "./textures/viewport";
 import {
     ViewportPingPongTexture,
     ViewportTexture,
     ShadowMapTexture,
-    CubemapTexture,
+    type CubemapTexture,
 } from "./textures";
 import { createBindGroupLayouts } from "./bindGroupLayouts";
 import { setError } from "../util/status";
@@ -33,7 +32,7 @@ export class WebGpu {
     public shadowmaps = new ShadowMapTexture(
         Limits.MAX_SHADOWMAPS,
         Game.flags.has("shadowLow") ? 512 : 2048,
-        "shadowmaps"
+        "shadowmaps",
     );
 
     public canvasTexture!: GPUTexture;
@@ -43,7 +42,7 @@ export class WebGpu {
     public shaderModules: ReturnType<typeof createModules>;
     public bindGroupLayouts: ReturnType<typeof createBindGroupLayouts>;
     public pipelines: ReturnType<typeof createPipelines>;
-    private _queuedResize?: [number,number];
+    private _queuedResize?: [number, number];
     public wasResized = false;
 
     public renderScale = 1;
@@ -62,17 +61,17 @@ export class WebGpu {
             await navigator.gpu.requestAdapter({
                 powerPreference: "high-performance",
             }),
-            "Your browser doesn't support WebGPU"
+            "Your browser doesn't support WebGPU",
         );
         const device = nn(
             await adapter.requestDevice({
                 requiredFeatures: ["timestamp-query"],
             }),
-            "Couldn't obtain WebGPU device"
+            "Couldn't obtain WebGPU device",
         );
         const wg = nn(
             canvas.getContext("webgpu"),
-            "Couldn't obtain WebGPU context"
+            "Couldn't obtain WebGPU context",
         );
 
         canvas.width = document.body.clientWidth;
@@ -84,8 +83,11 @@ export class WebGpu {
         });
 
         console.log({
-            adapter, device, canvas, wg
-        })
+            adapter,
+            device,
+            canvas,
+            wg,
+        });
 
         return new WebGpu(adapter, device, canvas, wg);
     }
@@ -94,16 +96,16 @@ export class WebGpu {
         public readonly adapter: GPUAdapter,
         public device: GPUDevice,
         public readonly canvas: HTMLCanvasElement,
-        public readonly ctx: GPUCanvasContext
+        public readonly ctx: GPUCanvasContext,
     ) {
         console.log(
-            "%cFavela/Honda (WebGPU)",
-            "font-family: sans-serif; font-weight: bold; font-size: 2rem; color: #f44; background-color: black; padding: 1rem"
+            "%ctinrlike/Honda (WebGPU)",
+            "font-family: sans-serif; font-weight: bold; font-size: 2rem; color: #f44; background-color: black; padding: 1rem",
         );
         console.log(
             `%cGPU: %c${adapter.info.description}`,
             "font-family: sans-serif; font-weight: bold; font-size: 1rem",
-            "font-family: sans-serif; font-size: 1rem"
+            "font-family: sans-serif; font-size: 1rem",
         );
         console.groupCollapsed("GPUInfo");
         console.log("Prefered fmt:", this.pFormat);
@@ -142,6 +144,7 @@ export class WebGpu {
             setError("Lost device");
             console.error("lost device", x);
             device.destroy();
+            // biome-ignore lint/style/noNonNullAssertion: We want to break stuff on purpose
             this.device = null!; // cause device accesses to error out
         });
 
@@ -151,6 +154,7 @@ export class WebGpu {
             setError(`Lost device ${err.error.message}`);
             console.error("gpu error", err);
             device.destroy();
+            // biome-ignore lint/style/noNonNullAssertion: We want to break stuff on purpose
             this.device = null!;
         };
 
@@ -161,8 +165,6 @@ export class WebGpu {
                     (think about retina, scaling)
         */
         this.ro.observe(canvas, { box: "device-pixel-content-box" });
-
-        console.log(createShaderContext())
     }
 
     public get aspectRatio() {
@@ -174,9 +176,9 @@ export class WebGpu {
         const h = override?.[1] ?? this.canvas.height;
         this._aspectRatio = w / h;
 
-        Object.values(this.textures).forEach((t) =>
-            t.resize(this.device, w, h)
-        );
+        Object.values(this.textures).forEach((t) => {
+            t.resize(this.device, w, h);
+        });
         this.wasResized = true;
     }
 
@@ -191,23 +193,22 @@ export class WebGpu {
 
     private resizeCallback([e]: ResizeObserverEntry[]) {
         this._queuedResize = [
-             Math.round(
+            Math.round(
                 nn(e.devicePixelContentBoxSize?.[0].inlineSize) *
-                this.renderScale
+                    this.renderScale,
             ) & ~1,
             Math.round(
                 nn(e.devicePixelContentBoxSize?.[0].blockSize) *
-                this.renderScale
-            ) & ~1
-        ]
-        
+                    this.renderScale,
+            ) & ~1,
+        ];
     }
 
     public frameStart() {
         this.resize();
-        
+
         // Chrome seems to pass a "new?" frame every time, firefox reuses the same one
-        if (this.canvasTexture != this.ctx.getCurrentTexture()) {
+        if (this.canvasTexture !== this.ctx.getCurrentTexture()) {
             this.canvasTexture = this.ctx.getCurrentTexture();
             this.canvasView = this.canvasTexture.createView({
                 label: "canvasView",
@@ -215,7 +216,7 @@ export class WebGpu {
         }
 
         this.queryIndex = 0;
-        this.wasQueryReady = this.queryMapBuffer.mapState == "unmapped";
+        this.wasQueryReady = this.queryMapBuffer.mapState === "unmapped";
     }
 
     /**
@@ -230,7 +231,7 @@ export class WebGpu {
             0,
             this.queryIndex,
             this.queryBuffer,
-            0
+            0,
         );
 
         if (this.wasQueryReady) {
@@ -240,21 +241,20 @@ export class WebGpu {
                 0,
                 readBuf,
                 0,
-                this.queryBuffer.size
+                this.queryBuffer.size,
             );
 
             this.device.queue.submit([Game.cmdEncoder.finish()]);
 
-            await readBuf.mapAsync(GPUMapMode.READ)
+            await readBuf.mapAsync(GPUMapMode.READ);
 
             const times = new BigInt64Array(readBuf.getMappedRange());
             Game.perf.sumbitGpuTimestamps(
                 this.timestampLabels,
                 times,
-                this.queryIndex >> 1
+                this.queryIndex >> 1,
             );
             readBuf.unmap();
-
         } else {
             this.device.queue.submit([Game.cmdEncoder.finish()]);
         }
@@ -291,7 +291,7 @@ export class WebGpu {
 
         this.gpuSamplerMap[key] = h = this.device.createSampler({
             maxAnisotropy:
-                d.minFilter == "linear" && d.mipmapFilter == "linear" ? 4 : 1,
+                d.minFilter === "linear" && d.mipmapFilter === "linear" ? 4 : 1,
             ...d,
         });
         return h;

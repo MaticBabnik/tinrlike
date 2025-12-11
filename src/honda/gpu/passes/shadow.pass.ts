@@ -1,5 +1,5 @@
 import { Game } from "@/honda/state";
-import { IPass } from "./pass.interface";
+import type { IPass } from "./pass.interface";
 import { LightSystem } from "@/honda/systems/light";
 import { MeshSystem } from "@/honda/systems/mesh";
 
@@ -63,7 +63,7 @@ export class ShadowMapPass implements IPass {
                     c.nInstances,
                     0,
                     0,
-                    c.firstInstance
+                    c.firstInstance,
                 );
             }
 

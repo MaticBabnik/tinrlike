@@ -1,7 +1,7 @@
-import { SceneNode } from "@/honda/core/node";
+import type { SceneNode } from "@/honda/core/node";
 import { System } from "../../core/ecs";
 import { MeshComponent } from "./mesh.component";
-import { Game, Material, Mesh } from "@/honda";
+import { Game, type Material, type Mesh } from "@/honda";
 
 interface IDrawCall {
     mat: Material;
@@ -53,11 +53,11 @@ export class MeshSystem extends System {
             });
 
         this.calls = [];
-        if (sortedEntities.length == 0) return;
+        if (sortedEntities.length === 0) return;
 
         let i = 0,
-            previousMesh: Mesh = null!,
-            previousMat: Material = null!;
+            previousMesh: Mesh | undefined,
+            previousMat: Material | undefined;
 
         for (const [
             { material: mat, primitive: mesh },
@@ -66,7 +66,7 @@ export class MeshSystem extends System {
             this.instances.set(tc.$glbMtx, i * 32);
             this.instances.set(tc.$glbInvMtx, i * 32 + 16);
 
-            if (previousMat != mat || previousMesh != mesh) {
+            if (previousMat !== mat || previousMesh !== mesh) {
                 this.calls.push({
                     firstInstance: i,
                     nInstances: 1,
@@ -76,6 +76,7 @@ export class MeshSystem extends System {
                 previousMat = mat;
                 previousMesh = mesh;
             } else {
+                // biome-ignore lint/style/noNonNullAssertion: can't be undefined
                 this.calls.at(-1)!.nInstances++;
             }
             i++;
@@ -84,9 +85,9 @@ export class MeshSystem extends System {
         Game.gpu.device.queue.writeBuffer(
             this.instanceBuffer,
             0,
-            this.instances,
+            this.instances.buffer,
             0,
-            4 * 32 * i
+            4 * 32 * i,
         );
     }
 }

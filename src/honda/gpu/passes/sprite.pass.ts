@@ -1,19 +1,17 @@
 import { Game } from "../../state";
 import { makeStructuredView } from "webgpu-utils";
-import { IPass } from "./pass.interface";
+import type { IPass } from "./pass.interface";
 import { Sprite2dSystem } from "@/honda/systems/sprite2d";
 import { nn } from "@/honda/util";
 
-
-type Run = { atlas: string, start: number, count: number }
+type Run = { atlas: string; start: number; count: number };
 
 export class SpritePass implements IPass {
     protected uniforms = makeStructuredView(
-        Game.gpu.shaderModules.devsprite.defs.structs["Uniforms"]
+        Game.gpu.shaderModules.devsprite.defs.structs.Uniforms,
     );
 
     protected storageBuffer: Float32Array;
-
 
     protected uniformsGpu: GPUBuffer;
     protected storageGpu: GPUBuffer;
@@ -26,15 +24,11 @@ export class SpritePass implements IPass {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
-        this.storageBuffer = new Float32Array(
-            maxSprites * 12
-        );
+        this.storageBuffer = new Float32Array(maxSprites * 12);
 
         this.storageGpu = Game.gpu.device.createBuffer({
             size: this.storageBuffer.byteLength,
-            usage:
-                GPUBufferUsage.STORAGE |
-                GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
     }
 
@@ -45,7 +39,9 @@ export class SpritePass implements IPass {
             return group;
         }
 
-        const atlasSpec = nn(Game.ecs.getSystem(Sprite2dSystem).$atlases.get(atlas));
+        const atlasSpec = nn(
+            Game.ecs.getSystem(Sprite2dSystem).$atlases.get(atlas),
+        );
 
         const newGroup = Game.gpu.device.createBindGroup({
             layout: Game.gpu.bindGroupLayouts.devsprite,
@@ -59,8 +55,8 @@ export class SpritePass implements IPass {
                 {
                     binding: 1,
                     resource: {
-                        buffer: this.storageGpu
-                    }
+                        buffer: this.storageGpu,
+                    },
                 },
                 {
                     binding: 2,
@@ -68,14 +64,12 @@ export class SpritePass implements IPass {
                 },
                 {
                     binding: 3,
-                    resource: Game.gpu.getSampler(
-                        {
-                            minFilter: "linear",
-                            magFilter: "linear",
-                            mipmapFilter: "linear",
-                        }
-                    )
-                }
+                    resource: Game.gpu.getSampler({
+                        minFilter: "linear",
+                        magFilter: "linear",
+                        mipmapFilter: "linear",
+                    }),
+                },
             ],
         });
 
@@ -83,8 +77,6 @@ export class SpritePass implements IPass {
 
         return newGroup;
     }
-
-
 
     apply() {
         const spriteSystem = Game.ecs.getSystem(Sprite2dSystem);
@@ -95,20 +87,22 @@ export class SpritePass implements IPass {
             return;
         }
 
-        const runs: Run[] = [{
-            atlas: sprites[0].atlas,
-            start: 0,
-            count: 0
-        }];
+        const runs: Run[] = [
+            {
+                atlas: sprites[0].atlas,
+                start: 0,
+                count: 0,
+            },
+        ];
 
         for (let i = 0; i < sprites.length; i++) {
-            let run = runs[runs.length - 1]!;
+            let run = runs[runs.length - 1];
 
             if (run.atlas !== sprites[i].atlas) {
                 run = {
                     atlas: sprites[i].atlas,
                     start: i,
-                    count: 0
+                    count: 0,
                 };
                 runs.push(run);
             }
@@ -120,7 +114,6 @@ export class SpritePass implements IPass {
             const uvty = 1 / atlas.rows;
             const tx = (sprites[i].sid % atlas.columns) * uvtx;
             const ty = Math.floor(sprites[i].sid / atlas.columns) * uvty;
-
 
             this.storageBuffer[offset + 0] = sprites[i].x;
             this.storageBuffer[offset + 1] = sprites[i].y;
@@ -157,30 +150,31 @@ export class SpritePass implements IPass {
 
         this.uniforms.set({
             scale: [wr, hr],
-        })
+        });
 
         Game.gpu.device.queue.writeBuffer(
             this.storageGpu,
             0,
             this.storageBuffer.buffer,
             0,
-            sprites.length * 12 * 4
+            sprites.length * 12 * 4,
         );
 
         Game.gpu.device.queue.writeBuffer(
             this.uniformsGpu,
             0,
-            this.uniforms.arrayBuffer
+            this.uniforms.arrayBuffer,
         );
 
         const pass = Game.cmdEncoder.beginRenderPass({
-            colorAttachments:
-                [{
+            colorAttachments: [
+                {
                     loadOp: "load",
                     storeOp: "store",
                     view: Game.gpu.canvasView,
-                }],
-            timestampWrites: Game.gpu.timestamp('Sprite')
+                },
+            ],
+            timestampWrites: Game.gpu.timestamp("Sprite"),
         });
         pass.setPipeline(Game.gpu.pipelines.sprite);
 
@@ -188,7 +182,7 @@ export class SpritePass implements IPass {
             pass.setBindGroup(0, this.getOrCreateBindGroup(run.atlas, false));
             pass.draw(4, run.count, 0, run.start);
         }
-        
+
         pass.end();
     }
 }

@@ -1,12 +1,12 @@
 import { makeStructuredView } from "webgpu-utils";
-import { IPass } from "./pass.interface";
+import type { IPass } from "./pass.interface";
 import { Game } from "@/honda/state";
 import { CameraSystem } from "@/honda/systems/camera";
 import { LightSystem } from "@/honda/systems/light";
 
 export class ShadePass implements IPass {
     protected settings = makeStructuredView(
-        Game.gpu.shaderModules.shade.defs.structs["ShadeUniforms"]
+        Game.gpu.shaderModules.shade.defs.structs.ShadeUniforms,
     );
 
     protected uniforms: GPUBuffer;
@@ -104,7 +104,7 @@ export class ShadePass implements IPass {
         Game.gpu.device.queue.writeBuffer(
             this.uniforms,
             0,
-            this.settings.arrayBuffer
+            this.settings.arrayBuffer,
         );
         pass.setBindGroup(0, this.shadeMainGroup);
         pass.draw(3);

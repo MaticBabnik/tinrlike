@@ -1,4 +1,4 @@
-import { Mat4, vec3, quat, mat4 } from "wgpu-matrix";
+import { type Mat4, vec3, quat, mat4 } from "wgpu-matrix";
 
 /**
  * transform? trans form
@@ -16,7 +16,7 @@ export class Transform {
     constructor(
         public translation = vec3.create(),
         public rotation = quat.identity(),
-        public scale = vec3.create(1, 1, 1)
+        public scale = vec3.create(1, 1, 1),
     ) {
         this._locMtx = mat4.identity();
         this._locInvMtx = mat4.identity();
@@ -36,7 +36,7 @@ export class Transform {
         mat4.multiply(
             this._locMtx,
             mat4.fromQuat(this.rotation, this._scratch),
-            this._locMtx
+            this._locMtx,
         );
         mat4.scale(this._locMtx, this.scale, this._locMtx);
 

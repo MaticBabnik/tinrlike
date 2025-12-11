@@ -1,4 +1,4 @@
-import { SceneNode } from "@/honda";
+import type { SceneNode } from "@/honda";
 
 /* eslint-disable class-methods-use-this */
 export abstract class Script {

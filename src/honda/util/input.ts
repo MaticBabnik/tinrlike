@@ -1,5 +1,6 @@
 //TODO: Make a game-specific input system (aimX, aimY, moveX, moveY, fire, ...)
 //TODO: |-Allow switch between mouse/controller
+//TODO: |-Allow rebinding
 
 export class Input {
     public btnMap: Record<string, boolean> = {};
@@ -15,6 +16,7 @@ export class Input {
         rootElement.addEventListener("mousedown", (ev) => this.onMouseDown(ev));
         rootElement.addEventListener("mouseup", (ev) => this.onMouseUp(ev));
         rootElement.addEventListener("mousemove", (ev) => this.onMouseMove(ev));
+        window.addEventListener("blur", () => this.onLoseFocus());
         document.addEventListener("pointerlockchange", () => {
             if (!document.pointerLockElement) {
                 this.pointerLocked = false;
@@ -51,6 +53,12 @@ export class Input {
         this.btnMap[`mouse${ev.button}`] = false;
     }
 
+    protected onLoseFocus() {
+        for (const k in this.btnMap) {
+            this.btnMap[k] = false;
+        }
+    }
+
     protected async lockPointer(unadjusted = true) {
         try {
             if (unadjusted) {
@@ -64,7 +72,7 @@ export class Input {
         } catch (ex) {
             if (unadjusted && ex instanceof DOMException) {
                 console.warn(
-                    "unadjustedMovement pointerLock failed, falling back"
+                    "unadjustedMovement pointerLock failed, falling back",
                 );
                 this.lockPointer(false);
             } else console.error("Could not get pointer lock");

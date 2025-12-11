@@ -1,11 +1,13 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: this object is only safe to use after init */
+
 import type { WebGpu } from "./gpu";
 import type { Input } from "./util/input";
 import { Perf } from "./util/perf";
 import GUI from "muigui";
-import { Flags } from "./util/flags";
+import type { Flags } from "./util/flags";
 import { ECS } from "./core/ecs";
 import { Scene } from "./core/scene";
-import { IPass } from "./gpu/passes";
+import type { IPass } from "./gpu/passes";
 
 export const Game = {
     ecs: new ECS(),

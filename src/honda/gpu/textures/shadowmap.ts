@@ -6,7 +6,7 @@ export class ShadowMapTexture {
     constructor(
         public nLights: number,
         public size = 1024,
-        public label: string | undefined = undefined
+        public label: string | undefined = undefined,
     ) {}
 
     public alloc(dev: GPUDevice) {

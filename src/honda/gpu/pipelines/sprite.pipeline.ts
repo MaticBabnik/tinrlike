@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 
 export function createSprite(g: WebGpu) {
     const { module } = g.shaderModules.devsprite;
@@ -6,36 +6,35 @@ export function createSprite(g: WebGpu) {
     return g.device.createRenderPipeline({
         label: "sprite",
         layout: g.device.createPipelineLayout({
-            bindGroupLayouts: [
-                g.bindGroupLayouts.devsprite
-            ],
+            bindGroupLayouts: [g.bindGroupLayouts.devsprite],
         }),
         primitive: {
-            topology: 'triangle-strip',
-            cullMode: 'none',
+            topology: "triangle-strip",
+            cullMode: "none",
         },
         vertex: {
             module,
-            buffers: []
+            buffers: [],
         },
         fragment: {
             module,
-            targets: [{
-                format: g.pFormat,
-                blend: {
-                    color: {
-                        srcFactor: 'src-alpha',
-                        dstFactor: 'one-minus-src-alpha',
-                        operation: 'add',
+            targets: [
+                {
+                    format: g.pFormat,
+                    blend: {
+                        color: {
+                            srcFactor: "src-alpha",
+                            dstFactor: "one-minus-src-alpha",
+                            operation: "add",
+                        },
+                        alpha: {
+                            srcFactor: "one",
+                            dstFactor: "one-minus-src-alpha",
+                            operation: "add",
+                        },
                     },
-                    alpha: {
-                        srcFactor: 'one',
-                        dstFactor: 'one-minus-src-alpha',
-                        operation: 'add',
-                    },
-                }
-            }],
-
+                },
+            ],
         },
     });
 }

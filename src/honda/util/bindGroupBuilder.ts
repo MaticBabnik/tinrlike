@@ -41,7 +41,10 @@ type Remove<T, U> = T extends U ? never : T;
 /**
  * BindGroupLayout Builder
  */
-export interface IBGLBuilder<Name extends string = string, Available = BindingIndex> {
+export interface IBGLBuilder<
+    Name extends string = string,
+    Available = BindingIndex,
+> {
     /**
      * The name/label of the bind group layout
      */
@@ -78,15 +81,18 @@ export interface IBGLBuilder<Name extends string = string, Available = BindingIn
  */
 export function bindGroupLayout<Name extends string, T extends IBGLBuilder>(
     name: Name,
-    extend?: T
-): IBGLBuilder<Name, T extends IBGLBuilder<string, infer TAvl> ? TAvl : BindingIndex> {
+    extend?: T,
+): IBGLBuilder<
+    Name,
+    T extends IBGLBuilder<string, infer TAvl> ? TAvl : BindingIndex
+> {
     const bg = {
         name,
         groups: (extend as __IBGLBuilderPrivate | undefined)?.groups ?? {},
         binding(id, visStr, type, options) {
             assert(
                 !(id in this.groups),
-                `Binding ${id} already exists on ${this.name}`
+                `Binding ${id} already exists on ${this.name}`,
             );
 
             const visibility = visStr.split("").reduce(
@@ -97,7 +103,7 @@ export function bindGroupLayout<Name extends string, T extends IBGLBuilder>(
                         v: GPUShaderStage.VERTEX,
                         f: GPUShaderStage.FRAGMENT,
                     }[c] ?? 0),
-                0
+                0,
             );
 
             return {
@@ -126,10 +132,10 @@ export function bindGroupLayout<Name extends string, T extends IBGLBuilder>(
 /**
  * @param device WebGPU device
  * @param specs An 'as const' array of IBGLBuilder-s
- * @returns A record of the bind group layouts indexed by their names. 
+ * @returns A record of the bind group layouts indexed by their names.
  */
 export function createBindGroupLayoutsFromArray<
-    T extends readonly IBGLBuilder[]
+    T extends readonly IBGLBuilder[],
 >(device: GPUDevice, specs: T) {
     return Object.fromEntries(specs.map((x) => [x.name, x.create(device)])) as {
         [K in T[number] as K["name"]]: GPUBindGroupLayout;

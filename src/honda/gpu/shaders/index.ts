@@ -2,8 +2,7 @@ import {
     makeShaderDataDefinitions,
     type ShaderDataDefinitions,
 } from "webgpu-utils";
-import { ParsedRegistry, parseIntoRegistry } from "wesl";
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 
 type ShaderKey =
     | "flipx"
@@ -25,12 +24,6 @@ const shaderSources = import.meta.glob("./*.wgsl", {
     query: "raw",
     import: "default",
 }) as Record<ShaderKey, string>;
-
-const sources2 = import.meta.glob("./**/*.w(e|g)sl", {
-    eager: true,
-    query: "raw",
-    import: "default",
-});
 
 export default shaderSources;
 
@@ -56,14 +49,4 @@ export function createModules(g: WebGpu) {
     }
 
     return ax;
-}
-
-export function createShaderContext() {
-    const registry: ParsedRegistry = { modules: {} };
-
-    const pathsFixed = Object.fromEntries(Object.entries(sources2 as Record<string, string>).map(([k, v]) => [k.replace(/^\.\//, ''), v]));
-
-    parseIntoRegistry(pathsFixed, registry, "honda", "honda");
-
-    return registry;
 }

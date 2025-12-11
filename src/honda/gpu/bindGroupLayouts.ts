@@ -1,4 +1,4 @@
-import { WebGpu } from ".";
+import type { WebGpu } from ".";
 import {
     bindGroupLayout,
     createBindGroupLayoutsFromArray,

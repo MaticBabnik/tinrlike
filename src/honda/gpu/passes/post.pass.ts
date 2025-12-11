@@ -1,19 +1,20 @@
 import { Game } from "../../state";
 import { makeStructuredView } from "webgpu-utils";
-import { IPass } from "./pass.interface";
+import type { IPass } from "./pass.interface";
 import { CameraSystem } from "@/honda/systems/camera";
+import { nn } from "@/honda/util";
 
 function mode() {
     const map = Game.input.btnMap;
-    if (map["KeyB"]) return 1; // wdepth
-    if (map["KeyN"]) return 2; // normal
-    if (map["KeyM"]) return 3; // normal
+    if (map.KeyB) return 1; // wdepth
+    if (map.KeyN) return 2; // normal
+    if (map.KeyM) return 3; // normal
     return 0;
 }
 
 export class PostprocessPass implements IPass {
     protected settings = makeStructuredView(
-        Game.gpu.shaderModules.postprocess.defs.structs["PostCfg"]
+        Game.gpu.shaderModules.postprocess.defs.structs.PostCfg,
     );
 
     protected settingsGpuBuffer: GPUBuffer;
@@ -89,7 +90,7 @@ export class PostprocessPass implements IPass {
         this.settings.set({
             mode: mode(),
 
-            inverseProjection: csys.activeCamera.projMtxInv,
+            inverseProjection: nn(csys.activeCamera).projMtxInv,
             camera: csys.viewMtx,
 
             ...this.guiSettings,
@@ -112,7 +113,7 @@ export class PostprocessPass implements IPass {
         Game.gpu.device.queue.writeBuffer(
             this.settingsGpuBuffer,
             0,
-            this.settings.arrayBuffer
+            this.settings.arrayBuffer,
         );
         post.setBindGroup(0, this.bindGroup);
         post.draw(3);

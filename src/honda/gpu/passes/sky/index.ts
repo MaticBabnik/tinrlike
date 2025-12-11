@@ -1,1 +1,1 @@
-export * from "./sky.pass"
+export * from "./sky.pass";

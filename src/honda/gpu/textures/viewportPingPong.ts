@@ -5,7 +5,7 @@ export class ViewportPingPongTexture<Tformat extends GPUTextureFormat> {
     constructor(
         public format: Tformat,
         public renderScale: number = 1,
-        public label = "<unk>"
+        public label = "<unk>",
     ) {}
 
     public resize(dev: GPUDevice, viewportW: number, viewportH: number) {

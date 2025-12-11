@@ -1,7 +1,7 @@
 import { Game } from "@/honda/state";
-import { IPass } from "./pass.interface";
+import type { IPass } from "./pass.interface";
 import { setTypedValues } from "webgpu-utils";
-import { ViewportPingPongTexture } from "../textures/viewportPingPong";
+import type { ViewportPingPongTexture } from "../textures/viewportPingPong";
 
 const ALIGNED_UNIFORM_SIZE = 1280;
 
@@ -12,7 +12,7 @@ function halfGauss(n: number) {
     const factor = 1 / (Math.sqrt(2 * Math.PI) * sigma);
 
     const kernel = [...Array(n + 1)].map(
-        (_, x) => factor * Math.exp((-x * x) / (2 * sigma * sigma))
+        (_, x) => factor * Math.exp((-x * x) / (2 * sigma * sigma)),
     );
     const sum = kernel.reduce((acc, v, i) => acc + (i === 0 ? v : 2 * v), 0);
     return kernel.map((v) => [v / sum, v / sum, v / sum, v / sum]);
@@ -39,14 +39,14 @@ export class BlurPass implements IPass {
                     addressModeV: "clamp-to-edge",
                     magFilter: "linear",
                     minFilter: "linear",
-                    mipmapFilter: 'linear'
+                    mipmapFilter: "linear",
                 }),
             },
         ];
 
         this.bindGroup = [
             Game.gpu.device.createBindGroup({
-                label: this.label + "A",
+                label: `${this.label}A`,
                 layout: Game.gpu.bindGroupLayouts.blur,
                 entries: [
                     ...common,
@@ -58,7 +58,7 @@ export class BlurPass implements IPass {
                 ],
             }),
             Game.gpu.device.createBindGroup({
-                label: this.label + "B",
+                label: `${this.label}B`,
                 layout: Game.gpu.bindGroupLayouts.blur,
                 entries: [
                     ...common,
@@ -77,24 +77,24 @@ export class BlurPass implements IPass {
         const krnl = halfGauss(this.radius);
 
         setTypedValues(
-            Game.gpu.shaderModules.blur1d.defs.structs["BlurUniforms"],
+            Game.gpu.shaderModules.blur1d.defs.structs.BlurUniforms,
             {
                 v: [1 / this.texture.tex.width, 0],
                 size: this.radius,
                 krnl,
             },
             this.buffer,
-            0
+            0,
         );
         setTypedValues(
-            Game.gpu.shaderModules.blur1d.defs.structs["BlurUniforms"],
+            Game.gpu.shaderModules.blur1d.defs.structs.BlurUniforms,
             {
                 v: [0, 1 / this.texture.tex.height],
                 size: this.radius,
                 krnl,
             },
             this.buffer,
-            ALIGNED_UNIFORM_SIZE
+            ALIGNED_UNIFORM_SIZE,
         );
 
         Game.gpu.device.queue.writeBuffer(this.gpuBuffer, 0, this.buffer);
@@ -104,7 +104,7 @@ export class BlurPass implements IPass {
         protected texture: ViewportPingPongTexture<GPUTextureFormat>,
         protected pipeline: GPURenderPipeline,
         protected radius = 7,
-        protected label = "<blur:unk>"
+        protected label = "<blur:unk>",
     ) {
         this.gpuBuffer = Game.gpu.device.createBuffer({
             label,

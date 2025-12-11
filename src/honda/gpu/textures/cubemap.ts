@@ -29,7 +29,7 @@ export class CubemapTexture {
      */
     public constructor(
         public readonly size: number,
-        public readonly label = "<unnamed cubemap>"
+        public readonly label = "<unnamed cubemap>",
     ) {
         this.mips = Math.log2(size / 32) + 1;
 
@@ -175,9 +175,9 @@ export class CubemapTexture {
     public static async loadRGBM(
         imageUrls: string[],
         label = "<unnamed cubemap>",
-        scale = 1
+        scale = 1,
     ) {
-        assert(imageUrls.length == 6, "Expected 6 sides");
+        assert(imageUrls.length === 6, "Expected 6 sides");
         const images = await Promise.all(
             imageUrls.map(async (x) => {
                 const img = new Image();
@@ -185,27 +185,27 @@ export class CubemapTexture {
                 await img.decode();
 
                 assert(img.width >= 128, "Expected at least 128x128 cubemaps");
-                assert(img.width == img.height, "Expected square sides");
+                assert(img.width === img.height, "Expected square sides");
                 assert(
                     img.width
                         .toString(2)
                         .split("")
-                        .filter((y) => y == "1").length == 1, // popcount at home :sob:
-                    "Expected power of two size"
+                        .filter((y) => y === "1").length === 1, // popcount at home :sob:
+                    "Expected power of two size",
                 );
 
                 return createImageBitmap(img, {
                     colorSpaceConversion: "none",
                     premultiplyAlpha: "none",
                 });
-            })
+            }),
         );
 
         const size = images[0].width;
 
         assert(
-            images.find((x) => x.width != size) == undefined,
-            "All textures must be of same size"
+            images.find((x) => x.width !== size) === undefined,
+            "All textures must be of same size",
         );
 
         const texture = new CubemapTexture(size, label);
@@ -232,7 +232,7 @@ export class CubemapTexture {
             0,
             uniforms,
             0,
-            uniforms.length
+            uniforms.length,
         );
 
         const bindGroup = Game.gpu.device.createBindGroup({
@@ -254,7 +254,7 @@ export class CubemapTexture {
             Game.gpu.device.queue.copyExternalImageToTexture(
                 { source: images[i] },
                 { texture: tmp },
-                [size, size, 1]
+                [size, size, 1],
             );
 
             const rp = enc.beginRenderPass({

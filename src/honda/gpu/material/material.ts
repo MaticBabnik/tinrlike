@@ -17,11 +17,12 @@ const MaterialStruct = makeShaderDataDefinitions(`struct Material {
 };`).structs.Material;
 
 export class Material {
-    protected static defaultTexture?: GPUTexture;
+    // don't access directly, use getDefaultTexture()
+    protected static _defaultTexture: GPUTexture;
 
     protected static getDefaultTexture(): GPUTexture {
-        if (!Material.defaultTexture) {
-            Material.defaultTexture = Game.gpu.device.createTexture({
+        if (!Material._defaultTexture) {
+            Material._defaultTexture = Game.gpu.device.createTexture({
                 label: "MATERIAL_DUMMY",
                 format: "rgba8unorm",
                 viewFormats: ["rgba8unorm", "rgba8unorm-srgb"],
@@ -33,14 +34,14 @@ export class Material {
             });
 
             Game.gpu.device.queue.writeTexture(
-                { texture: Material.defaultTexture },
+                { texture: Material._defaultTexture },
                 new Uint8Array([255, 255, 255, 255]),
                 { bytesPerRow: 4 },
-                [1, 1, 1]
+                [1, 1, 1],
             );
         }
 
-        return this.defaultTexture!;
+        return Material._defaultTexture;
     }
 
     public static withoutTextures(
@@ -48,7 +49,7 @@ export class Material {
         metal: number = 0.5,
         rough: number = 0.5,
         emission: [number, number, number] = [0, 0, 0],
-        label?: string
+        label?: string,
     ) {
         return new Material(
             { factor: vec4.create(color[0], color[1], color[2], 1) },
@@ -56,7 +57,7 @@ export class Material {
             undefined,
             { factor: vec3.create(...emission) },
             {},
-            label
+            label,
         );
     }
 
@@ -79,7 +80,7 @@ export class Material {
         normal: Mat.NormalOpt | undefined,
         emission: Partial<Mat.Emission>,
         alpha: Partial<Mat.Alpha>,
-        public readonly label?: string
+        public readonly label?: string,
     ) {
         this.id = getNewResourceId();
         const sampler = Game.gpu.getSampler({
@@ -115,8 +116,8 @@ export class Material {
         };
 
         this.type =
-            (normal != undefined ? NORMALMAP_BIT : 0) |
-            (this.alpha.mode == Mat.AlphaMode.BLEND ? TRANSPARENCY_BIT : 0);
+            (normal !== undefined ? NORMALMAP_BIT : 0) |
+            (this.alpha.mode === Mat.AlphaMode.BLEND ? TRANSPARENCY_BIT : 0);
 
         this.type_v2 =
             (this.alpha.mode << 10) |
@@ -146,7 +147,7 @@ export class Material {
             roughFactor: this.metalRough.roughFactor,
             normalScale: this.normal?.scale ?? 1,
             alphaCutoff: this.alpha.alphaCutoff ?? 0.5,
-            ignoreAlpha: this.alpha.mode == Mat.AlphaMode.OPAQUE ? 1 : 0,
+            ignoreAlpha: this.alpha.mode === Mat.AlphaMode.OPAQUE ? 1 : 0,
         });
 
         this.materialData = Game.gpu.device.createBuffer({
@@ -158,21 +159,23 @@ export class Material {
         Game.gpu.device.queue.writeBuffer(
             this.materialData,
             0,
-            view.arrayBuffer
+            view.arrayBuffer,
         );
 
-        const optionalNormalMap = this.normal
-            ? [
-                  {
-                      binding: 7,
-                      resource: this.normal!.texture.createView({
-                          label: `${label}:normalmap`,
-                          format: "rgba8unorm",
-                      }),
-                  },
-                  { binding: 8, resource: this.normal!.sampler },
-              ]
-            : [];
+        let optionalNormalMap: GPUBindGroupEntry[] = [];
+
+        if (this.normal) {
+            optionalNormalMap = [
+                {
+                    binding: 7,
+                    resource: this.normal.texture.createView({
+                        label: `${label}:normalmap`,
+                        format: "rgba8unorm",
+                    }),
+                },
+                { binding: 8, resource: this.normal.sampler },
+            ];
+        }
 
         this.bindGroup = Game.gpu.device.createBindGroup({
             label,
@@ -199,12 +202,12 @@ export class Material {
                 { binding: 4, resource: this.metalRough.sampler },
                 {
                     binding: 5,
-                    resource: this.emission!.texture.createView({
+                    resource: this.emission.texture.createView({
                         label: `${label}:emission`,
                         format: "rgba8unorm",
                     }),
                 },
-                { binding: 6, resource: this.emission!.sampler },
+                { binding: 6, resource: this.emission.sampler },
                 ...optionalNormalMap,
             ],
         });

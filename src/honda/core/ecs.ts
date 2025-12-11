@@ -1,5 +1,5 @@
 import { nn } from "../util";
-import { SceneNode } from "./node";
+import type { SceneNode } from "./node";
 
 /* eslint-disable class-methods-use-this */
 export class ECS {
@@ -28,27 +28,35 @@ export class ECS {
     }
 
     public earlyUpdate() {
-        this._systems.forEach((x) => x.earlyUpdate());
+        this._systems.forEach((x) => {
+            x.earlyUpdate();
+        });
     }
 
     public update() {
-        this._systems.forEach((x) => x.update());
+        this._systems.forEach((x) => {
+            x.update();
+        });
     }
 
     public lateUpdate() {
-        this._systems.forEach((x) => x.lateUpdate());
+        this._systems.forEach((x) => {
+            x.lateUpdate();
+        });
     }
 
     // TOOD(mbabnik): add a mechanism to override system(s)
     public getSystem<T extends System>(
-        sysctor: new (...args: never[]) => T
+        sysctor: new (...args: never[]) => T,
     ): T {
         return nn(this._systems.find((x) => x instanceof sysctor)) as T;
     }
 }
 
 export abstract class System {
-    public abstract componentType: new (...args: never[]) => IComponent;
+    public abstract componentType: new (
+        ...args: never[]
+    ) => IComponent;
 
     public earlyUpdate() {}
     public update() {}

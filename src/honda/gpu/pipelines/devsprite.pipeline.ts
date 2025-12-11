@@ -1,8 +1,5 @@
-import { WebGpu } from "..";
-import {
-    DEPTHTEST_GREATER_WRITE,
-    TRI_STRIP_CULLED,
-} from "./constants";
+import type { WebGpu } from "..";
+import { DEPTHTEST_GREATER_WRITE, TRI_STRIP_CULLED } from "./constants";
 
 export function createDevsprite(g: WebGpu) {
     const { module } = g.shaderModules.devsprite;
@@ -10,8 +7,7 @@ export function createDevsprite(g: WebGpu) {
     return g.device.createRenderPipeline({
         label: "devsprite",
         layout: g.device.createPipelineLayout({
-            bindGroupLayouts: [
-            ],
+            bindGroupLayouts: [],
         }),
         primitive: TRI_STRIP_CULLED,
         vertex: { module },

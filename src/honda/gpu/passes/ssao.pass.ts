@@ -1,9 +1,10 @@
 import { Game } from "@/honda/state";
 import { makeStructuredView } from "webgpu-utils";
 import { vec3 } from "wgpu-matrix";
-import { IPass } from "./pass.interface";
+import type { IPass } from "./pass.interface";
 import { CameraSystem } from "@/honda/systems/camera";
 import { BlurPass } from "./blur.pass";
+import { nn } from "@/honda/util";
 
 function generateSampleHemisphere(nSamples: number) {
     const arr = new Float32Array(nSamples * 4);
@@ -15,7 +16,7 @@ function generateSampleHemisphere(nSamples: number) {
         cVec[2] = Math.random();
 
         vec3.normalize(cVec, cVec);
-        vec3.scale(cVec, Math.pow((i + 1) / nSamples, 2), cVec);
+        vec3.scale(cVec, ((i + 1) / nSamples) ** 2, cVec);
 
         arr[i * 4 + 0] = cVec[0];
         arr[i * 4 + 1] = cVec[1];
@@ -39,7 +40,7 @@ function generateNoise(size: number) {
 
 export class SSAOPass implements IPass {
     protected settings = makeStructuredView(
-        Game.gpu.shaderModules.ssao.defs.structs["SSAOCfg"]
+        Game.gpu.shaderModules.ssao.defs.structs.SSAOCfg,
     );
 
     protected ssaoBlur: BlurPass;
@@ -98,7 +99,7 @@ export class SSAOPass implements IPass {
             Game.gpu.textures.ssao,
             Game.gpu.pipelines.blurR8u,
             4,
-            "ssao-blur"
+            "ssao-blur",
         );
 
         this.settingsGpuBuffer = Game.gpu.device.createBuffer({
@@ -124,7 +125,7 @@ export class SSAOPass implements IPass {
                 bytesPerRow: 4 * 4 * 4,
                 rowsPerImage: 4,
             },
-            [4, 4, 1]
+            [4, 4, 1],
         );
 
         const p = Game.gui.addFolder("SSAO");
@@ -141,7 +142,7 @@ export class SSAOPass implements IPass {
         }
 
         const csys = Game.ecs.getSystem(CameraSystem);
-        const camera = csys.activeCamera;
+        const camera = nn(csys.activeCamera);
         this.settings.set({
             projection: camera.projMtx,
             inverseProjection: camera.projMtxInv,
@@ -168,7 +169,7 @@ export class SSAOPass implements IPass {
         Game.gpu.device.queue.writeBuffer(
             this.settingsGpuBuffer,
             0,
-            this.settings.arrayBuffer
+            this.settings.arrayBuffer,
         );
         post.setBindGroup(0, this.bindGroup);
         if (!this.disable) post.draw(3);

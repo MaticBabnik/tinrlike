@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 import { TRI_LIST_CULLED, VERTEX_POS_UV } from "./constants";
 
 export function createShadow(g: WebGpu) {
@@ -26,7 +26,7 @@ export function createShadow(g: WebGpu) {
             depthWriteEnabled: true,
             depthBias: -50,
             depthBiasSlopeScale: -50,
-            depthBiasClamp: 50
+            depthBiasClamp: 50,
         },
     });
 }

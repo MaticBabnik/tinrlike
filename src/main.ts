@@ -11,13 +11,13 @@ import {
     MeshSystem,
     CameraSystem,
     LightSystem,
-    NavSystem,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
 
 import { createScene } from "./scene";
-import { Flags } from "./honda/util/flags";
+import type { Flags } from "./honda/util/flags";
+import { $ } from "./honda/util";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -39,7 +39,9 @@ async function frame() {
     Game.ecs.lateUpdate();
     Game.perf.measure("gpu");
     Game.gpu.frameStart();
-    Game.passes.forEach((x) => x.apply());
+    Game.passes.forEach((x) => {
+        x.apply();
+    });
 
     Game.input.endFrame();
     await Game.gpu.endFrame();
@@ -49,16 +51,15 @@ async function frame() {
     requestAnimationFrame(frame);
 }
 
-const $ = document.querySelector.bind(document);
 setInterval(
     perfRenderer(
-        $<HTMLSpanElement>("#fps")!,
-        $<HTMLSpanElement>("#mspf")!,
-        $<HTMLSpanElement>("#ents")!,
-        $<HTMLPreElement>("#measured")!,
-        $<HTMLPreElement>("#measured-gpu")!
+        $<HTMLSpanElement>("#fps"),
+        $<HTMLSpanElement>("#mspf"),
+        $<HTMLSpanElement>("#ents"),
+        $<HTMLPreElement>("#measured"),
+        $<HTMLPreElement>("#measured-gpu"),
     ),
-    500
+    500,
 );
 
 const play = async (preset: "low" | "medium" | "high") => {
@@ -69,10 +70,10 @@ const play = async (preset: "low" | "medium" | "high") => {
                 medium: ["shadowLow"],
                 high: [],
             } satisfies Record<string, Flags[]>
-        )[preset]
+        )[preset],
     );
 
-    const canvas = document.querySelector("canvas")!;
+    const canvas = $<HTMLCanvasElement>("canvas");
 
     try {
         Game.gpu = await WebGpu.obtainForCanvas(canvas);
@@ -82,7 +83,6 @@ const play = async (preset: "low" | "medium" | "high") => {
     }
 
     Game.input = new Input(canvas);
-    Game.ecs.addSystem(new NavSystem());
     Game.ecs.addSystem(new ScriptSystem());
     Game.ecs.addSystem(new MeshSystem());
     Game.ecs.addSystem(new CameraSystem());
@@ -93,7 +93,7 @@ const play = async (preset: "low" | "medium" | "high") => {
     Game.passes = [
         new GBufferPass(),
         new ShadowMapPass(),
-        new SkyPass(Game.gpu.sky),
+        new SkyPass(),
         new ShadePass(),
         new PostprocessPass(),
     ];
@@ -106,4 +106,4 @@ const play = async (preset: "low" | "medium" | "high") => {
 };
 
 const h = window.location.hash.replace(/^#/, "");
-play(h == "low" || h == "medium" || h == "high" ? h : "high");
+play(h === "low" || h === "medium" || h === "high" ? h : "high");

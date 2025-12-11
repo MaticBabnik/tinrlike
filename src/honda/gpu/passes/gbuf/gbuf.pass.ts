@@ -1,12 +1,9 @@
 import { Game } from "@/honda/state";
-import { IPass } from "../pass.interface";
-import {
-    Material,
-    NORMALMAP_BIT,
-} from "@/honda";
-import { Mesh } from "../../meshes/mesh";
+import type { IPass } from "../pass.interface";
+import { type Material, NORMALMAP_BIT } from "@/honda";
+import type { Mesh } from "../../meshes/mesh";
 import { BIND_MAT, BIND_PASS } from "./gbuf.const";
-import { makeStructuredView, StructuredView } from "webgpu-utils";
+import { makeStructuredView, type StructuredView } from "webgpu-utils";
 import { MeshSystem } from "@/honda/systems/mesh";
 import { CameraSystem } from "@/honda/systems/camera";
 
@@ -17,7 +14,7 @@ export class GBufferPass implements IPass {
 
     constructor() {
         this.uniforms = makeStructuredView(
-            Game.gpu.shaderModules.g.defs.uniforms["uniforms"]
+            Game.gpu.shaderModules.g.defs.uniforms.uniforms,
         );
 
         this.uniformsBuf = Game.gpu.device.createBuffer({
@@ -48,7 +45,8 @@ export class GBufferPass implements IPass {
 
     apply(): void {
         const { calls } = Game.ecs.getSystem(MeshSystem);
-        const { viewProjMtx: viewProjectionMatrix } = Game.ecs.getSystem(CameraSystem);
+        const { viewProjMtx: viewProjectionMatrix } =
+            Game.ecs.getSystem(CameraSystem);
 
         this.uniforms.set({
             viewProjection: viewProjectionMatrix,
@@ -59,7 +57,7 @@ export class GBufferPass implements IPass {
         Game.gpu.device.queue.writeBuffer(
             this.uniformsBuf,
             0,
-            this.uniforms.arrayBuffer
+            this.uniforms.arrayBuffer,
         );
 
         const rp = Game.cmdEncoder.beginRenderPass({
@@ -101,29 +99,29 @@ export class GBufferPass implements IPass {
         rp.setBindGroup(BIND_PASS, this.bindGroup);
         for (const c of calls) {
             // activate/switch pipeline
-            if (c.mat.type != activeMat?.type) {
+            if (c.mat.type !== activeMat?.type) {
                 rp.setPipeline(
                     c.mat.type & NORMALMAP_BIT
                         ? Game.gpu.pipelines.gNorm
-                        : Game.gpu.pipelines.g
+                        : Game.gpu.pipelines.g,
                 );
                 normalMaps = !!(c.mat.type & NORMALMAP_BIT);
             }
 
             // attach material
-            if (c.mat != activeMat) {
+            if (c.mat !== activeMat) {
                 activeMat = c.mat;
                 rp.setBindGroup(BIND_MAT, c.mat.bindGroup);
             }
 
             // attach mesh buffers
-            if (c.mesh != activeMesh) {
+            if (c.mesh !== activeMesh) {
                 if (normalMaps) {
                     if (!c.mesh.tangent) {
                         console.warn("Missing tangents for", c.mesh);
                         continue;
                     }
-                    rp.setVertexBuffer(3, c.mesh.tangent!);
+                    rp.setVertexBuffer(3, c.mesh.tangent);
                 }
                 rp.setVertexBuffer(0, c.mesh.position);
                 rp.setVertexBuffer(1, c.mesh.texCoord);
@@ -138,7 +136,7 @@ export class GBufferPass implements IPass {
                 c.nInstances,
                 0,
                 0,
-                c.firstInstance
+                c.firstInstance,
             );
         }
 

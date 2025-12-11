@@ -1,9 +1,10 @@
-export interface IBase<TExtesions = {}, TExtras = {}> {
+export interface IBase<TExtesions = object, TExtras = object> {
     extensions?: Record<string, unknown> & Partial<TExtesions>;
     extras?: Record<string, unknown> & Partial<TExtras>;
 }
 
-export interface INamed<TExtesions = {}, TExtras = {}> extends IBase<TExtesions,TExtras> {
+export interface INamed<TExtesions = object, TExtras = object>
+    extends IBase<TExtesions, TExtras> {
     name?: string;
 }
 
@@ -148,11 +149,12 @@ export interface IMesh extends INamed {
 //#region MeshPrimitive
 export type TTopologyType = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export interface IMeshPrimitive extends IBase<{
-    KHR_materials_emissive_strength: {
-        emissiviveStrength: number
-    }
-}> {
+export interface IMeshPrimitive
+    extends IBase<{
+        KHR_materials_emissive_strength: {
+            emissiviveStrength: number;
+        };
+    }> {
     attributes: Record<string, number | undefined>;
     indices?: number;
     material?: number;
@@ -162,11 +164,12 @@ export interface IMeshPrimitive extends IBase<{
 //#endregion MeshPrimitive
 
 //#region Node
-export interface INodeBase extends INamed<{
-    KHR_lights_punctual: {
+export interface INodeBase
+    extends INamed<{
+        KHR_lights_punctual: {
             light: number;
         };
-}> {
+    }> {
     camera?: number;
     children?: number[];
     name?: string;
@@ -216,7 +219,10 @@ export interface ISkin extends INamed {
     joints: number[];
 }
 
-export type TImageExts = Record<"EXT_texture_webp" | "EXT_texture_avif", {source:number}>;
+export type TImageExts = Record<
+    "EXT_texture_webp" | "EXT_texture_avif",
+    { source: number }
+>;
 
 export interface ITexture extends INamed<TImageExts> {
     source?: number;
@@ -243,11 +249,12 @@ export interface IKhrLight extends INamed {
     spot?: IKhrLightSpot;
 }
 
-export interface IGltfRoot extends IBase<{
-    KHR_lights_punctual: {
+export interface IGltfRoot
+    extends IBase<{
+        KHR_lights_punctual: {
             lights: IKhrLight[];
         };
-}> {
+    }> {
     extensionsUsed?: string[];
     extensionsRequired?: string[];
 

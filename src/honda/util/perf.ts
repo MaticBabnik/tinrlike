@@ -16,8 +16,6 @@ export class Perf {
     protected gpuAccumulator = new Map<string, number>();
     protected gpuFrameCount = 0;
 
-    constructor() {}
-
     public startFrame() {
         this.frameToFrameTimes[this.frameIndex] =
             performance.now() - this.frameStart;
@@ -31,7 +29,7 @@ export class Perf {
         this.frameTimes[this.frameIndex++] =
             performance.now() - this.frameStart;
         this.framesSinceLastLabel++;
-        if (this.frameIndex == Perf.N) this.frameIndex = 0;
+        if (this.frameIndex === Perf.N) this.frameIndex = 0;
     }
 
     public measure(label: string) {
@@ -56,7 +54,7 @@ export class Perf {
         const f =
             1000 / (this.frameToFrameTimes.reduce((c, p) => c + p) / Perf.N);
 
-        return isNaN(f) ? 0 : f;
+        return Number.isNaN(f) ? 0 : f;
     }
 
     /**
@@ -69,7 +67,9 @@ export class Perf {
         }
 
         if (this.framesSinceLastLabel > 0) {
-            ts.forEach((x) => (x[1] /= this.framesSinceLastLabel));
+            ts.forEach((x) => {
+                x[1] /= this.framesSinceLastLabel;
+            });
             this.framesSinceLastLabel = 0;
         }
 
@@ -79,13 +79,13 @@ export class Perf {
     public sumbitGpuTimestamps(
         labels: Record<number, string>,
         timestamps: BigInt64Array,
-        n: number
+        n: number,
     ) {
         for (let i = 0; i < n; i++) {
             const c = this.gpuAccumulator.get(labels[i]) ?? 0;
             this.gpuAccumulator.set(
                 labels[i],
-                c + Number(timestamps[2 * i + 1] - timestamps[2 * i])
+                c + Number(timestamps[2 * i + 1] - timestamps[2 * i]),
             );
         }
         this.gpuFrameCount++;
@@ -94,7 +94,7 @@ export class Perf {
     public getGpuStats() {
         const stats = Array.from(this.gpuAccumulator.entries()).map(
             ([label, time]) =>
-                [label, time / this.gpuFrameCount] as [string, number]
+                [label, time / this.gpuFrameCount] as [string, number],
         );
 
         this.gpuAccumulator.clear();
@@ -108,7 +108,7 @@ export function perfRenderer(
     mspf: HTMLSpanElement,
     ents: HTMLSpanElement,
     cpu: HTMLPreElement,
-    gpu: HTMLPreElement
+    gpu: HTMLPreElement,
 ) {
     return () => {
         fps.innerText = Game.perf.fps.toFixed(1).padStart(5, " ");
@@ -121,13 +121,16 @@ export function perfRenderer(
             .join("\n");
 
         const g = Game.perf.getGpuStats();
-        gpu.innerText = g.length == 0 ? '<GPU timings timed out>' : g
-            .map(
-                ([n, t]) =>
-                    `${n.padEnd(30)} ${(t / 1000)
-                        .toFixed(0)
-                        .padStart(6, " ")}us`
-            )
-            .join("\n");
+        gpu.innerText =
+            g.length === 0
+                ? "<GPU timings timed out>"
+                : g
+                      .map(
+                          ([n, t]) =>
+                              `${n.padEnd(30)} ${(t / 1000)
+                                  .toFixed(0)
+                                  .padStart(6, " ")}us`,
+                      )
+                      .join("\n");
     };
 }

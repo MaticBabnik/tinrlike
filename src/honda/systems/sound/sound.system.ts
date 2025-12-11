@@ -1,4 +1,4 @@
-import { System, SceneNode, CameraSystem } from "@/honda";
+import { System, type SceneNode, CameraSystem } from "@/honda";
 import { SoundEmmiter } from "./sound-emitter.component";
 import { Game } from "@/honda";
 import { vec3 } from "wgpu-matrix";
@@ -7,15 +7,15 @@ export class SoundSystem extends System {
     public componentType = SoundEmmiter;
 
     protected audioContext: AudioContext;
-    protected audioBuffers: Map<string, AudioBuffer> = new Map()
+    protected audioBuffers: Map<string, AudioBuffer> = new Map();
 
     protected components = new Map<SoundEmmiter, SceneNode>();
-    
+
     protected activeSources: Map<string, AudioBufferSourceNode> = new Map();
-    protected activeComponentSources: Map<SoundEmmiter, AudioBufferSourceNode> = new Map();
+    protected activeComponentSources: Map<SoundEmmiter, AudioBufferSourceNode> =
+        new Map();
     protected activeComponentPanners: Map<SoundEmmiter, PannerNode> = new Map();
-    constructor()
-    {
+    constructor() {
         super();
         this.audioContext = new AudioContext();
     }
@@ -36,7 +36,6 @@ export class SoundSystem extends System {
 
         this.components.delete(component);
     }
-      
 
     public update(): void {
         const cameraSystem = Game.ecs.getSystem(CameraSystem);
@@ -52,13 +51,13 @@ export class SoundSystem extends System {
         const forward = vec3.fromValues(
             -cameraTransform.$glbMtx[8],
             -cameraTransform.$glbMtx[9],
-            -cameraTransform.$glbMtx[10]
+            -cameraTransform.$glbMtx[10],
         );
 
         const up = vec3.fromValues(
             cameraTransform.$glbMtx[4],
             cameraTransform.$glbMtx[5],
-            cameraTransform.$glbMtx[6]
+            cameraTransform.$glbMtx[6],
         );
 
         this.audioContext.listener.positionX.value = position[0];
@@ -73,11 +72,10 @@ export class SoundSystem extends System {
         this.audioContext.listener.upY.value = up[1];
         this.audioContext.listener.upZ.value = up[2];
 
-
         this.components.keys().forEach((x) => {
             const node = this.components.get(x);
             if (!node) {
-                return
+                return;
             }
 
             const panner = this.activeComponentPanners.get(x);
@@ -95,10 +93,9 @@ export class SoundSystem extends System {
                 this.stopComponentAudio(x);
             }
         });
-
     }
 
-    public async loadAudioFiles( audioFiles: { [key: string]: string } ) {
+    public async loadAudioFiles(audioFiles: { [key: string]: string }) {
         for (const [key, url] of Object.entries(audioFiles)) {
             try {
                 const buffer = await this.loadAudioBuffer(url);
@@ -106,9 +103,8 @@ export class SoundSystem extends System {
                     continue;
                 }
                 this.audioBuffers.set(key, buffer);
-            }
-            catch (e) {
-                console.warn(`Failed to load audio file: ${url}`);
+            } catch (e) {
+                console.warn(`Failed to load audio file: ${url}`, e);
             }
         }
     }
@@ -116,7 +112,10 @@ export class SoundSystem extends System {
     private async loadAudioBuffer(url: string) {
         const response = await fetch(url);
         if (!response.ok) {
-            console.warn(`Failed to load audio file: ${url}`);
+            console.warn(
+                `Failed to load audio file: ${url}`,
+                response.statusText,
+            );
             return;
         }
 
@@ -128,7 +127,7 @@ export class SoundSystem extends System {
         audioKey: string,
         loop: boolean = false,
         volume: number = 1,
-        audioId: string = ""
+        audioId: string = "",
     ) {
         const buffer = this.audioBuffers.get(audioKey);
         if (!buffer) {
@@ -151,7 +150,7 @@ export class SoundSystem extends System {
 
         source.onended = () => {
             this.activeSources.delete(audioId);
-        }
+        };
 
         source.start(0);
     }
@@ -166,7 +165,7 @@ export class SoundSystem extends System {
         this.activeSources.delete(audioId);
     }
 
-    protected playComponentAudio(component: SoundEmmiter) {        
+    protected playComponentAudio(component: SoundEmmiter) {
         const buffer = this.audioBuffers.get(component.soundKey);
         if (!buffer) {
             console.warn(`Audio buffer not found: ${component.soundKey}`);
@@ -179,7 +178,7 @@ export class SoundSystem extends System {
             return;
         }
 
-        component.setPlaying(true)
+        component.setPlaying(true);
 
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
@@ -191,7 +190,7 @@ export class SoundSystem extends System {
             component.setPlaying(false);
             component.stop();
             this.activeComponentSources.delete(component);
-        }
+        };
 
         const panner = this.audioContext.createPanner();
         panner.positionX.value = node.transform.translation[0];
@@ -206,8 +205,11 @@ export class SoundSystem extends System {
 
         const gain = this.audioContext.createGain();
         gain.gain.value = component.volume;
-        
-        source.connect(panner).connect(gain).connect(this.audioContext.destination);
+
+        source
+            .connect(panner)
+            .connect(gain)
+            .connect(this.audioContext.destination);
 
         source.start(0);
     }

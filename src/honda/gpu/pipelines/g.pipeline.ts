@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 import {
     TRI_LIST_CULLED,
     DEPTHTEST_GREATER_WRITE,
@@ -14,7 +14,7 @@ export function createG(g: WebGpu) {
         layout: g.device.createPipelineLayout({
             bindGroupLayouts: [
                 g.bindGroupLayouts.g,
-                g.bindGroupLayouts.material
+                g.bindGroupLayouts.material,
             ],
         }),
         primitive: TRI_LIST_CULLED,
@@ -24,7 +24,12 @@ export function createG(g: WebGpu) {
         },
         fragment: {
             module,
-            targets: [{ format: "rgba8unorm-srgb" }, { format: "rgba8unorm" },{ format: "rg8unorm" },{ format: "rgba8unorm" }],
+            targets: [
+                { format: "rgba8unorm-srgb" },
+                { format: "rgba8unorm" },
+                { format: "rg8unorm" },
+                { format: "rgba8unorm" },
+            ],
         },
         depthStencil: DEPTHTEST_GREATER_WRITE,
     });
@@ -38,7 +43,7 @@ export function createGNorm(g: WebGpu) {
         layout: g.device.createPipelineLayout({
             bindGroupLayouts: [
                 g.bindGroupLayouts.g,
-                g.bindGroupLayouts.materialNormal
+                g.bindGroupLayouts.materialNormal,
             ],
         }),
         primitive: TRI_LIST_CULLED,
@@ -48,7 +53,12 @@ export function createGNorm(g: WebGpu) {
         },
         fragment: {
             module,
-            targets: [{ format: "rgba8unorm-srgb" }, { format: "rgba8unorm" },{ format: "rg8unorm" },{ format: "rgba8unorm" }],
+            targets: [
+                { format: "rgba8unorm-srgb" },
+                { format: "rgba8unorm" },
+                { format: "rg8unorm" },
+                { format: "rgba8unorm" },
+            ],
         },
         depthStencil: DEPTHTEST_GREATER_WRITE,
     });

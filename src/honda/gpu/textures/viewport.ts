@@ -5,7 +5,7 @@ export class ViewportTexture<Tformat extends GPUTextureFormat> {
     constructor(
         public format: Tformat,
         public renderScale: number = 1,
-        public label: string | undefined = undefined
+        public label: string | undefined = undefined,
     ) {}
 
     public resize(dev: GPUDevice, viewportW: number, viewportH: number) {
@@ -19,7 +19,7 @@ export class ViewportTexture<Tformat extends GPUTextureFormat> {
             usage:
                 GPUTextureUsage.RENDER_ATTACHMENT |
                 GPUTextureUsage.TEXTURE_BINDING |
-                GPUTextureUsage.COPY_SRC ,
+                GPUTextureUsage.COPY_SRC,
             dimension: "2d",
             label: this.label,
         });

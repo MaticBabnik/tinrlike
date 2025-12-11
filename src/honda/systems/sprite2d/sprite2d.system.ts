@@ -1,12 +1,12 @@
 import { System } from "@/honda/core/ecs";
-import { AtlasSpec } from "./atlas.interface";
+import type { AtlasSpec } from "./atlas.interface";
 import { assert } from "@/honda/util";
 
 type Sprite = {
-    atlas: string,
-    sid: number,
-    x: number,
-    y: number,
+    atlas: string;
+    sid: number;
+    x: number;
+    y: number;
     scale: number;
     rotate: number;
     z: number;
@@ -31,21 +31,33 @@ export class Sprite2dSystem extends System {
         return sprites.sort((a, b) => a.z - b.z);
     }
 
-    public registerAtlas(name: string, texture: GPUTexture, spriteSize: number) {
-        assert(!this.$atlases.has(name), `Atlas with name ${name} already registered`);
+    public registerAtlas(
+        name: string,
+        texture: GPUTexture,
+        spriteSize: number,
+    ) {
+        assert(
+            !this.$atlases.has(name),
+            `Atlas with name ${name} already registered`,
+        );
         assert(
             texture.width % spriteSize === 0 &&
-            texture.height % spriteSize === 0,
-            `Texture dimensions must be multiples of spriteSize`
+                texture.height % spriteSize === 0,
+            `Texture dimensions must be multiples of spriteSize`,
         );
 
         const atlas = {
-            name, texture, spriteSize,
+            name,
+            texture,
+            spriteSize,
             columns: texture.width / spriteSize,
-            rows: texture.height / spriteSize
+            rows: texture.height / spriteSize,
         };
 
-        console.log(`Registered atlas ${name}: ${atlas.columns}x${atlas.rows} sprites`, atlas);
+        console.log(
+            `Registered atlas ${name}: ${atlas.columns}x${atlas.rows} sprites`,
+            atlas,
+        );
 
         this.$atlases.set(name, atlas);
     }
@@ -53,7 +65,6 @@ export class Sprite2dSystem extends System {
     public sprite(
         atlas: string,
         sid: number,
-
 
         x: number,
         y: number,
@@ -68,7 +79,10 @@ export class Sprite2dSystem extends System {
         multiplyBlue = 1,
         multiplyAlpha = 1,
     ): void {
-        assert(this.$atlases.has(atlas), `Atlas with name ${atlas} not registered`);
+        assert(
+            this.$atlases.has(atlas),
+            `Atlas with name ${atlas} not registered`,
+        );
 
         this.$sprites.push({
             atlas,
@@ -84,5 +98,4 @@ export class Sprite2dSystem extends System {
             multiplyAlpha,
         });
     }
-
 }

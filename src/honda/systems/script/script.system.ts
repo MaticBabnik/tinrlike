@@ -1,4 +1,4 @@
-import { SceneNode, System } from "@/honda";
+import { type SceneNode, System } from "@/honda";
 import { ScriptComponent } from "./script.component";
 
 interface PrivateScript {
@@ -27,14 +27,20 @@ export class ScriptSystem extends System {
     }
 
     public earlyUpdate(): void {
-        this.components.keys().forEach((x) => x.script.earlyUpdate());
+        this.components.keys().forEach((x) => {
+            x.script.earlyUpdate();
+        });
     }
 
     public update(): void {
-        this.components.keys().forEach((x) => x.script.update());
+        this.components.keys().forEach((x) => {
+            x.script.update();
+        });
     }
 
     public lateUpdate(): void {
-        this.components.keys().forEach((x) => x.script.lateUpdate());
+        this.components.keys().forEach((x) => {
+            x.script.lateUpdate();
+        });
     }
 }

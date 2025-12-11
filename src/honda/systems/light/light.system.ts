@@ -1,11 +1,11 @@
 import { LightComponent } from "./light.component";
 import { Game } from "@/honda/state";
 import { makeStructuredView } from "webgpu-utils";
-import { mat4, Mat4, Vec3, vec4 } from "wgpu-matrix";
-import { IPointLight, ISpotLight, THondaLight } from "./lights.interface";
+import { mat4, type Mat4, type Vec3, vec4 } from "wgpu-matrix";
+import type { IPointLight, ISpotLight, THondaLight } from "./lights.interface";
 import { Limits } from "@/honda/limits";
 import { System } from "@/honda/core/ecs";
-import { SceneNode } from "@/honda/core/node";
+import type { SceneNode } from "@/honda/core/node";
 
 interface ILightData {
     position: Vec3;
@@ -42,7 +42,7 @@ export class LightSystem extends System {
     protected lightVPMat: ArrayBuffer;
 
     protected lights = makeStructuredView(
-        Game.gpu.shaderModules.shade.defs.uniforms.lights
+        Game.gpu.shaderModules.shade.defs.uniforms.lights,
     );
 
     constructor() {
@@ -55,11 +55,11 @@ export class LightSystem extends System {
 
         this.matrixAlignedSize = Math.max(
             64,
-            Game.gpu.device.limits.minUniformBufferOffsetAlignment
+            Game.gpu.device.limits.minUniformBufferOffsetAlignment,
         );
 
         this.lightVPMat = new ArrayBuffer(
-            this.matrixAlignedSize * Limits.MAX_SHADOWMAPS
+            this.matrixAlignedSize * Limits.MAX_SHADOWMAPS,
         );
 
         this.shadowmapMatrices = Game.gpu.device.createBuffer({
@@ -96,16 +96,16 @@ export class LightSystem extends System {
             let shadowMap = -1;
             let vp: Mat4 | undefined;
 
-            if (l.lightInfo.castShadows && l.lightInfo.type != "point") {
+            if (l.lightInfo.castShadows && l.lightInfo.type !== "point") {
                 shadowMap = this.nShadowmaps++;
 
                 vp = new Float32Array(
                     this.lightVPMat,
                     this.matrixAlignedSize * shadowMap,
-                    16
+                    16,
                 );
 
-                if (l.lightInfo.type == "directional") {
+                if (l.lightInfo.type === "directional") {
                     //TODO(mbabnik): figure out a better way to setup directional lights
                     mat4.ortho(
                         -DIR_RADIUS,
@@ -114,7 +114,7 @@ export class LightSystem extends System {
                         DIR_RADIUS,
                         DIR_RADIUS,
                         -DIR_RADIUS,
-                        proj
+                        proj,
                     );
                 } else {
                     //TODO(mbabnik): use maxRange or some function of intensity for far plane
@@ -123,7 +123,7 @@ export class LightSystem extends System {
                         1,
                         0.01,
                         l.lightInfo.maxRange,
-                        proj
+                        proj,
                     );
                 }
 
@@ -151,13 +151,13 @@ export class LightSystem extends System {
         Game.gpu.device.queue.writeBuffer(
             this.lightsBuf,
             0,
-            this.lights.arrayBuffer
+            this.lights.arrayBuffer,
         );
 
         Game.gpu.device.queue.writeBuffer(
             this.shadowmapMatrices,
             0,
-            this.lightVPMat
+            this.lightVPMat,
         );
     }
 }

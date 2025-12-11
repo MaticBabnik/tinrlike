@@ -1,7 +1,7 @@
-import { SceneNode } from "@/honda/core/node";
+import type { SceneNode } from "@/honda/core/node";
 import { nn } from "..";
-import { ASampler, V3Sampler, V4Sampler } from "./animationsampler";
-import { IAnimtionChannel } from "./gltf.types";
+import { type ASampler, V3Sampler, V4Sampler } from "./animationsampler";
+import type { IAnimtionChannel } from "./gltf.types";
 
 interface IHAnimationChannel {
     node: SceneNode;
@@ -17,7 +17,7 @@ export class HAnimation {
         public readonly samplers: ASampler[],
         public readonly channelDefs: IAnimtionChannel[],
         public readonly gltfId: number,
-        public readonly name = "<unknown animation>"
+        public readonly name = "<unknown animation>",
     ) {
         this.length = samplers
             .map((x) => x.inAcc.accessor.findLast(() => true) ?? 0)
@@ -31,13 +31,13 @@ export class HAnimation {
      */
     public addNode(gltfIndex: number, node: SceneNode) {
         const channel = this.channelDefs.find(
-            (x) => x.target.node == gltfIndex
+            (x) => x.target.node === gltfIndex,
         );
 
         if (!channel) return;
 
         const type = channel.target.path;
-        if (type != "translation" && type != "rotation" && type != "scale") {
+        if (type !== "translation" && type !== "rotation" && type !== "scale") {
             return;
         }
 
@@ -67,13 +67,15 @@ export class HAnimation {
 
     public attach(n: SceneNode) {
         const gi = n.meta.gltfId;
-        if (typeof gi == "number" && gi == this.gltfId) {
+        if (typeof gi === "number" && gi === this.gltfId) {
             const gni = n.meta.gltfNodeId;
-            if (typeof gni == "number") {
+            if (typeof gni === "number") {
                 this.addNode(gni, n);
             }
         }
-        n.children.forEach((x) => this.attach(x));
+        n.children.forEach((x) => {
+            this.attach(x);
+        });
     }
 
     public apply(t: number) {
@@ -82,20 +84,20 @@ export class HAnimation {
                 case "translation":
                     (x.sampler as V3Sampler).sampleInto(
                         t,
-                        x.node.transform.translation
+                        x.node.transform.translation,
                     );
                     break;
                 case "rotation":
                     (x.sampler as V4Sampler).sampleInto(
                         t,
                         x.node.transform.rotation,
-                        true
+                        true,
                     );
                     break;
                 case "scale":
                     (x.sampler as V3Sampler).sampleInto(
                         t,
-                        x.node.transform.scale
+                        x.node.transform.scale,
                     );
                     break;
             }

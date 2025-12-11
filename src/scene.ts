@@ -18,10 +18,9 @@ function dz(x: number) {
 }
 
 function aLerp(a: number, b: number, t: number) {
-    const diff = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI
-    return a + diff * t
+    const diff = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
+    return a + diff * t;
 }
-
 
 class MovementScript extends Script {
     protected angle = 0;
@@ -38,28 +37,34 @@ class MovementScript extends Script {
             this.moveBaseVec[1] = 0;
             this.moveBaseVec[2] = dz(g.axes[1]);
         } else {
-            boost = Game.input.btnMap["ShiftLeft"];
+            boost = Game.input.btnMap.ShiftLeft;
             this.moveBaseVec[0] =
-                (Game.input.btnMap["KeyD"] ? 1 : 0) +
-                (Game.input.btnMap["KeyA"] ? -1 : 0);
+                (Game.input.btnMap.KeyD ? 1 : 0) +
+                (Game.input.btnMap.KeyA ? -1 : 0);
             this.moveBaseVec[1] = 0;
             this.moveBaseVec[2] =
-                (Game.input.btnMap["KeyW"] ? -1 : 0) +
-                (Game.input.btnMap["KeyS"] ? 1 : 0);
+                (Game.input.btnMap.KeyW ? -1 : 0) +
+                (Game.input.btnMap.KeyS ? 1 : 0);
         }
 
         // rotate moveBaseVec by 45 degrees on z
         vec3.transformQuat(this.moveBaseVec, this.ROT, this.moveBaseVec);
 
-        if (this.moveBaseVec[0] != 0 || this.moveBaseVec[2] != 0) {
+        if (this.moveBaseVec[0] !== 0 || this.moveBaseVec[2] !== 0) {
             const newAngle = Math.atan2(
                 this.moveBaseVec[0],
-                this.moveBaseVec[2]
+                this.moveBaseVec[2],
             );
 
             // This is not great... Watch https://www.youtube.com/watch?v=LSNQuFEDOyQ
             this.angle = aLerp(this.angle, newAngle, 0.2);
-            quat.fromEuler(0, this.angle, 0, "xyz", this.node.transform.rotation);
+            quat.fromEuler(
+                0,
+                this.angle,
+                0,
+                "xyz",
+                this.node.transform.rotation,
+            );
 
             if (vec3.length(this.moveBaseVec) > 1) {
                 vec3.normalize(this.moveBaseVec, this.moveBaseVec);
@@ -68,13 +73,13 @@ class MovementScript extends Script {
             vec3.mulScalar(
                 this.moveBaseVec,
                 Game.deltaTime * (boost ? 100 : 7),
-                this.moveBaseVec
+                this.moveBaseVec,
             );
 
             vec3.add(
                 this.node.transform.translation,
                 this.moveBaseVec,
-                this.node.transform.translation
+                this.node.transform.translation,
             );
             this.node.transform.update();
         }
@@ -90,13 +95,12 @@ class LerpCameraScript extends Script {
             this.node.transform.translation,
             playerNode.transform.translation,
             0.1,
-            this.node.transform.translation
+            this.node.transform.translation,
         );
 
         this.node.transform.update();
     }
 }
-
 
 export async function createScene() {
     setStatus("loading assets");
@@ -105,7 +109,7 @@ export async function createScene() {
     const sky2 = await CubemapTexture.loadRGBM(
         CubemapTexture.SIDES.map((x) => `hdrsky/${x}.rgbm`),
         "sky2",
-        16
+        16,
     );
 
     setStatus("building scene");
@@ -135,9 +139,9 @@ export async function createScene() {
         quat.fromEuler(
             -30 * DEG,
             -45 * DEG,
-            0 * DEG,
+            0,
             "zyx",
-            cameraHolder.transform.rotation
+            cameraHolder.transform.rotation,
         );
         cameraHolder.transform.update();
 
@@ -156,7 +160,7 @@ export async function createScene() {
                 color: [1, 0.953, 0.871],
                 intensity: 10,
                 type: "directional",
-            })
+            }),
         );
 
         sun.transform.rotation = quat.fromEuler(-45, -45, 0, "xyz");

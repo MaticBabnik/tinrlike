@@ -1,4 +1,4 @@
-import { IComponent } from "@/honda/core/ecs";
+import type { IComponent } from "@/honda/core/ecs";
 import { Game } from "@/honda/state";
 import { mat4 } from "wgpu-matrix";
 
@@ -14,7 +14,7 @@ export class CameraComponent implements IComponent {
         protected _fov: number,
         protected _near: number,
         protected _far: number,
-        public name = "Camera"
+        public name = "Camera",
     ) {
         this.recompute();
     }
@@ -24,7 +24,7 @@ export class CameraComponent implements IComponent {
     }
 
     public set fov(x: number) {
-        if (x != this._fov) {
+        if (x !== this._fov) {
             this._fov = x;
             this.dirty = true;
         }
@@ -34,7 +34,7 @@ export class CameraComponent implements IComponent {
     }
 
     public set near(x: number) {
-        if (x != this._near) {
+        if (x !== this._near) {
             this._near = x;
             this.dirty = true;
         }
@@ -45,7 +45,7 @@ export class CameraComponent implements IComponent {
     }
 
     public set far(x: number) {
-        if (x != this._far) {
+        if (x !== this._far) {
             this._far = x;
             this.dirty = true;
         }
@@ -83,14 +83,14 @@ export class CameraComponent implements IComponent {
     }
 
     public get projMtx() {
-        if (Game.gpu.aspectRatio != this.currentAspect || this.dirty) {
+        if (Game.gpu.aspectRatio !== this.currentAspect || this.dirty) {
             this.recompute();
         }
         return this.projectionMtx;
     }
 
     public get projMtxInv() {
-        if (Game.gpu.aspectRatio != this.currentAspect || this.dirty) {
+        if (Game.gpu.aspectRatio !== this.currentAspect || this.dirty) {
             this.recompute();
         }
         return this.invProjectionMtx;

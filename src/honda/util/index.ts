@@ -9,12 +9,12 @@ export function nn<T>(value: T | null | undefined, message?: string): T {
 
 /**
  * Assertion
- * @param assertion condition 
+ * @param assertion condition
  * @param message error message for fails
  */
 export function assert<T>(
     assertion: T,
-    message = "Assertion failed"
+    message = "Assertion failed",
 ): asserts assertion {
     if (!assertion) throw new Error(message);
 }
@@ -31,3 +31,6 @@ export function nMips(w: number, h: number) {
 }
 
 export const PI_2 = Math.PI / 2;
+
+export const $ = <T extends Element>(key: string) =>
+    nn(document.querySelector<T>(key));

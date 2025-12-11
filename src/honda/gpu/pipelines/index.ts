@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 import { createBloom } from "./bloom.pipeline";
 import { createBlur } from "./blur.pipeline";
 import { createIblIrradiance, createIblSpecular } from "./compute_ibl.pipeline";

@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 
 export function createIblIrradiance(g: WebGpu) {
     const { module } = g.shaderModules.compute_ibl;
@@ -8,7 +8,7 @@ export function createIblIrradiance(g: WebGpu) {
         layout: g.device.createPipelineLayout({
             bindGroupLayouts: [g.bindGroupLayouts.computeIbl],
         }),
-        compute: { module, entryPoint: 'irradiance' },
+        compute: { module, entryPoint: "irradiance" },
     });
 }
 
@@ -18,10 +18,8 @@ export function createIblSpecular(g: WebGpu) {
     return g.device.createComputePipeline({
         label: "c_ibl_specular",
         layout: g.device.createPipelineLayout({
-            bindGroupLayouts: [
-                g.bindGroupLayouts.computeIbl,
-            ],
+            bindGroupLayouts: [g.bindGroupLayouts.computeIbl],
         }),
-        compute: { module, entryPoint: 'specular' },
+        compute: { module, entryPoint: "specular" },
     });
 }

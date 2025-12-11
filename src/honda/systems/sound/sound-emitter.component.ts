@@ -1,19 +1,15 @@
-import { IComponent } from "@/honda/core/ecs";
+import type { IComponent } from "@/honda/core/ecs";
 
 export class SoundEmmiter implements IComponent {
     protected _isPlaying: boolean = false;
     protected _play: boolean = false;
-    protected _loop: boolean = false
+    protected _loop: boolean = false;
 
     constructor(
         public soundKey: string,
         public name: string = "SoundEmmiter",
         public volume: number = 1,
-    ) {
-        this.soundKey = soundKey;
-        this.name = name;
-        this.volume = volume;
-    }
+    ) {}
 
     public play() {
         this._play = true;

@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 import { TRI_LIST_CULLED } from "./constants";
 
 export function createRgbmload(g: WebGpu) {
@@ -15,7 +15,7 @@ export function createRgbmload(g: WebGpu) {
         },
         fragment: {
             module,
-            targets: [{ format: 'rgba16float' }],
+            targets: [{ format: "rgba16float" }],
         },
     });
 }

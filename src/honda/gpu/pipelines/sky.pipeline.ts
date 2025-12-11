@@ -1,4 +1,4 @@
-import { WebGpu } from "..";
+import type { WebGpu } from "..";
 import { VERTEX_POS } from "./constants";
 
 export function createSky(g: WebGpu) {
@@ -8,8 +8,8 @@ export function createSky(g: WebGpu) {
         label: "sky",
         layout: "auto",
         primitive: {
-            cullMode:'none',
-            topology:'triangle-list'
+            cullMode: "none",
+            topology: "triangle-list",
         },
         vertex: {
             module,

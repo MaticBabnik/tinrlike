@@ -1,6 +1,7 @@
-const $ = document.querySelector.bind(document);
-const statusEl = $<HTMLPreElement>("#status")!;
-const errorEl = $<HTMLPreElement>("#error")!;
+import { $ } from ".";
+
+const statusEl = $<HTMLPreElement>("#status");
+const errorEl = $<HTMLPreElement>("#error");
 
 export function setStatus(status: string | undefined) {
     if (status) {
@@ -15,7 +16,7 @@ export function setError(error: string | undefined) {
     if (error) {
         errorEl.innerText = error;
         errorEl.classList.remove("hide");
-        setStatus('errored');
+        setStatus("errored");
     } else {
         errorEl.classList.add("hide");
     }

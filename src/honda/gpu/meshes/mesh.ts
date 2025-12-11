@@ -9,7 +9,7 @@ export class Mesh {
         public readonly texCoord: GPUBuffer,
         public readonly tangent: GPUBuffer | undefined,
         public readonly index: GPUBuffer,
-        public readonly drawCount: number
+        public readonly drawCount: number,
     ) {
         this.id = getNewResourceId();
     }

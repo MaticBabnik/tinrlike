@@ -1,4 +1,4 @@
-import { Vec3, Vec4 } from "wgpu-matrix";
+import type { Vec3, Vec4 } from "wgpu-matrix";
 
 export enum AlphaMode {
     OPAQUE = 0,

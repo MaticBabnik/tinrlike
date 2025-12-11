@@ -1,13 +1,13 @@
 import { mat4 } from "wgpu-matrix";
 import { CameraComponent } from "./camera.component";
 import { System } from "@/honda/core/ecs";
-import { SceneNode } from "@/honda/core/node";
-import { Transform } from "@/honda/core/transform";
+import type { SceneNode } from "@/honda/core/node";
+import type { Transform } from "@/honda/core/transform";
 
 export class CameraSystem extends System {
     public componentType = CameraComponent;
 
-    public activeCamera: CameraComponent = null!;
+    public activeCamera?: CameraComponent;
 
     public viewProjMtxInv = mat4.identity();
     public viewProjMtx = mat4.identity();
@@ -30,7 +30,8 @@ export class CameraSystem extends System {
     public lateUpdate(): void {
         const activeCamera = this.components.entries().find(([c]) => c.active);
         if (!activeCamera) return;
-        const cc = (this.activeCamera = activeCamera[0]);
+        this.activeCamera = activeCamera[0];
+        const cc = this.activeCamera;
         const tc = activeCamera[1].transform;
 
         // V = T^-1
@@ -51,7 +52,7 @@ export class CameraSystem extends System {
      */
     public overrideCamera(cc: CameraComponent, tc: Transform) {
         this.activeCamera = cc;
-        
+
         // V = T^-1
         this.viewMtx.set(tc.$glbInvMtx);
 
@@ -65,7 +66,7 @@ export class CameraSystem extends System {
         mat4.mul(this.viewMtxInv, cc.projMtxInv, this.viewProjMtxInv);
     }
 
-    public getActiveCameraNode(): SceneNode {
-        return this.components.get(this.activeCamera)!;
+    public getActiveCameraNode(): SceneNode | undefined {
+        return this.activeCamera && this.components.get(this.activeCamera);
     }
 }

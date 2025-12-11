@@ -1,5 +1,13 @@
-import { vec3, Vec3, Quat, quat, utils, Vec4, vec4 } from "wgpu-matrix";
-import { FavelaAccesor } from ".";
+import {
+    vec3,
+    type Vec3,
+    type Quat,
+    quat,
+    utils,
+    type Vec4,
+    vec4,
+} from "wgpu-matrix";
+import type { HondaAccesor } from ".";
 
 export enum AnimInterp {
     STEP = "STEP",
@@ -25,7 +33,7 @@ function spline(
     vs: number,
     bs: number,
     ae: number,
-    ve: number
+    ve: number,
 ): number {
     const t2 = t * t;
     const t3 = t2 * t;
@@ -40,14 +48,14 @@ function spline(
 export class SSampler {
     constructor(
         public readonly interp: AnimInterp,
-        public readonly inAcc: FavelaAccesor<Float32Array, "SCALAR">,
-        public readonly outAcc: FavelaAccesor<Float32Array, "SCALAR">
+        public readonly inAcc: HondaAccesor<Float32Array, "SCALAR">,
+        public readonly outAcc: HondaAccesor<Float32Array, "SCALAR">,
     ) {}
 
     public sample(t: number): number {
         // Handle accesses outside of animation range
         const l = this.inAcc.count - 1;
-        const o = this.interp == AnimInterp.CUBICSPLINE ? 1 : 0;
+        const o = this.interp === AnimInterp.CUBICSPLINE ? 1 : 0;
         if (t < this.inAcc.accessor[0]) return this.outAcc.accessor[o];
         if (t > this.inAcc.accessor[l]) return this.outAcc.accessor[l - o];
 
@@ -69,7 +77,7 @@ export class SSampler {
                 return utils.lerp(
                     this.outAcc.accessor[i],
                     this.outAcc.accessor[i + 1],
-                    (t - ts) / te
+                    (t - ts) / te,
                 );
             }
 
@@ -86,7 +94,7 @@ export class SSampler {
                     this.outAcc.accessor[i * 3 + 1],
                     this.outAcc.accessor[i * 3 + 2],
                     this.outAcc.accessor[i * 3 + 3],
-                    this.outAcc.accessor[i * 3 + 4]
+                    this.outAcc.accessor[i * 3 + 4],
                 );
             }
         }
@@ -96,8 +104,8 @@ export class SSampler {
 export class V3Sampler {
     constructor(
         public readonly interp: AnimInterp,
-        public readonly inAcc: FavelaAccesor<Float32Array, "SCALAR">,
-        public readonly outAcc: FavelaAccesor<Float32Array, "VEC3">
+        public readonly inAcc: HondaAccesor<Float32Array, "SCALAR">,
+        public readonly outAcc: HondaAccesor<Float32Array, "VEC3">,
     ) {}
 
     public sample(t: number): Vec3 {
@@ -106,7 +114,7 @@ export class V3Sampler {
 
     public sampleInto(t: number, v: Vec3): Vec3 {
         const l = this.inAcc.count - 1;
-        const o = this.interp == AnimInterp.CUBICSPLINE ? 1 : 0;
+        const o = this.interp === AnimInterp.CUBICSPLINE ? 1 : 0;
         if (t < this.inAcc.accessor[0]) {
             v[0] = this.outAcc.accessor[o * 3 + 0];
             v[1] = this.outAcc.accessor[o * 3 + 1];
@@ -142,17 +150,17 @@ export class V3Sampler {
                 v[0] = utils.lerp(
                     this.outAcc.accessor[i * 3 + 0],
                     this.outAcc.accessor[i * 3 + 3],
-                    tn
+                    tn,
                 );
                 v[1] = utils.lerp(
                     this.outAcc.accessor[i * 3 + 1],
                     this.outAcc.accessor[i * 3 + 4],
-                    tn
+                    tn,
                 );
                 v[2] = utils.lerp(
                     this.outAcc.accessor[i * 3 + 2],
                     this.outAcc.accessor[i * 3 + 5],
-                    tn
+                    tn,
                 );
                 return v;
             }
@@ -170,7 +178,7 @@ export class V3Sampler {
                     this.outAcc.accessor[(i * 3 + 1) * 3 + 0],
                     this.outAcc.accessor[(i * 3 + 2) * 3 + 0],
                     this.outAcc.accessor[(i * 3 + 3) * 3 + 0],
-                    this.outAcc.accessor[(i * 3 + 4) * 3 + 0]
+                    this.outAcc.accessor[(i * 3 + 4) * 3 + 0],
                 );
                 v[1] = spline(
                     tn,
@@ -178,7 +186,7 @@ export class V3Sampler {
                     this.outAcc.accessor[(i * 3 + 1) * 3 + 1],
                     this.outAcc.accessor[(i * 3 + 2) * 3 + 1],
                     this.outAcc.accessor[(i * 3 + 3) * 3 + 1],
-                    this.outAcc.accessor[(i * 3 + 4) * 3 + 1]
+                    this.outAcc.accessor[(i * 3 + 4) * 3 + 1],
                 );
                 v[2] = spline(
                     tn,
@@ -186,7 +194,7 @@ export class V3Sampler {
                     this.outAcc.accessor[(i * 3 + 1) * 3 + 2],
                     this.outAcc.accessor[(i * 3 + 2) * 3 + 2],
                     this.outAcc.accessor[(i * 3 + 3) * 3 + 2],
-                    this.outAcc.accessor[(i * 3 + 4) * 3 + 2]
+                    this.outAcc.accessor[(i * 3 + 4) * 3 + 2],
                 );
 
                 return v;
@@ -198,8 +206,8 @@ export class V3Sampler {
 export class V4Sampler {
     constructor(
         public readonly interp: AnimInterp,
-        public readonly inAcc: FavelaAccesor<Float32Array, "SCALAR">,
-        public readonly outAcc: FavelaAccesor<Float32Array, "VEC4">
+        public readonly inAcc: HondaAccesor<Float32Array, "SCALAR">,
+        public readonly outAcc: HondaAccesor<Float32Array, "VEC4">,
     ) {}
 
     public sample(t: number): Vec4 {
@@ -218,10 +226,10 @@ export class V4Sampler {
     public sampleInto(
         t: number,
         vq: Vec4 | Quat,
-        rotation = false
+        _rotation = false,
     ): Vec4 | Quat {
         const l = this.inAcc.count - 1;
-        const o = this.interp == AnimInterp.CUBICSPLINE ? 1 : 0;
+        const o = this.interp === AnimInterp.CUBICSPLINE ? 1 : 0;
 
         if (t < this.inAcc.accessor[0]) {
             vq[0] = this.outAcc.accessor[o * 4 + 0];
@@ -254,37 +262,33 @@ export class V4Sampler {
             }
 
             case AnimInterp.LINEAR: {
-                if (rotation && false /* TODO: lol */) {
-                    // TODO(sphere bullshit)
-                    throw new Error("TODO: quat linear rotation sampling");
-                    return vq;
-                } else {
-                    const ts = this.inAcc.accessor[i],
-                        te = this.inAcc.accessor[i + 1];
-                    const tn = (t - ts) / (te - ts);
+                //TODO: linear for quaternions should be slerp
 
-                    vq[0] = utils.lerp(
-                        this.outAcc.accessor[i * 4 + 0],
-                        this.outAcc.accessor[i * 4 + 4],
-                        tn
-                    );
-                    vq[1] = utils.lerp(
-                        this.outAcc.accessor[i * 4 + 1],
-                        this.outAcc.accessor[i * 4 + 5],
-                        tn
-                    );
-                    vq[2] = utils.lerp(
-                        this.outAcc.accessor[i * 4 + 2],
-                        this.outAcc.accessor[i * 4 + 6],
-                        tn
-                    );
-                    vq[3] = utils.lerp(
-                        this.outAcc.accessor[i * 4 + 3],
-                        this.outAcc.accessor[i * 4 + 7],
-                        tn
-                    );
-                    return vq;
-                }
+                const ts = this.inAcc.accessor[i],
+                    te = this.inAcc.accessor[i + 1];
+                const tn = (t - ts) / (te - ts);
+
+                vq[0] = utils.lerp(
+                    this.outAcc.accessor[i * 4 + 0],
+                    this.outAcc.accessor[i * 4 + 4],
+                    tn,
+                );
+                vq[1] = utils.lerp(
+                    this.outAcc.accessor[i * 4 + 1],
+                    this.outAcc.accessor[i * 4 + 5],
+                    tn,
+                );
+                vq[2] = utils.lerp(
+                    this.outAcc.accessor[i * 4 + 2],
+                    this.outAcc.accessor[i * 4 + 6],
+                    tn,
+                );
+                vq[3] = utils.lerp(
+                    this.outAcc.accessor[i * 4 + 3],
+                    this.outAcc.accessor[i * 4 + 7],
+                    tn,
+                );
+                return vq;
             }
 
             case AnimInterp.CUBICSPLINE: {
@@ -300,7 +304,7 @@ export class V4Sampler {
                     this.outAcc.accessor[(i * 4 + 1) * 4 + 0],
                     this.outAcc.accessor[(i * 4 + 2) * 4 + 0],
                     this.outAcc.accessor[(i * 4 + 3) * 4 + 0],
-                    this.outAcc.accessor[(i * 4 + 4) * 4 + 0]
+                    this.outAcc.accessor[(i * 4 + 4) * 4 + 0],
                 );
                 vq[1] = spline(
                     tn,
@@ -308,7 +312,7 @@ export class V4Sampler {
                     this.outAcc.accessor[(i * 4 + 1) * 4 + 1],
                     this.outAcc.accessor[(i * 4 + 2) * 4 + 1],
                     this.outAcc.accessor[(i * 4 + 3) * 4 + 1],
-                    this.outAcc.accessor[(i * 4 + 4) * 4 + 1]
+                    this.outAcc.accessor[(i * 4 + 4) * 4 + 1],
                 );
                 vq[2] = spline(
                     tn,
@@ -316,7 +320,7 @@ export class V4Sampler {
                     this.outAcc.accessor[(i * 4 + 1) * 4 + 2],
                     this.outAcc.accessor[(i * 4 + 2) * 4 + 2],
                     this.outAcc.accessor[(i * 4 + 3) * 4 + 2],
-                    this.outAcc.accessor[(i * 4 + 4) * 4 + 2]
+                    this.outAcc.accessor[(i * 4 + 4) * 4 + 2],
                 );
                 vq[3] = spline(
                     tn,
@@ -324,7 +328,7 @@ export class V4Sampler {
                     this.outAcc.accessor[(i * 4 + 1) * 4 + 3],
                     this.outAcc.accessor[(i * 4 + 2) * 4 + 3],
                     this.outAcc.accessor[(i * 4 + 3) * 4 + 3],
-                    this.outAcc.accessor[(i * 4 + 4) * 4 + 3]
+                    this.outAcc.accessor[(i * 4 + 4) * 4 + 3],
                 );
 
                 return vq;
