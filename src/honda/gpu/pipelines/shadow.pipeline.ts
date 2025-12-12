@@ -24,9 +24,9 @@ export function createShadow(g: WebGpu) {
             format: "depth24plus",
             depthCompare: "greater",
             depthWriteEnabled: true,
-            depthBias: -50,
-            depthBiasSlopeScale: -50,
-            depthBiasClamp: 50,
+            depthBias: -5,
+            depthBiasSlopeScale: -5,
+            depthBiasClamp: -100,
         },
     });
 }

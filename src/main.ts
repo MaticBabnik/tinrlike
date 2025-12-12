@@ -18,6 +18,7 @@ import { setError, setStatus } from "@/honda/util/status";
 import { createScene } from "./scene";
 import type { Flags } from "./honda/util/flags";
 import { $ } from "./honda/util";
+import { FizSystem } from "./honda/systems/fiz";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -87,6 +88,7 @@ const play = async (preset: "low" | "medium" | "high") => {
     Game.ecs.addSystem(new MeshSystem());
     Game.ecs.addSystem(new CameraSystem());
     Game.ecs.addSystem(new LightSystem());
+    Game.ecs.addSystem(new FizSystem());
 
     await createScene();
 

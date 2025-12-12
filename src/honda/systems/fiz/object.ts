@@ -2,7 +2,7 @@ import { vec2, type Vec2 } from "wgpu-matrix";
 import type { TShape } from "./shapes/shape";
 import type { Vec2Like } from "./common";
 import { FIZ_LAYER_PHYS } from "./layer";
-import { FIZ_DEFAULT_MATERIAL, type Material } from "./material";
+import { FIZ_DEFAULT_MATERIAL, type FizMaterial } from "./material";
 
 interface IPhysicsObject {
     readonly id: number;
@@ -25,7 +25,7 @@ export abstract class PhysicsObjectBase implements IPhysicsObject {
         public angle: number = 0,
         public layersOn: number = FIZ_LAYER_PHYS,
         public layersListen: number = 0,
-        public material: Material = FIZ_DEFAULT_MATERIAL,
+        public material: FizMaterial = FIZ_DEFAULT_MATERIAL,
     ) {
         if (position) {
             vec2.copy(position, this.position);
@@ -47,7 +47,7 @@ export class DynamicPhysicsObject extends PhysicsObjectBase {
         mass: number = 1,
         layersOn: number = FIZ_LAYER_PHYS,
         layersListen: number = 0,
-        material: Material = FIZ_DEFAULT_MATERIAL,
+        material: FizMaterial = FIZ_DEFAULT_MATERIAL,
     ) {
         super(true, shape, position, angle, layersOn, layersListen, material);
         this.mass = mass;
@@ -81,7 +81,7 @@ export class StaticPhysicsObject extends PhysicsObjectBase {
         angle: number = 0,
         layersOn: number = FIZ_LAYER_PHYS,
         layersListen: number = 0,
-        material: Material = FIZ_DEFAULT_MATERIAL,
+        material: FizMaterial = FIZ_DEFAULT_MATERIAL,
     ) {
         super(false, shape, position, angle, layersOn, layersListen, material);
     }

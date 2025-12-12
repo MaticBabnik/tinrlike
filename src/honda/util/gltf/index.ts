@@ -768,7 +768,7 @@ export class GltfBinary {
 
         const color = gLight.color ?? [1, 1, 1],
             intensity = gLight.intensity ?? 1,
-            maxRange = gLight.range ?? 100000,
+            maxRange = gLight.range ?? 100,
             castShadows = !gLight.extras?._noshadow;
 
         switch (gLight.type) {
@@ -798,6 +798,7 @@ export class GltfBinary {
                     color,
                     intensity,
                     castShadows,
+                    maxRange
                 } satisfies IDirectionalLight;
 
             default:

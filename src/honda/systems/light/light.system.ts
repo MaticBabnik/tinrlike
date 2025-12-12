@@ -26,8 +26,6 @@ const TYPE_MAP: Record<THondaLight["type"], number> = {
     spot: 2,
 };
 
-const DIR_RADIUS = 33;
-
 export class LightSystem extends System {
     public componentType = LightComponent;
 
@@ -108,12 +106,12 @@ export class LightSystem extends System {
                 if (l.lightInfo.type === "directional") {
                     //TODO(mbabnik): figure out a better way to setup directional lights
                     mat4.ortho(
-                        -DIR_RADIUS,
-                        DIR_RADIUS,
-                        -DIR_RADIUS,
-                        DIR_RADIUS,
-                        DIR_RADIUS,
-                        -DIR_RADIUS,
+                        -l.lightInfo.maxRange,
+                        l.lightInfo.maxRange,
+                        -l.lightInfo.maxRange,
+                        l.lightInfo.maxRange,
+                        l.lightInfo.maxRange,
+                        -l.lightInfo.maxRange,
                         proj,
                     );
                 } else {

@@ -11,6 +11,7 @@ export interface IPointLight extends IBaseLight {
 
 export interface IDirectionalLight extends IBaseLight {
     type: "directional";
+    maxRange: number;
 }
 
 export interface ISpotLight extends IBaseLight {

@@ -1,14 +1,22 @@
 import { vec2, vec4 } from "wgpu-matrix";
 import type { DynamicPhysicsObject, TPhysicsObject } from "./object";
 import { objectVsObject, type CollisionManifold } from "./collisions";
-import { Material } from "./material";
+import { FizMaterial } from "./material";
 
 const STATIC_VEL = vec2.zero();
+
+export type CollisionNotifyCallback = (
+    object: TPhysicsObject,
+    other: TPhysicsObject,
+    collision: CollisionManifold,
+) => void;
 
 export class PhysicsWorld {
     private objects = new Map<number, TPhysicsObject>();
 
     constructor(
+        public collisionNotifyCallback?: CollisionNotifyCallback,
+
         /**
          * Size of each hash grid cell in world units.
          */
@@ -25,6 +33,12 @@ export class PhysicsWorld {
 
     public addObject(obj: TPhysicsObject) {
         this.objects.set(obj.id, obj);
+    }
+
+    public removeObject(obj: TPhysicsObject | number) {
+        const id = typeof obj === "number" ? obj : obj.id;
+        this.objects.delete(id);
+        // assume the object is not involved in current collisions/pairs
     }
 
     // debug helper
@@ -117,6 +131,11 @@ export class PhysicsWorld {
             if (!collision) continue;
             this._collisions.push(collision);
 
+            if (objA.layersListen & objB.layersOn)
+                this.collisionNotifyCallback?.(objA, objB, collision);
+            if (objB.layersListen & objA.layersOn)
+                this.collisionNotifyCallback?.(objB, objA, collision);
+
             if ((objA.layersOn & objB.layersOn & this.layersPhysics) === 0)
                 continue; // no common physics layers
 
@@ -157,7 +176,7 @@ export class PhysicsWorld {
             }
 
             // impulse resolution ---------------------------------------------------------
-            const restitution = Material.restitution(
+            const restitution = FizMaterial.restitution(
                 objA.material,
                 objB.material,
             );
