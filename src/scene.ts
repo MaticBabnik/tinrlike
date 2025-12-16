@@ -6,9 +6,9 @@ import {
     ScriptComponent,
     Script,
     LightComponent,
+    DebugSystem,
 } from "@/honda";
-import { quat, vec2, vec3 } from "wgpu-matrix";
-import { CubemapTexture } from "./honda/gpu/textures/cubemap";
+import { quat, vec2, vec3, vec4 } from "wgpu-matrix";
 import { setStatus } from "./honda/util/status";
 import { nn } from "./honda/util";
 import {
@@ -22,7 +22,9 @@ import {
     CUSTOM_LAYER_OFFSET,
     FIZ_LAYER_PHYS,
     type IFizNotify,
+    FizSystem,
 } from "@/honda/systems/fiz";
+import { AnimationPlayerScript } from "./animplayer.script";
 
 // basic deadzone
 function dz(x: number) {
@@ -135,12 +137,31 @@ const TRIGGER_TIME = 0.5;
 const OPEN_TIME = 1.0;
 const REARM_TIME = 1.0;
 
+const spikeHurtShape = new AABBShape(1.2, 1.2);
+
 class SpikeScript extends Script implements IFizNotify {
     protected state = SpikeState.Idle;
     protected nextStateTime = Infinity;
+    protected fiz: FizSystem = null!;
 
-    override lateUpdate(): void {
+    override onAttach(): void {
+        this.fiz = Game.ecs.getSystem(FizSystem);
+    }
+
+    override update(): void {
         const now = Game.time;
+
+        if (this.state === SpikeState.Open) {
+            this.fiz.collisionQuery(
+                spikeHurtShape,
+                this.node.transform.translation,
+                0,
+                TL_LAYER_PLAYER,
+                (obj) => {
+                    Script.findInstance(obj, PlayerScript)?.hurt();
+                },
+            );
+        }
 
         if (now >= this.nextStateTime) {
             switch (this.state) {
@@ -152,7 +173,6 @@ class SpikeScript extends Script implements IFizNotify {
                     break;
 
                 case SpikeState.Open:
-
                     this.state = SpikeState.Rearming;
                     this.nextStateTime = now + REARM_TIME;
                     this.node.transform.translation[1] = 0;
@@ -160,7 +180,6 @@ class SpikeScript extends Script implements IFizNotify {
                     break;
 
                 case SpikeState.Rearming:
-
                     this.state = SpikeState.Idle;
                     this.nextStateTime = Infinity;
                     break;
@@ -168,28 +187,59 @@ class SpikeScript extends Script implements IFizNotify {
         }
     }
 
-    onCollision(otherNode: SceneNode): void {
+    onCollision(): void {
         switch (this.state) {
             case SpikeState.Idle:
                 this.state = SpikeState.Triggering;
                 this.nextStateTime = Game.time + TRIGGER_TIME;
                 break;
             case SpikeState.Open:
-                Script.findInstance(otherNode, PlayerScript)?.hurt();
                 break;
         }
+    }
+}
+
+class AxesScript extends Script {
+    private i = vec4.create(0, 0, 0, 1);
+    private r1 = vec4.create(0, 0, 0, 1);
+    private r2 = vec4.create(0, 0, 0, 1);
+
+    override lateUpdate(): void {
+        const d = Game.ecs.getSystem(DebugSystem);
+        Game.scene.computeTransforms();
+
+        this.i.set([0, 0, 0]);
+        vec4.transformMat4(this.i, this.node.transform.$glbMtx, this.r1);
+
+        this.i.set([0.1, 0, 0]);
+        vec4.transformMat4(this.i, this.node.transform.$glbMtx, this.r2);
+        d.line(this.r1, this.r2, [1, 0, 0]);
+
+        this.i.set([0, 0.1, 0]);
+        vec4.transformMat4(this.i, this.node.transform.$glbMtx, this.r2);
+        d.line(this.r1, this.r2, [0, 1, 0]);
+
+        this.i.set([0, 0, 0.1]);
+        vec4.transformMat4(this.i, this.node.transform.$glbMtx, this.r2);
+        d.line(this.r1, this.r2, [0, 0, 1]);
+    }
+}
+
+function applyScriptToAllNodes<T extends Script>(
+    n: SceneNode,
+    sctor: new () => T,
+) {
+    n.addComponent(new ScriptComponent(new sctor()));
+
+    for (const c of n.children) {
+        applyScriptToAllNodes(c, sctor);
     }
 }
 
 export async function createScene() {
     setStatus("loading assets");
     const level = await GltfBinary.fromUrl("./next.glb");
-    const ps = await GltfBinary.fromUrl("./Untitled.glb");
-    const sky2 = await CubemapTexture.loadRGBM(
-        CubemapTexture.SIDES.map((x) => `hdrsky/${x}.rgbm`),
-        "sky2",
-        16,
-    );
+    const tc = await GltfBinary.fromUrl("./testchr.glb");
 
     setStatus("building scene");
 
@@ -280,7 +330,7 @@ export async function createScene() {
         spikeNode.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(
-                    new AABBShape(2, 2),
+                    new AABBShape(1.4, 1.4),
                     [0, 0],
                     0,
                     0,
@@ -316,7 +366,24 @@ export async function createScene() {
             ),
         );
         player.addComponent(new ScriptComponent(new PlayerScript()));
-        player.addChild(ps.sceneAsNode());
+
+        {
+            const tcn = tc.sceneAsNode();
+            const anim = tc.getAnimation(0);
+            const anim2 = tc.getAnimation(1);
+
+            anim.attach(tcn);
+            anim2.attach(tcn);
+
+            tcn.addComponent(
+                new ScriptComponent(new AnimationPlayerScript(anim)),
+            );
+            tcn.addComponent(
+                new ScriptComponent(new AnimationPlayerScript(anim2)),
+            );
+            player.addChild(tcn);
+        }
+
         Game.scene.addChild(player);
 
         const cameraHolder = new SceneNode();
@@ -361,9 +428,28 @@ export async function createScene() {
         Game.scene.addChild(sun);
     }
 
+    Game.scene.addComponent(
+        new ScriptComponent(
+            new (class extends Script {
+                private d: DebugSystem = null!;
+
+                override onAttach(): void {
+                    this.d = Game.ecs.getSystem(DebugSystem);
+                }
+
+                public override update(): void {
+                    // XYZ axes
+                    this.d.line([0, 0, 0], [1, 0, 0], [1, 0, 0]);
+                    this.d.line([0, 0, 0], [0, 1, 0], [0, 1, 0]);
+                    this.d.line([0, 0, 0], [0, 0, 1], [0, 0, 1]);
+                }
+            })(),
+        ),
+    );
+
     console.groupCollapsed("scene");
     console.log(Game.scene.tree());
     console.groupEnd();
 
-    Game.gpu.sky = sky2;
+    // Game.gpu.sky = sky2;
 }

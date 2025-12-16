@@ -168,6 +168,7 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
 
     // fries in bag
     for (var i = 0u; i < uni.nLights; i++) {
+
         var atten = 1.0;
         var L = vec3f(0.0);
         var light = lights[i];

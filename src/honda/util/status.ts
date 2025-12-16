@@ -21,3 +21,5 @@ export function setError(error: string | undefined) {
         errorEl.classList.add("hide");
     }
 }
+
+// TODO(mbabnik): Remove / find a better solution

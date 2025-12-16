@@ -2,6 +2,8 @@
 //TODO: |-Allow switch between mouse/controller
 //TODO: |-Allow rebinding
 
+//TODO: Move to a system?
+
 export class Input {
     public btnMap: Record<string, boolean> = {};
     public mouseDeltaX = 0;

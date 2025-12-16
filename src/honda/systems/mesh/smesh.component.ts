@@ -1,48 +1,23 @@
-// snipers on the roof, please kill me if I lose
-
 import type { Material, Mesh, SceneNode } from "@/honda";
 import type { IComponent } from "@/honda/core/ecs";
 import type { SkinInfo } from "./skin";
 import { mat4, type Mat4 } from "wgpu-matrix";
 
-export class MeshComponentBase implements IComponent {
-    constructor(
-        public primitive: Mesh,
-        public material: Material,
-        public name: string,
-    ) {}
-}
-
-export class MeshComponent extends MeshComponentBase implements IComponent {
-    constructor(
-        primitive: Mesh,
-        material: Material,
-        name: string = `unknownMeshComponent`,
-    ) {
-        super(primitive, material, name);
-    }
-}
+// snipers on the roof, please kill me if I lose
+// RIP bozo Charlie Kirk
 
 const IDENT = mat4.identity();
 
-export class SkinnedMeshComponent
-    extends MeshComponentBase
-    implements IComponent
-{
+export class SkinnedMeshComponent implements IComponent {
     public boneMatrices: Float32Array;
 
     constructor(
-        primitive: Mesh,
-        material: Material,
+        public primitive: Mesh,
+        public material: Material,
         public skin: SkinInfo, // bladee reference
-        name: string = `unknownSkinnedMeshComponent`,
+
+        public name: string = `unknownSkinnedMeshComponent`,
     ) {
-        super(primitive, material, name);
-        if (!primitive.joints || !primitive.weights) {
-            throw new Error(
-                "SkinnedMeshComponent requires a mesh with joints and weights",
-            );
-        }
         this.boneMatrices = new Float32Array(skin.joints.length * 16);
     }
 
@@ -96,6 +71,7 @@ export class SkinnedMeshComponent
                 );
 
                 mat4.mul(ct, ibm, r);
+
             }
 
             // recurse into children

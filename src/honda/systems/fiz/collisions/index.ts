@@ -1,16 +1,15 @@
-import type { TPhysicsObject } from "../object";
-
 import { aabbVsAabb } from "./aabb-aabb";
 import { aabbVsCircle } from "./aabb-circle";
 import { circleVsCircle } from "./circle-circle";
+import type { ICollidable } from "./collidable.interface";
 
 // Import/Export (https://www.youtube.com/watch?v=wdd4NBUmVUQ)
 import type { CollisionManifold } from "./manifold";
 export type { CollisionManifold } from "./manifold";
 
 export function objectVsObject(
-    a: TPhysicsObject,
-    b: TPhysicsObject,
+    a: ICollidable,
+    b: ICollidable,
 ): CollisionManifold | null {
     const flip = a.shape.type > b.shape.type;
     // sort so that the "lower" type is always first (halves the number of cases)

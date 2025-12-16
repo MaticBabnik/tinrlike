@@ -11,6 +11,7 @@ import {
     MeshSystem,
     CameraSystem,
     LightSystem,
+    DebugSystem,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
@@ -19,6 +20,7 @@ import { createScene } from "./scene";
 import type { Flags } from "./honda/util/flags";
 import { $ } from "./honda/util";
 import { FizSystem } from "./honda/systems/fiz";
+import { DebugLinePass } from "./honda/gpu/passes/debugline.pass";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -63,6 +65,13 @@ setInterval(
     500,
 );
 
+// TODO(mbabnik): Remove Game.gpu and Game.cmdEncoder and move them into a Renderer class
+// TODO(mbabnik): The renderer should be optional or atleast have a headless mode
+// TODO(mbabnik): glTF should then task the renderer with copying buffers and textures to GPU
+
+// TODO(mbabnik): Proper UI layer (vue?)
+// TODO(mbabnik): Add ability to pause the game loop (but keep some level of code running)
+
 const play = async (preset: "low" | "medium" | "high") => {
     Game.flags = new Set<Flags>(
         (
@@ -84,6 +93,7 @@ const play = async (preset: "low" | "medium" | "high") => {
     }
 
     Game.input = new Input(canvas);
+    Game.ecs.addSystem(new DebugSystem());
     Game.ecs.addSystem(new ScriptSystem());
     Game.ecs.addSystem(new MeshSystem());
     Game.ecs.addSystem(new CameraSystem());
@@ -95,9 +105,10 @@ const play = async (preset: "low" | "medium" | "high") => {
     Game.passes = [
         new GBufferPass(),
         new ShadowMapPass(),
-        new SkyPass(),
+        new SkyPass([0, 0, 0, 0]),
         new ShadePass(),
         new PostprocessPass(),
+        new DebugLinePass(),
     ];
 
     setStatus(undefined);

@@ -1,0 +1,101 @@
+
+struct Uniforms {
+    viewProjection: mat4x4<f32>,
+    deltaTime: f32,
+    time: f32,
+
+    transform: mat4x4<f32>,
+    invTransform: mat4x4<f32>,
+
+    joints: array<mat4x4f, 128>
+}
+
+struct SkinnedInstance {
+    transform: mat4x4<f32>,
+    invTransform: mat4x4<f32>,
+    joints: array<mat4x4f, 128>,
+}
+
+struct Material {
+    baseFactor: vec4f,
+    emissionFactor: vec3f,
+    metalFactor: f32,
+    roughFactor: f32,
+    normalScale: f32,
+    alphaCutoff: f32,
+    ignoreAlpha: u32,
+}
+
+struct VertexIn {
+    @builtin(instance_index) instanceIndex: u32,
+    @location(0) position: vec3f,
+    @location(1) uv: vec2f,
+    @location(2) normal: vec3f,
+    @location(3) jointIds: vec4<u32>,
+    @location(4) jointWeights: vec4f,
+}
+
+struct VertexOutput {
+    @builtin(position) pos: vec4f,
+    @location(0) fragNormal: vec3f,
+    @location(1) uv: vec2f,
+}
+
+struct Gbuffer {
+    @location(0) base: vec4f,
+    @location(1) normal: vec4f,
+    @location(2) mtlRgh: vec2f,
+    @location(3) emission: vec4f,
+}
+
+// SkinnedMesh group
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+// Material group
+@group(1) @binding(0) var<uniform> material: Material;
+@group(1) @binding(1) var tBase: texture_2d<f32>;
+@group(1) @binding(2) var sBase: sampler;
+@group(1) @binding(3) var tMtlRgh: texture_2d<f32>;
+@group(1) @binding(4) var sMtlRgh: sampler;
+@group(1) @binding(5) var tEms: texture_2d<f32>;
+@group(1) @binding(6) var sEms: sampler;
+
+@vertex
+fn vertex_main(v: VertexIn) -> VertexOutput {
+    // Compute skin matrix
+    let sm = uniforms.joints[v.jointIds[0]] * v.jointWeights[0] +
+             uniforms.joints[v.jointIds[1]] * v.jointWeights[1] +
+             uniforms.joints[v.jointIds[2]] * v.jointWeights[2] +
+             uniforms.joints[v.jointIds[3]] * v.jointWeights[3];
+
+    // Project to world
+    let normalMatrix = transpose(mat3x3(uniforms.invTransform[0].xyz, uniforms.invTransform[1].xyz, uniforms.invTransform[2].xyz));
+    let wPos = uniforms.transform * sm * vec4f(v.position, 1.0);
+    let wNor = normalize(normalMatrix * vec3f(v.normal));
+
+    // project position
+    let pPos = uniforms.viewProjection * wPos;
+
+    var output: VertexOutput;
+    output.pos = pPos;
+    output.fragNormal = wNor;
+    output.uv = v.uv;
+    return output;
+}
+
+@fragment
+fn fragment_main(input: VertexOutput) -> Gbuffer {
+    let base = textureSample(tBase, sBase, input.uv) * material.baseFactor;
+    if base.a < material.alphaCutoff {
+        discard;
+    }
+    let mtlRgh = textureSample(tMtlRgh, sMtlRgh, input.uv).zy * vec2f(material.metalFactor, material.roughFactor);
+    let ems = textureSample(tEms, sEms, input.uv).xyz * material.emissionFactor;
+
+    var output: Gbuffer;
+    output.base = vec4f(base.xyz, 1.0);
+    output.normal = vec4f((input.fragNormal + vec3f(1, 1, 1)) / 2.0, 1.0);
+    output.mtlRgh = mtlRgh;
+    output.emission = vec4f(ems, 1.0);
+    return output;
+}

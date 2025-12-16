@@ -5,19 +5,21 @@ import {
 import type { WebGpu } from "..";
 
 type ShaderKey =
-    | "flipx"
     | "bloom"
     | "blur1d"
+    | "compute_ibl"
+    | "devline"
+    | "devsprite"
+    | "flipx"
     | "g"
     | "gnorm"
+    | "gskin"
     | "postprocess"
+    | "rgbmload"
     | "shade"
     | "shadow"
     | "sky"
-    | "ssao"
-    | "rgbmload"
-    | "compute_ibl"
-    | "devsprite";
+    | "ssao";
 
 const shaderSources = import.meta.glob("./*.wgsl", {
     eager: true,

@@ -115,6 +115,8 @@ export class V3Sampler {
     public sampleInto(t: number, v: Vec3): Vec3 {
         const l = this.inAcc.count - 1;
         const o = this.interp === AnimInterp.CUBICSPLINE ? 1 : 0;
+
+        // TODO: fix EVIL before start error!
         if (t < this.inAcc.accessor[0]) {
             v[0] = this.outAcc.accessor[o * 3 + 0];
             v[1] = this.outAcc.accessor[o * 3 + 1];
@@ -223,20 +225,18 @@ export class V4Sampler {
 
     public sampleInto(t: number, q: Vec4, rotation?: boolean): Vec4;
     public sampleInto(t: number, q: Quat, rotation?: boolean): Quat;
-    public sampleInto(
-        t: number,
-        vq: Vec4 | Quat,
-        _rotation = false,
-    ): Vec4 | Quat {
+    public sampleInto(t: number, vq: Vec4 | Quat, rot = false): Vec4 | Quat {
         const l = this.inAcc.count - 1;
         const o = this.interp === AnimInterp.CUBICSPLINE ? 1 : 0;
 
         if (t < this.inAcc.accessor[0]) {
-            vq[0] = this.outAcc.accessor[o * 4 + 0];
-            vq[1] = this.outAcc.accessor[o * 4 + 1];
-            vq[2] = this.outAcc.accessor[o * 4 + 2];
-            vq[2] = this.outAcc.accessor[o * 4 + 3];
-            return vq;
+            t = this.inAcc.accessor[0];
+            // TODO(mbabnik): WHY THE FUCK DOES THE BELLOW CODE FAIL ???????
+            // vq[0] = this.outAcc.accessor[o * 4 + 0];
+            // vq[1] = this.outAcc.accessor[o * 4 + 1];
+            // vq[2] = this.outAcc.accessor[o * 4 + 2];
+            // vq[2] = this.outAcc.accessor[o * 4 + 3];
+            // return vq;
         }
         if (t > this.inAcc.accessor[l]) {
             vq[0] = this.outAcc.accessor[(l - o) * 4 + 0];
@@ -262,7 +262,20 @@ export class V4Sampler {
             }
 
             case AnimInterp.LINEAR: {
-                //TODO: linear for quaternions should be slerp
+                if (rot) {
+                    quat.slerp(
+                        this.outAcc.accessor.slice(i * 4, i * 4 + 4) as Quat,
+                        this.outAcc.accessor.slice(
+                            (i + 1) * 4,
+                            (i + 1) * 4 + 4,
+                        ) as Quat,
+                        (t - this.inAcc.accessor[i]) /
+                            (this.inAcc.accessor[i + 1] -
+                                this.inAcc.accessor[i]),
+                        vq as Quat,
+                    );
+                    return vq;
+                }
 
                 const ts = this.inAcc.accessor[i],
                     te = this.inAcc.accessor[i + 1];

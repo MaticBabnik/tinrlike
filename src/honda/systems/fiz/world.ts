@@ -1,7 +1,10 @@
-import { vec2, vec4 } from "wgpu-matrix";
+import { type Vec2, vec2, vec4 } from "wgpu-matrix";
 import type { DynamicPhysicsObject, TPhysicsObject } from "./object";
 import { objectVsObject, type CollisionManifold } from "./collisions";
 import { FizMaterial } from "./material";
+import type { TShape } from "./shapes";
+import type { Vec2Like } from "./common";
+import type { ICollidable } from "./collisions/collidable.interface";
 
 const STATIC_VEL = vec2.zero();
 
@@ -265,10 +268,111 @@ export class PhysicsWorld {
         }
     }
 
+    private _queryQueue: {
+        shape: TShape;
+        position: Vec2Like;
+        rotation: number;
+        layersMask: number;
+        callback: (object: TPhysicsObject, manifold: CollisionManifold) => void;
+    }[] = [];
+
+    private _queryNow(
+        shape: TShape,
+        position: Vec2Like,
+        rotation: number,
+        layersMask: number,
+
+        callback: (object: TPhysicsObject, manifold: CollisionManifold) => void,
+    ) {
+        const possibleCollisions = new Set<TPhysicsObject>();
+
+        // find possible collisions via hash grid
+        const aabb = shape.getBounds(position, rotation);
+
+        const minX = Math.floor(aabb[0] / this.hashSize);
+        const minY = Math.floor(aabb[1] / this.hashSize);
+        const maxX = Math.floor(aabb[2] / this.hashSize);
+        const maxY = Math.floor(aabb[3] / this.hashSize);
+
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                const key = `${x},${y}`;
+                const cell = this._hashGrid.get(key);
+                if (!cell) continue;
+                for (const obj of cell) {
+                    if ((obj.layersOn & layersMask) === 0) continue;
+                    possibleCollisions.add(obj);
+                }
+            }
+        }
+
+        // precise collision check
+        for (const obj of possibleCollisions) {
+            const dummyObj: ICollidable = {
+                position: position as Vec2,
+                angle: rotation,
+                shape,
+            };
+
+            const collision = objectVsObject(dummyObj, obj);
+
+            if (collision) callback(obj, collision);
+        }
+    }
+
+    /**
+     * Sets up a query to be performed against
+     * the next physics state (post restitution).
+     *
+     * In practice this means that the callbacks will
+     * fire after `update()` but before `lateUpdate()`.
+     */
+    public query(
+        shape: TShape,
+        position: Vec2Like,
+        rotation: number,
+        layersMask: number,
+
+        callback: (object: TPhysicsObject, manifold: CollisionManifold) => void,
+    ): void {
+        this._queryQueue.push({
+            shape,
+            position,
+            rotation,
+            layersMask,
+            callback,
+        });
+    }
+
+    /**
+     * Querries the **current** physics state immediately.
+     */
+    public queryImmediate(
+        shape: TShape,
+        position: Vec2Like,
+        rotation: number,
+        layersMask: number,
+        callback: (object: TPhysicsObject, manifold: CollisionManifold) => void,
+    ): void {
+        this._queryNow(shape, position, rotation, layersMask, callback);
+    }
+
     private internalStep(dt: number) {
         this.integrate(dt);
         this.broadphase();
         this.narrowphase();
+
+        for (const q of this._queryQueue) {
+            this._queryNow(
+                q.shape,
+                q.position,
+                q.rotation,
+                q.layersMask,
+                q.callback,
+            );
+        }
+        // reset query queue
+        this._queryQueue.length = 0;
     }
 
     public step(dt: number) {

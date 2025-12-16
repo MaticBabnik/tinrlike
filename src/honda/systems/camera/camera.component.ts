@@ -61,7 +61,7 @@ export class CameraComponent implements IComponent {
         // );
 
         const aspect = Game.gpu.aspectRatio;
-        const minRange = 10;
+        const minRange = 5;
         let wr = 0,
             hr = 0;
 

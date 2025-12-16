@@ -36,7 +36,7 @@ export function aabbVsAabb(
 
     // manifold data
     const normal = vec2.create();
-    const penetrationPoint = posA; // TODO: fix!
+    const penetrationPoint = posA; // TODO: wrong! (correct is cancer)
     let depth: number;
 
     // pick minimum axis as collision normal

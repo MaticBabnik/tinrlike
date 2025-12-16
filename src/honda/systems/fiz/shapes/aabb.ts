@@ -1,6 +1,6 @@
-import { vec4, type Vec2 } from "wgpu-matrix";
+import { vec4 } from "wgpu-matrix";
 import type { IShape } from "./shape";
-import type { AABox } from "../common";
+import type { AABox, Vec2Like } from "../common";
 
 export class AABBShape implements IShape {
     public readonly type = "aabb";
@@ -10,7 +10,7 @@ export class AABBShape implements IShape {
         public halfExtentY: number,
     ) {}
 
-    getBoundsInto(out: AABox, position: Vec2): AABox {
+    getBoundsInto(out: AABox, position: Vec2Like): AABox {
         out[0] = position[0] - this.halfExtentX;
         out[1] = position[1] - this.halfExtentY;
         out[2] = position[0] + this.halfExtentX;
@@ -18,7 +18,7 @@ export class AABBShape implements IShape {
         return out;
     }
 
-    getBounds(position: Vec2): AABox {
+    getBounds(position: Vec2Like): AABox {
         return this.getBoundsInto(vec4.create(), position);
     }
 }

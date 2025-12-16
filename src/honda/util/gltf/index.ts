@@ -23,6 +23,7 @@ import {
     V3Sampler,
 } from "./animationsampler";
 import { HAnimation } from "./animation";
+import { SkinInfo, SkinnedMeshComponent } from "@/honda/";
 
 export type TTypedArrayCtor<T> = {
     new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): T;
@@ -323,7 +324,7 @@ export class GltfBinary {
 
         if (!(accessor.accessor instanceof expectedBufferType)) {
             throw new Error(
-                `Underlaying buffer doesn't match expected TypedArray`,
+                `Underlaying buffer doesn't match expected TypedArray (got ${accessor.accessor.constructor.name}, expected ${expectedBufferType.name})`,
             );
         }
 
@@ -469,7 +470,9 @@ export class GltfBinary {
                 gPrimitive.indices,
                 "Non indexed geometry is not supported, unlucky.",
             ),
-            tangent = gPrimitive.attributes.TANGENT;
+            tangent = gPrimitive.attributes.TANGENT,
+            weights = gPrimitive.attributes.WEIGHTS_0,
+            joints = gPrimitive.attributes.JOINTS_0;
 
         if (gPrimitive.mode !== undefined && gPrimitive.mode !== 4) {
             throw new Error("Unsupported: non-triagle-list geometry");
@@ -528,6 +531,30 @@ export class GltfBinary {
                               GPUBufferUsage.VERTEX,
                               `${name}:tangent`,
                           ),
+                      ),
+            weightBuffer =
+                weights === undefined
+                    ? undefined
+                    : GltfBinary.cacheOr(this.gpuBufferCache, weights, () =>
+                          this.uploadAccesorToGpuWithAssertType(
+                              weights,
+                              "VEC4",
+                              Float32Array,
+                              GPUBufferUsage.VERTEX,
+                              `${name}:weights`,
+                          ),
+                      ),
+            jointBuffer =
+                joints === undefined
+                    ? undefined
+                    : GltfBinary.cacheOr(this.gpuBufferCache, joints, () =>
+                          this.uploadAccesorToGpuWithAssertType(
+                              joints,
+                              "VEC4",
+                              Uint8Array,
+                              GPUBufferUsage.VERTEX,
+                              `${name}:joints`,
+                          ),
                       );
 
         return new Mesh(
@@ -535,6 +562,8 @@ export class GltfBinary {
             normBuffer,
             texCoordBuffer,
             tangentBuffer,
+            jointBuffer,
+            weightBuffer,
             indexBuffer,
             nn(nn(this.json.accessors)[nn(gPrimitive.indices)].count),
         );
@@ -542,7 +571,7 @@ export class GltfBinary {
 
     public getMeshP(mesh: number, primitive: number) {
         //FIXME(mbabnik): fix caching bullshit
-        return GltfBinary.cacheOr(this.meshCache, (mesh << 4) | primitive, () =>
+        return GltfBinary.cacheOr(this.meshCache, (mesh << 3) | primitive, () =>
             this.getMeshNoCache(mesh, primitive),
         );
     }
@@ -683,6 +712,37 @@ export class GltfBinary {
         return nn(this.json.scenes?.[arg], "Scene idx OOB");
     }
 
+    public loadSkinnedMeshToNode(
+        node: SceneNode,
+        meshIdx: number,
+        skinIdx: number,
+    ) {
+        const gMesh = nn(this.json.meshes?.[meshIdx]);
+        const gSkin = nn(this.json.skins?.[skinIdx]);
+
+        const invBindMat = this.getAccessorAndAssertType(
+            nn(gSkin.inverseBindMatrices),
+            "MAT4",
+            Float32Array,
+        );
+
+        const skin = new SkinInfo(this.id, gSkin.joints, invBindMat.accessor);
+
+        gMesh.primitives.forEach((p, i) => {
+            const mp = this.getMeshP(meshIdx, i);
+            if (!mp.joints || !mp.weights) {
+                throw new Error(
+                    `Skinning data missing in mesh primitive (${meshIdx}-${i})!`,
+                );
+            }
+            const mm = this.getMaterial(nn(p.material, "no material!"));
+
+            node.addComponent(
+                new SkinnedMeshComponent(mp, mm, skin, `skin:${meshIdx}-${i}`),
+            );
+        });
+    }
+
     public loadMeshToNode(node: SceneNode, idx: number) {
         const gMesh = nn(this.json.meshes?.[idx]);
 
@@ -723,7 +783,10 @@ export class GltfBinary {
 
         // meshes
         if (typeof gNode.mesh === "number") {
-            this.loadMeshToNode(node, gNode.mesh);
+            if (typeof gNode.skin === "number") {
+                // fuck...
+                this.loadSkinnedMeshToNode(node, gNode.mesh, gNode.skin);
+            } else this.loadMeshToNode(node, gNode.mesh);
         }
 
         // light
@@ -798,7 +861,7 @@ export class GltfBinary {
                     color,
                     intensity,
                     castShadows,
-                    maxRange
+                    maxRange,
                 } satisfies IDirectionalLight;
 
             default:

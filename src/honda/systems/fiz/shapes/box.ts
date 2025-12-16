@@ -1,6 +1,6 @@
-import { vec4, type Vec2 } from "wgpu-matrix";
+import { vec4 } from "wgpu-matrix";
 import type { IShape } from "./shape";
-import type { AABox } from "../common";
+import type { AABox, Vec2Like } from "../common";
 
 const { sin, cos, abs } = Math;
 
@@ -12,7 +12,7 @@ export class BoxShape implements IShape {
         public halfExtentY: number,
     ) {}
 
-    getBoundsInto(o: AABox, p: Vec2, a?: number): AABox {
+    getBoundsInto(o: AABox, p: Vec2Like, a?: number): AABox {
         a ??= 0;
 
         // rotate half extents
@@ -28,7 +28,7 @@ export class BoxShape implements IShape {
         return o;
     }
 
-    getBounds(position: Vec2, rotation?: number): AABox {
+    getBounds(position: Vec2Like, rotation?: number): AABox {
         return this.getBoundsInto(vec4.create(), position, rotation);
     }
 }

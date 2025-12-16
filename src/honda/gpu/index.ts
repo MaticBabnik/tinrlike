@@ -82,13 +82,6 @@ export class WebGpu {
             format: navigator.gpu.getPreferredCanvasFormat(),
         });
 
-        console.log({
-            adapter,
-            device,
-            canvas,
-            wg,
-        });
-
         return new WebGpu(adapter, device, canvas, wg);
     }
 
@@ -100,16 +93,16 @@ export class WebGpu {
     ) {
         console.log(
             "%ctinrlike/Honda (WebGPU)",
-            "font-family: sans-serif; font-weight: bold; font-size: 2rem; color: #f44; background-color: black; padding: 1rem",
+            "font-family: sans-serif; font-weight: bold; font-size: 2rem; color: white; background-color: magenta; padding: 0.2rem 0.4rem; border-radius: 0.2rem",
         );
         console.log(
             `%cGPU: %c${adapter.info.description}`,
             "font-family: sans-serif; font-weight: bold; font-size: 1rem",
             "font-family: sans-serif; font-size: 1rem",
         );
-        console.groupCollapsed("GPUInfo");
-        console.log("Prefered fmt:", this.pFormat);
-        console.info(adapter.info);
+        console.groupCollapsed("GPU Info");
+        console.log("Prefered texture format:", this.pFormat);
+        console.log(adapter.info);
         console.table(device.limits);
         console.groupEnd();
 

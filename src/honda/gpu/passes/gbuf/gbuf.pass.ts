@@ -3,14 +3,32 @@ import type { IPass } from "../pass.interface";
 import { type Material, NORMALMAP_BIT } from "@/honda";
 import type { Mesh } from "../../meshes/mesh";
 import { BIND_MAT, BIND_PASS } from "./gbuf.const";
-import { makeStructuredView, type StructuredView } from "webgpu-utils";
+import {
+    makeStructuredView,
+    setTypedValues,
+    type StructuredView,
+} from "webgpu-utils";
 import { MeshSystem } from "@/honda/systems/mesh";
 import { CameraSystem } from "@/honda/systems/camera";
+
+const U_ALIGN = 256;
+const MAX_SKINNED_MESHES = 5; //TODO: split off into a storage buffer aswell
 
 export class GBufferPass implements IPass {
     protected uniformsBuf: GPUBuffer;
     protected uniforms: StructuredView;
     protected bindGroup: GPUBindGroup;
+
+    private readonly skinUniforms =
+        Game.gpu.shaderModules.gskin.defs.structs.Uniforms;
+
+    private readonly alignedSkinUniformSize = ~~(
+        Math.ceil(this.skinUniforms.size / U_ALIGN) * U_ALIGN
+    );
+
+    protected skinnedUniformsCpu: ArrayBuffer;
+    protected skinnedUniformsGpu: GPUBuffer;
+    protected skinnedBindGroup!: GPUBindGroup;
 
     constructor() {
         this.uniforms = makeStructuredView(
@@ -37,6 +55,29 @@ export class GBufferPass implements IPass {
                     binding: 1,
                     resource: {
                         buffer: Game.ecs.getSystem(MeshSystem).instanceBuffer,
+                    },
+                },
+            ],
+        });
+
+        this.skinnedUniformsCpu = new ArrayBuffer(
+            this.alignedSkinUniformSize * MAX_SKINNED_MESHES,
+        );
+
+        this.skinnedUniformsGpu = Game.gpu.device.createBuffer({
+            size: this.skinnedUniformsCpu.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            label: "skinnedMeshUniforms",
+        });
+
+        this.skinnedBindGroup = Game.gpu.device.createBindGroup({
+            label: "gSkinBG",
+            layout: Game.gpu.bindGroupLayouts.gskin,
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this.skinnedUniformsGpu,
                     },
                 },
             ],
@@ -140,6 +181,64 @@ export class GBufferPass implements IPass {
             );
         }
 
+        this.renderSkinned(rp);
         rp.end();
+    }
+
+    renderSkinned(rp: GPURenderPassEncoder) {
+        const sms = Game.ecs.getSystem(MeshSystem);
+
+        const { viewProjMtx: viewProjection } =
+            Game.ecs.getSystem(CameraSystem);
+
+        let n = 0;
+        for (const [comp, node] of sms.$skinnedMeshes) {
+            setTypedValues(
+                this.skinUniforms,
+                {
+                    viewProjection,
+                    deltaTime: Game.deltaTime,
+                    time: Game.time,
+
+                    transform: node.transform.$glbMtx,
+                    invTransform: node.transform.$glbInvMtx,
+
+                    joints: comp.boneMatrices,
+                },
+                this.skinnedUniformsCpu,
+                n * this.alignedSkinUniformSize,
+            );
+
+            n++;
+        }
+
+        if (n === 0) return;
+
+        Game.gpu.device.queue.writeBuffer(
+            this.skinnedUniformsGpu,
+            0,
+            this.skinnedUniformsCpu,
+        );
+
+        let i = 0;
+        for (const [comp] of sms.$skinnedMeshes) {
+            rp.setPipeline(Game.gpu.pipelines.gSkin);
+
+            rp.setBindGroup(0, this.skinnedBindGroup, [
+                i * this.alignedSkinUniformSize,
+            ]);
+            rp.setBindGroup(1, comp.material.bindGroup);
+
+            rp.setVertexBuffer(0, comp.primitive.position);
+            rp.setVertexBuffer(1, comp.primitive.texCoord);
+            rp.setVertexBuffer(2, comp.primitive.normal);
+            rp.setVertexBuffer(3, comp.primitive.joints);
+            rp.setVertexBuffer(4, comp.primitive.weights);
+
+            rp.setIndexBuffer(comp.primitive.index, "uint16");
+
+            rp.drawIndexed(comp.primitive.drawCount);
+            i++;
+        }
     }
 }

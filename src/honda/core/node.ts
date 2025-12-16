@@ -50,6 +50,7 @@ export class SceneNode {
     }
 
     protected _attached = true;
+
     protected attachComponents() {
         if (this._attached) return;
         this._attached = true;
@@ -73,8 +74,12 @@ export class SceneNode {
     }
 
     public addComponent<T extends IComponent>(c: T) {
-        if (this.isNodeInScene()) Game.ecs.registerComponent(this, c);
-        else this._attached = false;
+        if (this.isNodeInScene()) {
+            Game.ecs.registerComponent(this, c);
+        } else {
+            this._attached = false;
+        }
+
         this.components.push(c);
     }
 

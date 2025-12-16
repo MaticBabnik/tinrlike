@@ -1,15 +1,22 @@
 import { System } from "@/honda/core/ecs";
 import { CopyTransformMode, FizComponent } from "./fiz.component";
 import { PhysicsWorld } from "./world";
-import { Game, type SceneNode, ScriptComponent } from "@/honda";
+import { DebugSystem, Game, type SceneNode, ScriptComponent } from "@/honda";
 import type { TPhysicsObject } from "./object";
 import type { CollisionManifold } from "./collisions";
-import type { IFizNotify } from "./fiznotify.interface";
+import type { IFizNotify, TCollisionCallback } from "./fiznotify.interface";
 import { quat } from "wgpu-matrix";
+import type { Vec2Like } from "./common";
+import type { TShape } from "./shapes";
+
+const COLOR_STATIC = [0.8, 0.8, 0.8];
+const COLOR_DYNAMIC = [1.0, 0.2, 0.2];
+const COLOR_QUERY = [0.2, 0.8, 1.0];
 
 export class FizSystem extends System {
     public componentType = FizComponent;
 
+    public debug = true;
     public world: PhysicsWorld;
     protected compToNode = new Map<FizComponent, SceneNode>();
     protected objToNode = new Map<TPhysicsObject, SceneNode>();
@@ -18,7 +25,7 @@ export class FizSystem extends System {
         super();
 
         this.world = new PhysicsWorld(
-            this.notifyCollission.bind(this),
+            this.notifyCollision.bind(this),
             hashSize,
             layersPhysics,
         );
@@ -54,7 +61,13 @@ export class FizSystem extends System {
 
             switch (component.copyTransformMode) {
                 case CopyTransformMode.All:
-                    quat.fromEuler(0, obj.angle, 0, 'xyz', node.transform.rotation);
+                    quat.fromEuler(
+                        0,
+                        obj.angle,
+                        0,
+                        "xyz",
+                        node.transform.rotation,
+                    );
                     node.transform.translation[0] = obj.position[0];
                     node.transform.translation[2] = obj.position[1];
                     node.transform.update();
@@ -64,6 +77,32 @@ export class FizSystem extends System {
                     node.transform.translation[0] = obj.position[0];
                     node.transform.translation[2] = obj.position[1];
                     node.transform.update();
+                    break;
+            }
+        }
+
+        if (this.debug) this.debugRenderObjects();
+    }
+
+    private debugRenderObjects(): void {
+        const d = Game.ecs.maybeGetSystem(DebugSystem);
+        if (!d) return;
+
+        for (const obj of this.objToNode.keys()) {
+            const color = obj.dynamic ? COLOR_DYNAMIC : COLOR_STATIC;
+
+            switch (obj.shape.type) {
+                case "aabb":
+                    d.rectangle2d(
+                        obj.position,
+                        obj.shape.halfExtentX,
+                        obj.shape.halfExtentY,
+                        color,
+                    );
+                    break;
+
+                case "circle":
+                    d.circle2d(obj.position, obj.shape.radius, color);
                     break;
             }
         }
@@ -93,7 +132,7 @@ export class FizSystem extends System {
         this.world.removeObject(component.object.id);
     }
 
-    private notifyCollission(
+    private notifyCollision(
         object: TPhysicsObject,
         other: TPhysicsObject,
         collision: CollisionManifold,
@@ -111,5 +150,87 @@ export class FizSystem extends System {
                 );
             }
         }
+    }
+
+    public collisionQuery(
+        shape: TShape,
+        position: Vec2Like,
+        rotation: number,
+        layersMask: number,
+
+        callback: TCollisionCallback,
+    ): void {
+        if (this.debug) {
+            const d = Game.ecs.maybeGetSystem(DebugSystem);
+            if (!d) return;
+            switch (shape.type) {
+                case "aabb":
+                    d.rectangle2d(
+                        position,
+                        shape.halfExtentX,
+                        shape.halfExtentY,
+                        COLOR_QUERY,
+                    );
+                    break;
+
+                case "circle":
+                    d.circle2d(position, shape.radius, COLOR_QUERY);
+                    break;
+            }
+        }
+
+        this.world.query(shape, position, rotation, layersMask, (fobj, mf) => {
+            const fnode = this.objToNode.get(fobj);
+            if (!fnode) {
+                console.warn("No node for physics object", fobj);
+                return;
+            }
+
+            callback(fnode, fobj, mf);
+        });
+    }
+
+    public collisionQueryImmediate(
+        shape: TShape,
+        position: Vec2Like,
+        rotation: number,
+        layersMask: number,
+        callback: TCollisionCallback,
+    ): void {
+        if (this.debug) {
+            const d = Game.ecs.maybeGetSystem(DebugSystem);
+            if (!d) return;
+
+            switch (shape.type) {
+                case "aabb":
+                    d.rectangle2d(
+                        position,
+                        shape.halfExtentX,
+                        shape.halfExtentY,
+                        COLOR_QUERY,
+                    );
+                    break;
+
+                case "circle":
+                    d.circle2d(position, shape.radius, COLOR_QUERY);
+                    break;
+            }
+        }
+
+        this.world.queryImmediate(
+            shape,
+            position,
+            rotation,
+            layersMask,
+            (fobj, mf) => {
+                const fnode = this.objToNode.get(fobj);
+                if (!fnode) {
+                    console.warn("No node for physics object", fobj);
+                    return;
+                }
+
+                callback(fnode, fobj, mf);
+            },
+        );
     }
 }

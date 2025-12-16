@@ -45,11 +45,16 @@ export class ECS {
         });
     }
 
-    // TOOD(mbabnik): add a mechanism to override system(s)
     public getSystem<T extends System>(
         sysctor: new (...args: never[]) => T,
     ): T {
         return nn(this._systems.find((x) => x instanceof sysctor)) as T;
+    }
+
+    public maybeGetSystem<T extends System>(
+        sysctor: new (...args: never[]) => T,
+    ): T | undefined {
+        return this._systems.find((x) => x instanceof sysctor) as T | undefined;
     }
 }
 

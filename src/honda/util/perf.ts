@@ -1,5 +1,7 @@
 import { Game } from "../state";
 
+// TODO(mbabnik): Figure out if this can be done better
+
 export class Perf {
     protected static readonly N = 100;
 

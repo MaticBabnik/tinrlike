@@ -85,7 +85,7 @@ export class ShadePass implements IPass {
             camera: csys.viewMtx,
             shadowMapSize: Game.gpu.shadowmaps.size,
             nLights: Game.ecs.getSystem(LightSystem).nLights,
-            iblMaxMips: Game.gpu.sky.mips - 1,
+            // iblMaxMips: Game.gpu.sky.mips - 1,
         });
 
         const pass = Game.cmdEncoder.beginRenderPass({

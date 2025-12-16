@@ -29,6 +29,13 @@ export class Transform {
         this.dirty = true;
     }
 
+    /**
+     * Forces the local matrix to be up to date
+     */
+    public materialize() {
+        if (this.dirty) this.updateLocal();
+    }
+
     private _scratch = mat4.create();
     private updateLocal() {
         mat4.identity(this._locMtx);

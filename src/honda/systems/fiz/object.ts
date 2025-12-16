@@ -3,6 +3,7 @@ import type { TShape } from "./shapes/shape";
 import type { Vec2Like } from "./common";
 import { FIZ_LAYER_PHYS } from "./layer";
 import { FIZ_DEFAULT_MATERIAL, type FizMaterial } from "./material";
+import type { ICollidable } from "./collisions/collidable.interface";
 
 interface IPhysicsObject {
     readonly id: number;
@@ -13,7 +14,7 @@ interface IPhysicsObject {
     angle: number;
 }
 
-export abstract class PhysicsObjectBase implements IPhysicsObject {
+export abstract class PhysicsObjectBase implements IPhysicsObject, ICollidable {
     private static _nextId: number = 0;
     public readonly id: number = PhysicsObjectBase._nextId++;
     public position: Vec2 = vec2.create();

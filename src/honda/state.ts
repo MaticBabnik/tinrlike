@@ -11,20 +11,27 @@ import type { IPass } from "./gpu/passes";
 
 export const Game = {
     ecs: new ECS(),
+
+    //TODO(mbabnik): Scene management?
     scene: new Scene(),
 
+    // TODO(mbabnik): Be specifica about when this is set/valid/...
     time: 0,
     deltaTime: 0,
 
+    // TODO(mbabnik): Make into a Renderer class
     gpu: null! as WebGpu,
     input: null! as Input,
     cmdEncoder: null! as GPUCommandEncoder,
 
+    // TODO(mbabnik): Remove
     gui: new GUI(),
     perf: new Perf(),
 
+    // TODO(mbabnik): Remove
     flags: new Set<Flags>(),
 
+    // TODO(mbabnik): Move to Renderer class
     passes: [] as IPass[],
 };
 

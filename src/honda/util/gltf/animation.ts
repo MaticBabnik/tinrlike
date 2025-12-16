@@ -9,6 +9,7 @@ interface IHAnimationChannel {
     sampler: ASampler;
 }
 
+// TODO: this is fucking terrible; also the name is abit sus
 export class HAnimation {
     public length: number;
     private channels: IHAnimationChannel[] = [];
@@ -30,39 +31,47 @@ export class HAnimation {
      * @param node The node
      */
     public addNode(gltfIndex: number, node: SceneNode) {
-        const channel = this.channelDefs.find(
+        const channels = this.channelDefs.filter(
             (x) => x.target.node === gltfIndex,
         );
 
-        if (!channel) return;
+        for (const channel of channels) {
 
-        const type = channel.target.path;
-        if (type !== "translation" && type !== "rotation" && type !== "scale") {
-            return;
+            const type = channel.target.path;
+            if (
+                type !== "translation" &&
+                type !== "rotation" &&
+                type !== "scale"
+            ) {
+                return;
+            }
+
+            const sampler = nn(
+                this.samplers[channel.sampler],
+                "sampler not found",
+            );
+
+            switch (type) {
+                case "translation":
+                    if (!(sampler instanceof V3Sampler)) {
+                        throw new Error("Translation requires a V3 sampler");
+                    } else break;
+                case "rotation":
+                    if (!(sampler instanceof V4Sampler)) {
+                        throw new Error("Rotation requires a V4 sampler");
+                    } else break;
+                case "scale":
+                    if (!(sampler instanceof V3Sampler)) {
+                        throw new Error("Scale requires a V3 sampler");
+                    } else break;
+            }
+
+            this.channels.push({
+                node,
+                type,
+                sampler,
+            });
         }
-
-        const sampler = nn(this.samplers[channel.sampler], "sampler not found");
-
-        switch (type) {
-            case "translation":
-                if (!(sampler instanceof V3Sampler)) {
-                    throw new Error("Translation requires a V3 sampler");
-                } else break;
-            case "rotation":
-                if (!(sampler instanceof V4Sampler)) {
-                    throw new Error("Rotation requires a V4 sampler");
-                } else break;
-            case "scale":
-                if (!(sampler instanceof V3Sampler)) {
-                    throw new Error("Scale requires a V3 sampler");
-                } else break;
-        }
-
-        this.channels.push({
-            node,
-            type,
-            sampler,
-        });
     }
 
     public attach(n: SceneNode) {

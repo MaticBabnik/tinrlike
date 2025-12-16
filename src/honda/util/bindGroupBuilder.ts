@@ -1,5 +1,7 @@
 import { assert } from ".";
 
+// TODO(mbabnik): Move to ../gpu
+
 type __BGLTypeMap = {
     buffer: GPUBufferBindingLayout;
     sampler: GPUSamplerBindingLayout;

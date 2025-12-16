@@ -1,3 +1,5 @@
+// TODO(mbabnik): Either move all limits here seperate by components
+
 export const Limits = {
     // maximum number of lights
     MAX_LIGHTS: 64,

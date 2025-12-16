@@ -8,6 +8,10 @@ export class Mesh {
         public readonly normal: GPUBuffer,
         public readonly texCoord: GPUBuffer,
         public readonly tangent: GPUBuffer | undefined,
+
+        public readonly joints: GPUBuffer | undefined,
+        public readonly weights: GPUBuffer | undefined,
+
         public readonly index: GPUBuffer,
         public readonly drawCount: number,
     ) {
