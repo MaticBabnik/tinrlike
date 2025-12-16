@@ -7,7 +7,7 @@ import {
     type Vec4,
     vec4,
 } from "wgpu-matrix";
-import type { HondaAccesor } from ".";
+import type { HondaAccesor } from "./gltf";
 
 export enum AnimInterp {
     STEP = "STEP",

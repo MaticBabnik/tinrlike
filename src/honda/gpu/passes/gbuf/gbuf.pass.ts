@@ -3,30 +3,16 @@ import type { IPass } from "../pass.interface";
 import { type Material, NORMALMAP_BIT } from "@/honda";
 import type { Mesh } from "../../meshes/mesh";
 import { BIND_MAT, BIND_PASS } from "./gbuf.const";
-import {
-    makeStructuredView,
-    setTypedValues,
-    type StructuredView,
-} from "webgpu-utils";
+import { makeStructuredView, type StructuredView } from "webgpu-utils";
 import { MeshSystem } from "@/honda/systems/mesh";
 import { CameraSystem } from "@/honda/systems/camera";
-import { StructArrayBuffer } from "../../buffer";
-
-const U_ALIGN = 256;
-const MAX_SKINNED_MESHES = 5; //TODO: split off into a storage buffer aswell
+import type { StructArrayBuffer } from "../../buffer";
 
 export class GBufferPass implements IPass {
     protected uniformsBuf: GPUBuffer;
     protected uniforms: StructuredView;
     protected bindGroup: GPUBindGroup;
     protected skinBindGroup: GPUBindGroup;
-
-    private readonly skinUniforms =
-        Game.gpu.shaderModules.gskin.defs.structs.Uniforms;
-
-    private readonly alignedSkinUniformSize = ~~(
-        Math.ceil(this.skinUniforms.size / U_ALIGN) * U_ALIGN
-    );
 
     constructor(private skinMeshBuffer: StructArrayBuffer) {
         this.uniforms = makeStructuredView(

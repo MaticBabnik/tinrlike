@@ -15,7 +15,7 @@ import {
     FizMaterial,
     StaticPhysicsObject,
     FIZ_LAYER_PHYS,
-    nn
+    nn,
 } from "@/honda";
 import { quat } from "wgpu-matrix";
 import { setStatus } from "./honda/util/status";

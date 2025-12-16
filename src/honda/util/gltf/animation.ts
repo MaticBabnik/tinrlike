@@ -36,7 +36,6 @@ export class HAnimation {
         );
 
         for (const channel of channels) {
-
             const type = channel.target.path;
             if (
                 type !== "translation" &&

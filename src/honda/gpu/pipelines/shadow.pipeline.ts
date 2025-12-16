@@ -43,7 +43,7 @@ export function createShadowSkin(g: WebGpu) {
         primitive: TRI_LIST_CULLED,
         vertex: {
             module,
-            buffers: VERTEX_POS_SKIN
+            buffers: VERTEX_POS_SKIN,
         },
         fragment: {
             module,

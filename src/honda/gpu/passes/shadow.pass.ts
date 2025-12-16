@@ -2,13 +2,13 @@ import { Game } from "@/honda/state";
 import type { IPass } from "./pass.interface";
 import { LightSystem } from "@/honda/systems/light";
 import { MeshSystem } from "@/honda/systems/mesh";
-import { StructArrayBuffer } from "../buffer";
+import type { StructArrayBuffer } from "../buffer";
 
 export class ShadowMapPass implements IPass {
     private mtxBindGroup: GPUBindGroup;
     private skinBindGroup: GPUBindGroup;
 
-    constructor(private skinMeshBuffer: StructArrayBuffer) {
+    constructor(skinMeshBuffer: StructArrayBuffer) {
         const mBuf = Game.ecs.getSystem(LightSystem).shadowmapMatrices;
         const iBuf = Game.ecs.getSystem(MeshSystem).instanceBuffer;
 

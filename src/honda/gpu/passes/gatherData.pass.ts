@@ -35,7 +35,7 @@ export class GatherDataPass implements IPass {
                 joints: c.boneMatrices,
             });
         }
-        
+
         this.skinMeshBuffer.push(0, this.skinMeshBuffer.elementSize * idx);
     }
 }

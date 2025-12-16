@@ -7,11 +7,11 @@ export * from "./core/node";
 
 export * from "./systems";
 
-export * from "./gpu";
+export * from "./gpu/gpu";
 export * from "./gpu/passes";
 export * from "./gpu/meshes/mesh";
 export * from "./gpu/material/material";
 
-export * from "./util/gltf";
+export * from "./util/gltf/gltf";
 export * from "./util/input";
 export * from "./util/index";

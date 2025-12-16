@@ -71,7 +71,6 @@ export class SkinnedMeshComponent implements IComponent {
                 );
 
                 mat4.mul(ct, ibm, r);
-
             }
 
             // recurse into children

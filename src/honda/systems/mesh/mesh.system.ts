@@ -42,7 +42,12 @@ export class MeshSystem extends System {
             this.meshes.delete(comp as MeshComponent) ||
             this.skinnedMeshes.delete(comp as SkinnedMeshComponent)
         ) {
-            console.warn("FIXME: component created twice!?", comp.name ?? '???', '-', node.name ?? '???');
+            console.warn(
+                "FIXME: component created twice!?",
+                comp.name ?? "???",
+                "-",
+                node.name ?? "???",
+            );
         }
 
         if (comp instanceof SkinnedMeshComponent) {
@@ -101,7 +106,6 @@ export class MeshSystem extends System {
                 previousMat = mat;
                 previousMesh = mesh;
             } else {
-                // biome-ignore lint/style/noNonNullAssertion: can't be undefined
                 this.calls.at(-1)!.nInstances++;
             }
             i++;
