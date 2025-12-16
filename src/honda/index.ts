@@ -14,3 +14,4 @@ export * from "./gpu/material/material";
 
 export * from "./util/gltf";
 export * from "./util/input";
+export * from "./util/index";

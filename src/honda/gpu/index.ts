@@ -11,6 +11,7 @@ import {
 } from "./textures";
 import { createBindGroupLayouts } from "./bindGroupLayouts";
 import { setError } from "../util/status";
+import type { Buffer, StructArrayBuffer, StructBuffer } from "./buffer";
 
 export class WebGpu {
     private ro: ResizeObserver;
@@ -34,6 +35,9 @@ export class WebGpu {
         Game.flags.has("shadowLow") ? 512 : 2048,
         "shadowmaps",
     );
+
+    public buffers: Record<string, Buffer | StructBuffer | StructArrayBuffer> =
+        {};
 
     public canvasTexture!: GPUTexture;
     public canvasView!: GPUTextureView;

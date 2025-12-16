@@ -18,6 +18,7 @@ type ShaderKey =
     | "rgbmload"
     | "shade"
     | "shadow"
+    | "shadowSkin"
     | "sky"
     | "ssao";
 

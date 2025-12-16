@@ -1,16 +1,10 @@
-
 struct Uniforms {
     viewProjection: mat4x4<f32>,
     deltaTime: f32,
     time: f32,
-
-    transform: mat4x4<f32>,
-    invTransform: mat4x4<f32>,
-
-    joints: array<mat4x4f, 128>
 }
 
-struct SkinnedInstance {
+struct Instance {
     transform: mat4x4<f32>,
     invTransform: mat4x4<f32>,
     joints: array<mat4x4f, 128>,
@@ -28,6 +22,7 @@ struct Material {
 
 struct VertexIn {
     @builtin(instance_index) instanceIndex: u32,
+    
     @location(0) position: vec3f,
     @location(1) uv: vec2f,
     @location(2) normal: vec3f,
@@ -50,6 +45,7 @@ struct Gbuffer {
 
 // SkinnedMesh group
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var<storage, read> instances: array<Instance>;
 
 // Material group
 @group(1) @binding(0) var<uniform> material: Material;
@@ -62,15 +58,17 @@ struct Gbuffer {
 
 @vertex
 fn vertex_main(v: VertexIn) -> VertexOutput {
+    let instance = instances[v.instanceIndex];
+
     // Compute skin matrix
-    let sm = uniforms.joints[v.jointIds[0]] * v.jointWeights[0] +
-             uniforms.joints[v.jointIds[1]] * v.jointWeights[1] +
-             uniforms.joints[v.jointIds[2]] * v.jointWeights[2] +
-             uniforms.joints[v.jointIds[3]] * v.jointWeights[3];
+    let sm = instance.joints[v.jointIds[0]] * v.jointWeights[0] +
+             instance.joints[v.jointIds[1]] * v.jointWeights[1] +
+             instance.joints[v.jointIds[2]] * v.jointWeights[2] +
+             instance.joints[v.jointIds[3]] * v.jointWeights[3];
 
     // Project to world
-    let normalMatrix = transpose(mat3x3(uniforms.invTransform[0].xyz, uniforms.invTransform[1].xyz, uniforms.invTransform[2].xyz));
-    let wPos = uniforms.transform * sm * vec4f(v.position, 1.0);
+    let normalMatrix = transpose(mat3x3(instance.invTransform[0].xyz, instance.invTransform[1].xyz, instance.invTransform[2].xyz));
+    let wPos = instance.transform * sm * vec4f(v.position, 1.0);
     let wNor = normalize(normalMatrix * vec3f(v.normal));
 
     // project position

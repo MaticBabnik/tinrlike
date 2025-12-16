@@ -21,6 +21,8 @@ import type { Flags } from "./honda/util/flags";
 import { $ } from "./honda/util";
 import { FizSystem } from "./honda/systems/fiz";
 import { DebugLinePass } from "./honda/gpu/passes/debugline.pass";
+import { GatherDataPass } from "./honda/gpu/passes/gatherData.pass";
+import { StructArrayBuffer } from "./honda/gpu/buffer";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -102,9 +104,20 @@ const play = async (preset: "low" | "medium" | "high") => {
 
     await createScene();
 
+    // Init skin buffer
+    const skinBuf = new StructArrayBuffer(
+        Game.gpu.shaderModules.gskin.defs.structs.Instance,
+        100,
+        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        "skinInstanceBuffer",
+    );
+
+    Game.gpu.buffers.skins = skinBuf;
+
     Game.passes = [
-        new GBufferPass(),
-        new ShadowMapPass(),
+        new GatherDataPass(skinBuf),
+        new GBufferPass(skinBuf),
+        new ShadowMapPass(skinBuf),
         new SkyPass([0, 0, 0, 0]),
         new ShadePass(),
         new PostprocessPass(),

@@ -10,6 +10,7 @@ import {
 } from "webgpu-utils";
 import { MeshSystem } from "@/honda/systems/mesh";
 import { CameraSystem } from "@/honda/systems/camera";
+import { StructArrayBuffer } from "../../buffer";
 
 const U_ALIGN = 256;
 const MAX_SKINNED_MESHES = 5; //TODO: split off into a storage buffer aswell
@@ -18,6 +19,7 @@ export class GBufferPass implements IPass {
     protected uniformsBuf: GPUBuffer;
     protected uniforms: StructuredView;
     protected bindGroup: GPUBindGroup;
+    protected skinBindGroup: GPUBindGroup;
 
     private readonly skinUniforms =
         Game.gpu.shaderModules.gskin.defs.structs.Uniforms;
@@ -26,11 +28,7 @@ export class GBufferPass implements IPass {
         Math.ceil(this.skinUniforms.size / U_ALIGN) * U_ALIGN
     );
 
-    protected skinnedUniformsCpu: ArrayBuffer;
-    protected skinnedUniformsGpu: GPUBuffer;
-    protected skinnedBindGroup!: GPUBindGroup;
-
-    constructor() {
+    constructor(private skinMeshBuffer: StructArrayBuffer) {
         this.uniforms = makeStructuredView(
             Game.gpu.shaderModules.g.defs.uniforms.uniforms,
         );
@@ -60,24 +58,20 @@ export class GBufferPass implements IPass {
             ],
         });
 
-        this.skinnedUniformsCpu = new ArrayBuffer(
-            this.alignedSkinUniformSize * MAX_SKINNED_MESHES,
-        );
-
-        this.skinnedUniformsGpu = Game.gpu.device.createBuffer({
-            size: this.skinnedUniformsCpu.byteLength,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            label: "skinnedMeshUniforms",
-        });
-
-        this.skinnedBindGroup = Game.gpu.device.createBindGroup({
+        this.skinBindGroup = Game.gpu.device.createBindGroup({
             label: "gSkinBG",
             layout: Game.gpu.bindGroupLayouts.gskin,
             entries: [
                 {
                     binding: 0,
                     resource: {
-                        buffer: this.skinnedUniformsGpu,
+                        buffer: this.uniformsBuf,
+                    },
+                },
+                {
+                    binding: 1,
+                    resource: {
+                        buffer: this.skinMeshBuffer.gpuBuf,
                     },
                 },
             ],
@@ -188,45 +182,11 @@ export class GBufferPass implements IPass {
     renderSkinned(rp: GPURenderPassEncoder) {
         const sms = Game.ecs.getSystem(MeshSystem);
 
-        const { viewProjMtx: viewProjection } =
-            Game.ecs.getSystem(CameraSystem);
-
-        let n = 0;
-        for (const [comp, node] of sms.$skinnedMeshes) {
-            setTypedValues(
-                this.skinUniforms,
-                {
-                    viewProjection,
-                    deltaTime: Game.deltaTime,
-                    time: Game.time,
-
-                    transform: node.transform.$glbMtx,
-                    invTransform: node.transform.$glbInvMtx,
-
-                    joints: comp.boneMatrices,
-                },
-                this.skinnedUniformsCpu,
-                n * this.alignedSkinUniformSize,
-            );
-
-            n++;
-        }
-
-        if (n === 0) return;
-
-        Game.gpu.device.queue.writeBuffer(
-            this.skinnedUniformsGpu,
-            0,
-            this.skinnedUniformsCpu,
-        );
+        rp.setPipeline(Game.gpu.pipelines.gSkin);
+        rp.setBindGroup(0, this.skinBindGroup);
 
         let i = 0;
         for (const [comp] of sms.$skinnedMeshes) {
-            rp.setPipeline(Game.gpu.pipelines.gSkin);
-
-            rp.setBindGroup(0, this.skinnedBindGroup, [
-                i * this.alignedSkinUniformSize,
-            ]);
             rp.setBindGroup(1, comp.material.bindGroup);
 
             rp.setVertexBuffer(0, comp.primitive.position);
@@ -237,8 +197,7 @@ export class GBufferPass implements IPass {
 
             rp.setIndexBuffer(comp.primitive.index, "uint16");
 
-            rp.drawIndexed(comp.primitive.drawCount);
-            i++;
+            rp.drawIndexed(comp.primitive.drawCount, 1, 0, 0, i++);
         }
     }
 }

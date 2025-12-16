@@ -18,10 +18,9 @@ const layouts = [
         .binding(0, "v", "buffer", { type: "uniform" })
         .binding(1, "v", "buffer", { type: "read-only-storage" }),
 
-    bindGroupLayout("gskin").binding(0, "v", "buffer", {
-        type: "uniform",
-        hasDynamicOffset: true,
-    }),
+    bindGroupLayout("gskin")
+        .binding(0, "v", "buffer", { type: "uniform" })
+        .binding(1, "v", "buffer", { type: "read-only-storage" }),
 
     bindGroupLayout("post")
         .binding(0, "f", "buffer", { type: "uniform" })

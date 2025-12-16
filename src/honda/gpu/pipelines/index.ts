@@ -8,7 +8,7 @@ import { createG, createGNorm, createGSkin } from "./g.pipeline";
 import { createPostProcess } from "./postprocess.pipeline";
 import { createRgbmload } from "./rgbmload.pipeline";
 import { createShade } from "./shade.pipeline";
-import { createShadow } from "./shadow.pipeline";
+import { createShadow, createShadowSkin } from "./shadow.pipeline";
 import { createSky } from "./sky.pipeline";
 import { createSprite } from "./sprite.pipeline";
 import { createSSAO } from "./ssao.pipeline";
@@ -19,6 +19,7 @@ export function createPipelines(g: WebGpu) {
         gSkin: createGSkin(g),
         gNorm: createGNorm(g),
         shadow: createShadow(g),
+        shadowSkin: createShadowSkin(g),
         post: createPostProcess(g),
         ssao: createSSAO(g),
         shade: createShade(g),

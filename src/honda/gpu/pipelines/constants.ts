@@ -45,6 +45,20 @@ export const VERTEX_POS_UV_NORM_SKIN = [
     },
 ] satisfies GPUVertexBufferLayout[];
 
+export const VERTEX_POS_SKIN = [
+    ...VERTEX_POS,
+
+    {
+        arrayStride: 4,
+        attributes: [{ offset: 0, format: "uint8x4", shaderLocation: 1 }],
+    },
+
+    {
+        arrayStride: 16,
+        attributes: [{ offset: 0, format: "float32x4", shaderLocation: 2 }],
+    },
+] satisfies GPUVertexBufferLayout[];
+
 export const VERTEX_POS_UV_NORM_TAN = [
     ...VERTEX_POS_UV_NORM,
     {
