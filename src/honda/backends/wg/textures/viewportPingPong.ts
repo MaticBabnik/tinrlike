@@ -1,7 +1,8 @@
 import type { IPingPongable, IResizable } from "./interfaces";
 
-export class ViewportPingPongTexture<Tformat extends GPUTextureFormat = GPUTextureFormat>
-    implements IResizable, IPingPongable
+export class ViewportPingPongTexture<
+    Tformat extends GPUTextureFormat = GPUTextureFormat,
+> implements IResizable, IPingPongable
 {
     public tex!: GPUTexture;
     public views!: [GPUTextureView, GPUTextureView];
@@ -15,6 +16,14 @@ export class ViewportPingPongTexture<Tformat extends GPUTextureFormat = GPUTextu
 
     public pingPong(): void {
         this.views.reverse();
+    }
+
+    public get width(): number {
+        return this.tex.width;
+    }
+
+    public get height(): number {
+        return this.tex.height;
     }
 
     public get readView(): GPUTextureView {

@@ -1,12 +1,10 @@
-import { Mat4, Vec3 } from "wgpu-matrix";
+import type { Mat4, Vec3 } from "wgpu-matrix";
 import { StructBuffer } from "../buffer";
-import { WGpu } from "../gpu";
+import type { WGpu } from "../gpu";
 import type { IPass } from "./pass.interface";
-import { CameraSystem } from "@/honda/systems/camera";
-import { nn } from "@/honda/util";
-import { Three } from "@/honda/gpu2";
-import { ITViewable } from "../textures";
-import { UniformData } from "./gatherData.pass";
+import type { Three } from "@/honda/gpu2";
+import type { ITViewable } from "../textures";
+import type { UniformData } from "./gatherData.pass";
 import { getPostProcess } from "../pipelines";
 
 export interface PostSettings {
@@ -33,15 +31,16 @@ export class PostprocessPass implements IPass {
         private gpu: WGpu,
 
         private postSettings: PostSettings,
-        
+
         private uniforms: UniformData,
-        
+
         private shaded: ITViewable,
         private depth: ITViewable,
+        private edge: ITViewable,
 
-        private out: ITViewable
+        private out: ITViewable,
     ) {
-        this.settings = new StructBuffer(
+        this.settings = new StructBuffer<PostCfg>(
             gpu,
             gpu.getStruct("postprocess", "PostCfg"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -70,6 +69,10 @@ export class PostprocessPass implements IPass {
                     binding: 2,
                     resource: this.depth.view,
                 },
+                {
+                    binding: 3,
+                    resource: this.edge.view,
+                },
             ],
         });
     }
@@ -83,7 +86,7 @@ export class PostprocessPass implements IPass {
             inverseProjection: this.uniforms.pInv,
             camera: this.uniforms.v,
 
-            ... this.postSettings
+            ...this.postSettings,
         });
 
         const post = this.gpu.cmdEncoder.beginRenderPass({

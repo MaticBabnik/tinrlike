@@ -10,7 +10,7 @@ type SystemComponent = MeshComponent | SkinnedMeshComponent;
 
 export class MeshSystem extends System {
     public componentType = MeshComponentBase;
-    
+
     protected meshes = new Map<MeshComponent, SceneNode>();
     protected skinnedMeshes = new Map<SkinnedMeshComponent, SceneNode>();
 

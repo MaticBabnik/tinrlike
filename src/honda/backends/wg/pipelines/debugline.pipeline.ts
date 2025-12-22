@@ -1,7 +1,7 @@
 import type { WGpu } from "../gpu";
 
 export function createDebugline(g: WGpu) {
-    const { module } = g.shaderModules.devline;
+    const module = g.getShaderModule("devline");
 
     return g.device.createRenderPipeline({
         label: "debugline",

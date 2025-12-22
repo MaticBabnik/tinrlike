@@ -15,7 +15,7 @@ export interface IGPUImplementation {
      * The width of the viewport in pixels.
      */
     get viewportWidth(): number;
-    
+
     /**
      * The height of the viewport in pixels.
      */
@@ -26,7 +26,7 @@ export interface IGPUImplementation {
      */
     get aspectRatio(): number;
 
-    createTextureData(d: IGPUTexDataDesc): IGPUTexData; 
+    createTextureData(d: IGPUTexDataDesc): IGPUTexData;
 
     createTexture(d: IGPUTexDesc, data: IGPUTexData): IGPUTex;
 

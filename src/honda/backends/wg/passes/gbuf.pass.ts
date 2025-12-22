@@ -5,8 +5,7 @@ import type { DrawCall, Instance, UniformData } from "./gatherData.pass";
 import type { WGMat } from "../resources/mat";
 import type { WGBuf } from "../resources/buf";
 import { type Four, MeshIndexType } from "@/honda/gpu2";
-import type { IResizable, ITViewable, ViewportTexture } from "../textures";
-import type { DepthFormats } from "../textures/types";
+import type { ITViewable } from "../textures";
 import { getGPipeline } from "../pipelines";
 
 export class GBufferPass implements IPass {

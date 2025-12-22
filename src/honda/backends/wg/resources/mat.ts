@@ -1,11 +1,9 @@
 import { MaterialBase } from "../../../gpu2/base/materialBase";
 import {
     GPUMatAlpha,
-    GPUTexFormat,
     type Four,
     type IGPUMat,
     type IGPUMatDesc,
-    type IGPUTex,
     type Three,
 } from "../../../gpu2/interface";
 import { StructBuffer } from "../buffer";

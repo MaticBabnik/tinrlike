@@ -27,9 +27,9 @@ import {
 } from "./honda/backends/wg/passes/gatherData.pass";
 import {
     ShadowMapTexture,
-    ViewportPingPongTexture,
     ViewportTexture,
 } from "./honda/backends/wg/textures";
+import { EdgePass } from "./honda/backends/wg/passes/edge.pass";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -89,6 +89,7 @@ function createGpuPipeline(gpu: WGpu) {
     const mtlRgh = new ViewportTexture("rg8unorm", 1, "gMetalRough");
     const emission = new ViewportTexture("rgba8unorm", 1, "gEmission");
     const depth = new ViewportTexture("depth24plus", 1, "gDepth");
+    const edge = new ViewportTexture("r8unorm", 1, "edge");
     const shaded = new ViewportTexture("rgba16float", 1, "shaded");
 
     const shadowmaps = new ShadowMapTexture(
@@ -105,6 +106,7 @@ function createGpuPipeline(gpu: WGpu) {
     gpu.addViewport(mtlRgh);
     gpu.addViewport(emission);
     gpu.addViewport(depth);
+    gpu.addViewport(edge);
     gpu.addViewport(shaded);
 
     const drawCalls = [] as DrawCall[];
@@ -198,6 +200,23 @@ function createGpuPipeline(gpu: WGpu) {
     );
 
     gpu.addPass(
+        new EdgePass(
+            gpu,
+            {
+                normalBoost: 1.0,
+                depthBoost: 1.0,
+            },
+
+            uniformData,
+
+            normal,
+            depth,
+
+            edge,
+        ),
+    );
+
+    gpu.addPass(
         new ShadePass(
             gpu,
 
@@ -233,6 +252,7 @@ function createGpuPipeline(gpu: WGpu) {
             uniformData,
             shaded,
             depth,
+            edge,
 
             gpu.canvasTexture,
         ),

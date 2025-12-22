@@ -19,7 +19,7 @@ var<uniform> post: PostCfg;
 var shaded: texture_2d<f32>;
 @group(0) @binding(2)
 var depth: texture_depth_2d;
-// @group(0) @binding(3) var ssao: texture_2d<f32>;
+@group(0) @binding(3) var edge: texture_2d<f32>;
 // @group(0) @binding(4) var bloom: texture_2d<f32>;
 
 @vertex
@@ -88,14 +88,7 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
     let p = vec2<u32>(fragCoord.xy);
 
     let s = textureLoad(shaded, p, 0);
-    let sU = textureLoad(shaded, vec2u(p.x, p.y - 1), 0).xyz;
-    let sD = textureLoad(shaded, vec2u(p.x, p.y + 1), 0).xyz;
-    let sL = textureLoad(shaded, vec2u(p.x - 1, p.y), 0).xyz;
-    let sR = textureLoad(shaded, vec2u(p.x + 1, p.y), 0).xyz;
-
-    let dX = sU - sD;
-    let dY = sL - sR;
-    let edgeFactor = dot(dX, dX) + dot(dY, dY);
+    let edgeFactor = textureLoad(edge, p, 0).x;
 
     let shadedColor = (1.0 - edgeFactor) * s.xyz;
     let toneMappedColor = agx_tonemap_punchy(shadedColor, post.exposure);

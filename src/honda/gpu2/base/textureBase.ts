@@ -41,5 +41,4 @@ export abstract class GPUTexBase extends RefCntBase implements IGPUTex {
     protected _rcDestroy(): void {
         this.data.rcRelease();
     }
-
 }

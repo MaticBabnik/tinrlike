@@ -1,4 +1,11 @@
-import { GPUMatAlpha, type Four, type IGPUMat, type IGPUMatDesc, type IGPUTex, type Three } from "../interface";
+import {
+    GPUMatAlpha,
+    type Four,
+    type IGPUMat,
+    type IGPUMatDesc,
+    type IGPUTex,
+    type Three,
+} from "../interface";
 import { RefCntBase } from "./refCountBase";
 
 export abstract class MaterialBase extends RefCntBase implements IGPUMat {

@@ -6,13 +6,21 @@ export class ViewportTexture<
 {
     public tex!: GPUTexture;
     public view!: GPUTextureView;
-    public resized: boolean = false; 
+    public resized: boolean = false;
 
     constructor(
         public format: Tformat,
         public renderScale: number = 1,
         public label: string | undefined = undefined,
     ) {}
+
+    public get width(): number {
+        return this.tex.width;
+    }
+
+    public get height(): number {
+        return this.tex.height;
+    }
 
     public resize(dev: GPUDevice, viewportW: number, viewportH: number) {
         this.tex?.destroy();

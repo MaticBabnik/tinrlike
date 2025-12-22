@@ -1,7 +1,4 @@
-import type {
-    GPUTexAddr,
-    GPUTexFilter,
-} from "./enums";
+import type { GPUTexAddr, GPUTexFilter } from "./enums";
 import type { IRefCnt } from "./rc.interface";
 import type { IGPUTexData } from "./textureData.interface";
 import type { Three } from "./types";

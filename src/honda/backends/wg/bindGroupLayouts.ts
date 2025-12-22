@@ -25,9 +25,9 @@ const layouts = [
     bindGroupLayout("post")
         .binding(0, "f", "buffer", { type: "uniform" })
         .binding(1, "f", "texture")
-        .binding(2, "f", "texture", { sampleType: "depth" }),
-        // .binding(3, "f", "texture")
-        // .binding(4, "f", "texture"),
+        .binding(2, "f", "texture", { sampleType: "depth" })
+        .binding(3, "f", "texture"),
+    // .binding(4, "f", "texture"),
 
     bindGroupLayout("ssao")
         .binding(0, "f", "buffer", { type: "uniform" })
@@ -107,6 +107,12 @@ const layouts = [
         .binding(0, "v", "buffer", { type: "uniform" })
         .binding(1, "v", "buffer", { type: "read-only-storage" })
         .binding(2, "v", "buffer", { type: "read-only-storage" }),
+
+    bindGroupLayout("edge")
+        .binding(0, "f", "buffer", { type: "uniform" })
+        .binding(1, "f", "texture")
+        .binding(2, "f", "texture", { sampleType: "unfilterable-float" })
+        .binding(3, "f", "sampler", { type: "non-filtering" }),
 ] as const;
 
 export function createBindGroupLayouts(g: WGpu) {

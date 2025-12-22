@@ -1,18 +1,16 @@
-import { Game } from "@/honda/state";
 import type { IPass } from "./pass.interface";
 import { mat4, vec4, type Mat4, type Vec3 } from "wgpu-matrix";
 import type { Buffer, StructArrayBuffer } from "../buffer";
-import {
+import type {
     CameraSystem,
-    IDirectionalLight,
     ISpotLight,
     LightSystem,
     MeshSystem,
     THondaLight,
 } from "@/honda/systems";
-import { IGPUMat, MeshV2, Three } from "@/honda/gpu2";
-import { WGpu } from "../gpu";
-import { WGMat } from "../resources/mat";
+import type { IGPUMat, MeshV2, Three } from "@/honda/gpu2";
+import type { WGpu } from "../gpu";
+import type { WGMat } from "../resources/mat";
 
 type MeshInstance = {
     transform: Mat4;
@@ -56,6 +54,11 @@ export type UniformData = {
     vp: Mat4;
     vpInv: Mat4;
     pInv: Mat4;
+
+    near: number;
+    far: number;
+    isOrtho: number;
+
     nLights: number;
     nShadowmaps: number;
 };
@@ -110,6 +113,9 @@ export class GatherDataPass implements IPass {
         this.uniformData.vp = this.cameraSystem.viewProjMtx;
         this.uniformData.vpInv = this.cameraSystem.viewProjMtxInv;
         this.uniformData.pInv = cam.projMtxInv;
+        this.uniformData.near = this.cameraSystem.near;
+        this.uniformData.far = this.cameraSystem.far;
+        this.uniformData.isOrtho = this.cameraSystem.isOrtho ? 1 : 0;
     }
 
     gatherMeshData(): void {

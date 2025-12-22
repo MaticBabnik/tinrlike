@@ -2,7 +2,7 @@ import { nn } from "../../util";
 import { Limits } from "./limits";
 
 import { getModules } from "./shaders";
-import { ShadowMapTexture, IResizable, ITViewable } from "./textures";
+import type { IResizable, ITViewable } from "./textures";
 import { createBindGroupLayouts } from "./bindGroupLayouts";
 import { setError } from "../../util/status";
 import type { Buffer, StructArrayBuffer, StructBuffer } from "./buffer";
@@ -49,6 +49,9 @@ export class WGpu implements IGPUImplementation {
         format: null! as GPUTextureFormat,
         view: null! as GPUTextureView,
         resized: true, // sej ni vazn
+
+        width: 0,
+        height: 0,
     } satisfies ITViewable;
 
     public pFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -255,6 +258,9 @@ export class WGpu implements IGPUImplementation {
             this.canvasTexture.view = this.canvasTex.createView({
                 label: "canvasView",
             });
+            this.canvasTexture.width = this.canvasTex.width;
+            this.canvasTexture.height = this.canvasTex.height;
+            this.canvasTexture.resized = true;
         }
 
         this.queryIndex = 0;

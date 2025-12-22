@@ -29,9 +29,15 @@ export abstract class RefCntBase implements IRefCnt {
         }
 
         this._rcCount--;
-        
+
         if (this._rcCount === 0) {
             this._rcValid = false;
+            console.log(
+                "RefCountBase: Destroying",
+                (this as { name?: string }).name ??
+                    (this as { label?: string }).label ??
+                    this.constructor.name,
+            );
             this._rcDestroy();
         }
     }

@@ -42,5 +42,4 @@ export abstract class GPUBufBase extends RefCntBase implements IGPUBuf {
     ): void;
 
     public abstract upload(src: BufferSource, offset: number, n: number): void;
-
 }

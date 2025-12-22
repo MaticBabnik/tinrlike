@@ -2,7 +2,6 @@ import { LightComponent } from "./light.component";
 import { System } from "@/honda/core/ecs";
 import type { SceneNode } from "@/honda/core/node";
 
-
 export class LightSystem extends System {
     public componentType = LightComponent;
 

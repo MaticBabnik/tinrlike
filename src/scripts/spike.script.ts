@@ -2,7 +2,6 @@ import { TL_LAYER_PLAYER } from "@/constants";
 import { AABBShape, FizSystem, Game, type IFizNotify, Script } from "@/honda";
 import { PlayerScript } from "./player.script";
 
-// biome-ignore lint/suspicious/noConstEnum: Only used in this file
 const enum SpikeState {
     Idle = 0,
     Triggering = 1,

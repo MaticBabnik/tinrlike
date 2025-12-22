@@ -176,7 +176,7 @@ export async function createScene() {
             n.name = "testLight";
             n.transform.translation.set([0, 1, 0]);
             n.transform.update();
-            
+
             n.addComponent(
                 new LightComponent({
                     type: "point",

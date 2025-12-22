@@ -2,7 +2,6 @@ import {
     makeShaderDataDefinitions,
     type ShaderDataDefinitions,
 } from "webgpu-utils";
-import type { WGpu } from "../gpu";
 
 const shaderSources = import.meta.glob("./*.wgsl", {
     eager: true,

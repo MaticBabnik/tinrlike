@@ -1,4 +1,4 @@
-import { Four } from "@/honda/gpu2";
+import type { Four } from "@/honda/gpu2";
 import type { WGpu } from "../gpu";
 import {
     TRI_LIST_CULLED,

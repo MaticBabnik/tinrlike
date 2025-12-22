@@ -11,6 +11,10 @@ export interface IResizable {
  * Trivially viewable texture interface
  */
 export interface ITViewable {
+    get width(): number;
+
+    get height(): number;
+
     get format(): GPUTextureFormat;
 
     get view(): GPUTextureView;
@@ -22,6 +26,10 @@ export interface ITViewable {
  * Ping-pongable texture interface
  */
 export interface IPingPongable {
+    get width(): number;
+
+    get height(): number;
+
     get format(): GPUTextureFormat;
 
     get views(): [GPUTextureView, GPUTextureView];

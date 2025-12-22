@@ -1,4 +1,12 @@
-import { type DynamicPhysicsObject, FizComponent, Game, Script } from "@/honda";
+import {
+    type DynamicPhysicsObject,
+    FizComponent,
+    Game,
+    nn,
+    Script,
+    type SkinnedMeshComponent,
+} from "@/honda";
+import type { IGPUMat } from "@/honda/gpu2";
 import { vec2, quat } from "wgpu-matrix";
 
 const ORIGIN = vec2.create(0, 0);
@@ -19,16 +27,28 @@ export class PlayerScript extends Script {
 
     protected fiz: DynamicPhysicsObject = null!;
 
+    protected material!: IGPUMat;
+
     override onAttach(): void {
         this.fiz =
             this.node.assertComponent<FizComponent<DynamicPhysicsObject>>(
                 FizComponent,
             ).object;
+
+        const cube = this.node.findChild((x) => x.name === "Cube");
+        const mesh = cube?.components.find(
+            (x) => x.name === "skinnedMesh0.prim0",
+        ) as SkinnedMeshComponent;
+
+        this.material = nn(mesh.material);
     }
 
     override update(): void {
         let boost = false;
         const g = Game.input.activeGamepad;
+
+        this.material.colorFactor[0] = Math.abs(Math.sin(Game.time));
+        this.material.push();
 
         if (g) {
             boost = g.buttons[0].pressed;

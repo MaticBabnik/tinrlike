@@ -13,6 +13,9 @@ export class CameraSystem extends System {
     public viewProjMtx = mat4.identity();
     public viewMtx = mat4.identity();
     public viewMtxInv = mat4.identity();
+    public near = 0;
+    public far = 0;
+    public isOrtho = false;
 
     protected components = new Map<CameraComponent, SceneNode>();
 
@@ -45,6 +48,10 @@ export class CameraSystem extends System {
 
         // (VP)^-1 = V^-1 * P^-1
         mat4.mul(this.viewMtxInv, cc.projMtxInv, this.viewProjMtxInv);
+
+        this.near = cc.near;
+        this.far = cc.far;
+        this.isOrtho = true; //TODO fix!
     }
 
     /**
