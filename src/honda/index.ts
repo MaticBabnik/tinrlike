@@ -1,5 +1,4 @@
 export * from "./state";
-export * from "./limits";
 
 export * from "./core/ecs";
 export * from "./core/scene";
@@ -7,11 +6,8 @@ export * from "./core/node";
 
 export * from "./systems";
 
-export * from "./gpu/gpu";
-export * from "./gpu/passes";
-export * from "./gpu/meshes/mesh";
-export * from "./gpu/material/material";
+export * from "./backends/wg/passes";
 
-export * from "./util/gltf/gltf";
+export * from "./util/gltf/loader";
 export * from "./util/input";
 export * from "./util/index";

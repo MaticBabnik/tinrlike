@@ -1,2 +1,0 @@
-export const BIND_PASS = 0,
-    BIND_MAT = 1;

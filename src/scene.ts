@@ -2,7 +2,7 @@ import {
     Game,
     SceneNode,
     CameraComponent,
-    GltfBinary,
+    GltfLoader,
     ScriptComponent,
     Script,
     LightComponent,
@@ -24,17 +24,15 @@ import { TL_LAYER_PLAYER } from "./constants";
 import { PlayerScript } from "./scripts/player.script";
 import { LerpCameraScript } from "./scripts/lerpCamera.script";
 import { SpikeScript } from "./scripts/spike.script";
+import { GltfBinary } from "./honda/util/gltf";
 
 export async function createScene() {
     setStatus("loading assets");
-    const level = await GltfBinary.fromUrl("./next.glb");
-    const tc = await GltfBinary.fromUrl("./testchr.glb");
+
+    const level = new GltfLoader(await GltfBinary.fromUrl("./next.glb"));
+    const tc = new GltfLoader(await GltfBinary.fromUrl("./testchr.glb"));
 
     setStatus("building scene");
-
-    level.json.extensions?.KHR_lights_punctual?.lights.forEach((light) => {
-        if (light.intensity) light.intensity /= 50;
-    });
 
     Game.scene.addChild(level.sceneAsNode());
 
@@ -173,6 +171,25 @@ export async function createScene() {
             player.addChild(tcn);
         }
 
+        {
+            const n = new SceneNode();
+            n.name = "testLight";
+            n.transform.translation.set([0, 1, 0]);
+            n.transform.update();
+            
+            n.addComponent(
+                new LightComponent({
+                    type: "point",
+                    color: [1, 0, 1],
+                    intensity: 5,
+                    maxRange: 10,
+                    castShadows: false,
+                }),
+            );
+
+            player.addChild(n);
+        }
+
         Game.scene.addChild(player);
 
         const cameraHolder = new SceneNode();
@@ -240,5 +257,7 @@ export async function createScene() {
     console.log(Game.scene.tree());
     console.groupEnd();
 
-    // Game.gpu.sky = sky2;
+    console.groupCollapsed("GPU ref counts");
+    (Game.gpu2 as { printRcStats?: () => void }).printRcStats?.();
+    console.groupEnd();
 }

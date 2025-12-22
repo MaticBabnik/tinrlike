@@ -1,28 +1,35 @@
 import {
     Input,
-    WebGpu,
     Game,
     ScriptSystem,
-    PostprocessPass,
-    SkyPass,
-    GBufferPass,
-    ShadowMapPass,
-    ShadePass,
     MeshSystem,
     CameraSystem,
     LightSystem,
     DebugSystem,
+    GBufferPass,
+    ShadePass,
+    ShadowMapPass,
+    PostprocessPass,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
 
 import { createScene } from "./scene";
-import type { Flags } from "./honda/util/flags";
 import { $ } from "./honda/util";
 import { FizSystem } from "./honda/systems/fiz";
-import { DebugLinePass } from "./honda/gpu/passes/debugline.pass";
-import { GatherDataPass } from "./honda/gpu/passes/gatherData.pass";
-import { StructArrayBuffer } from "./honda/gpu/buffer";
+import { WGpu } from "./honda/backends/wg/gpu";
+import { Buffer, StructArrayBuffer } from "./honda/backends/wg/buffer";
+import {
+    type DrawCall,
+    GatherDataPass,
+    type Instance,
+    type UniformData,
+} from "./honda/backends/wg/passes/gatherData.pass";
+import {
+    ShadowMapTexture,
+    ViewportPingPongTexture,
+    ViewportTexture,
+} from "./honda/backends/wg/textures";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -43,16 +50,20 @@ async function frame() {
     Game.perf.measure("lateUpdate");
     Game.ecs.lateUpdate();
     Game.perf.measure("gpu");
-    Game.gpu.frameStart();
-    Game.passes.forEach((x) => {
-        x.apply();
-    });
+
+    Game.gpu2.startFrame();
+    Game.gpu2.render();
 
     Game.input.endFrame();
-    await Game.gpu.endFrame();
+    await Game.gpu2.frameEnd();
+
+    const perf = (Game.gpu2 as Partial<WGpu>).perf;
+    if (perf) {
+        Game.perf.sumbitGpuTimestamps(perf.labels, perf.times, perf.n);
+    }
+
     Game.perf.measureEnd();
     Game.perf.stopFrame();
-    Game.gpu.wasResized = false;
     requestAnimationFrame(frame);
 }
 
@@ -67,34 +78,172 @@ setInterval(
     500,
 );
 
-// TODO(mbabnik): Remove Game.gpu and Game.cmdEncoder and move them into a Renderer class
-// TODO(mbabnik): The renderer should be optional or atleast have a headless mode
-// TODO(mbabnik): glTF should then task the renderer with copying buffers and textures to GPU
-
 // TODO(mbabnik): Proper UI layer (vue?)
 // TODO(mbabnik): Add ability to pause the game loop (but keep some level of code running)
 
-const play = async (preset: "low" | "medium" | "high") => {
-    Game.flags = new Set<Flags>(
-        (
-            {
-                low: ["rsHalf", "noSSAO", "shadowLow"],
-                medium: ["shadowLow"],
-                high: [],
-            } satisfies Record<string, Flags[]>
-        )[preset],
+function createGpuPipeline(gpu: WGpu) {
+    const N_SHADOWMAPS = 8;
+
+    const base = new ViewportTexture("rgba8unorm-srgb", 1, "gBase");
+    const normal = new ViewportTexture("rgba8unorm", 1, "gNormal");
+    const mtlRgh = new ViewportTexture("rg8unorm", 1, "gMetalRough");
+    const emission = new ViewportTexture("rgba8unorm", 1, "gEmission");
+    const depth = new ViewportTexture("depth24plus", 1, "gDepth");
+    const shaded = new ViewportTexture("rgba16float", 1, "shaded");
+
+    const shadowmaps = new ShadowMapTexture(
+        N_SHADOWMAPS,
+        "depth24plus",
+        2048,
+        "shadowmaps",
+    );
+    shadowmaps.alloc(gpu.device);
+
+    // register for resizing
+    gpu.addViewport(base);
+    gpu.addViewport(normal);
+    gpu.addViewport(mtlRgh);
+    gpu.addViewport(emission);
+    gpu.addViewport(depth);
+    gpu.addViewport(shaded);
+
+    const drawCalls = [] as DrawCall[];
+    const skinInstances = [] as Instance[];
+    const uniformData = {} as UniformData;
+
+    const shadowBuffer = new Buffer(
+        gpu,
+        Math.max(gpu.device.limits.minUniformBufferOffsetAlignment, 64) *
+            N_SHADOWMAPS,
+        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        "shadowmapUniforms",
     );
 
+    const meshBuf = new StructArrayBuffer(
+        gpu,
+        gpu.getStruct("g", "Instance"),
+        8192,
+        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        "meshInstanceBuffer",
+    );
+
+    const skinBuf = new StructArrayBuffer(
+        gpu,
+        gpu.getStruct("gskin", "Instance"),
+        100,
+        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        "skinInstanceBuffer",
+    );
+
+    const lightBuf = new StructArrayBuffer(
+        gpu,
+        gpu.getStruct("shade", "Light"),
+        128,
+        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        "lightInstanceBuffer",
+    );
+
+    gpu.addPass(
+        new GatherDataPass(
+            gpu,
+
+            Game.ecs.getSystem(CameraSystem),
+            Game.ecs.getSystem(MeshSystem),
+            Game.ecs.getSystem(LightSystem),
+
+            drawCalls,
+            meshBuf,
+            skinInstances,
+            skinBuf,
+
+            lightBuf,
+            shadowBuffer,
+
+            uniformData,
+        ),
+    );
+
+    gpu.addPass(
+        new GBufferPass(
+            gpu,
+
+            uniformData,
+            drawCalls,
+            meshBuf,
+            skinInstances,
+            skinBuf,
+
+            base,
+            normal,
+            mtlRgh,
+            emission,
+            depth,
+        ),
+    );
+
+    gpu.addPass(
+        new ShadowMapPass(
+            gpu,
+
+            uniformData,
+            drawCalls,
+            meshBuf,
+            skinInstances,
+            skinBuf,
+
+            shadowBuffer,
+
+            shadowmaps,
+        ),
+    );
+
+    gpu.addPass(
+        new ShadePass(
+            gpu,
+
+            uniformData,
+            lightBuf,
+
+            base,
+            normal,
+            mtlRgh,
+            emission,
+            depth,
+
+            shadowmaps,
+
+            shaded,
+        ),
+    );
+
+    gpu.addPass(
+        new PostprocessPass(
+            gpu,
+
+            {
+                exposure: 1,
+                gamma: 1.5,
+
+                fogColor: [0.5, 0.6, 0.7],
+                fogStart: 10,
+                fogEnd: 100,
+                fogDensity: 0,
+            },
+
+            uniformData,
+            shaded,
+            depth,
+
+            gpu.canvasTexture,
+        ),
+    );
+}
+
+async function mount() {
     const canvas = $<HTMLCanvasElement>("canvas");
 
-    try {
-        Game.gpu = await WebGpu.obtainForCanvas(canvas);
-    } catch (e) {
-        setError((e as object).toString());
-        throw e;
-    }
-
     Game.input = new Input(canvas);
+
     Game.ecs.addSystem(new DebugSystem());
     Game.ecs.addSystem(new ScriptSystem());
     Game.ecs.addSystem(new MeshSystem());
@@ -102,34 +251,25 @@ const play = async (preset: "low" | "medium" | "high") => {
     Game.ecs.addSystem(new LightSystem());
     Game.ecs.addSystem(new FizSystem());
 
-    await createScene();
-
-    // Init skin buffer
-    const skinBuf = new StructArrayBuffer(
-        Game.gpu.shaderModules.gskin.defs.structs.Instance,
-        100,
-        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-        "skinInstanceBuffer",
+    const gpu = await WGpu.obtainForCanvas(
+        {
+            anisotropy: 4,
+            renderScale: 1,
+            shadowMapSize: 2048,
+        },
+        canvas,
     );
+    Game.gpu2 = gpu;
 
-    Game.gpu.buffers.skins = skinBuf;
+    createGpuPipeline(gpu);
 
-    Game.passes = [
-        new GatherDataPass(skinBuf),
-        new GBufferPass(skinBuf),
-        new ShadowMapPass(skinBuf),
-        new SkyPass([0, 0, 0, 0]),
-        new ShadePass(),
-        new PostprocessPass(),
-        new DebugLinePass(),
-    ];
-
+    await createScene();
     setStatus(undefined);
-    Game.cmdEncoder = Game.gpu.device.createCommandEncoder();
-
-    Game.time = performance.now() / 1000; //get inital timestamp so delta isnt broken
+    Game.time = performance.now() / 1000; // get inital timestamp so delta isnt broken
     requestAnimationFrame(frame);
-};
+}
 
-const h = window.location.hash.replace(/^#/, "");
-play(h === "low" || h === "medium" || h === "high" ? h : "high");
+mount().catch((e) => {
+    setError((e as object).toString());
+    throw e;
+});

@@ -6,7 +6,10 @@
         "useIgnoreFile": true
     },
     "files": {
-        "includes": ["src/**"]
+        "includes": [
+            "src/**",
+            "vite.config.ts"
+        ]
     },
     "formatter": {
         "enabled": true,
@@ -19,7 +22,11 @@
             "recommended": true,
             "style": {
                 "noNonNullAssertion": "off"
+            },
+            "suspicious": {
+                "noConstEnum": "off"
             }
+
         }
     },
     "javascript": {

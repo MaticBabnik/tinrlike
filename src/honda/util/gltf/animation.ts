@@ -3,6 +3,8 @@ import { nn } from "..";
 import { type ASampler, V3Sampler, V4Sampler } from "./animationsampler";
 import type { IAnimtionChannel } from "./gltf.types";
 
+// TODO: move to honda/animation
+
 interface IHAnimationChannel {
     node: SceneNode;
     type: "translation" | "rotation" | "scale";

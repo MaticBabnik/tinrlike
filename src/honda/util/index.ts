@@ -26,8 +26,8 @@ export function clamp(min: number, x: number, max: number) {
 }
 
 // TODO: move to ../gpu
-export function nMips(w: number, h: number) {
-    const maxSize = Math.max(w, h);
+export function nMips(w: number, h: number, d = 1): number {
+    const maxSize = Math.max(w, h, d);
     return (1 + Math.log2(maxSize)) | 0;
 }
 

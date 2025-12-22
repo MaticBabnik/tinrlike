@@ -2,6 +2,8 @@ import type { IComponent } from "@/honda/core/ecs";
 import { Game } from "@/honda/state";
 import { mat4 } from "wgpu-matrix";
 
+//TODO: properly handle orthographic vs perspective
+
 export class CameraComponent implements IComponent {
     public active = true;
 
@@ -54,13 +56,13 @@ export class CameraComponent implements IComponent {
     protected recompute() {
         // mat4.perspectiveReverseZ(
         //     (this._fov * Math.PI) / 180,
-        //     Game.gpu.aspectRatio,
+        //     Game.gpu2.aspectRatio,
         //     this._near,
         //     this._far,
         //     this.projectionMtx
         // );
 
-        const aspect = Game.gpu.aspectRatio;
+        const aspect = Game.gpu2.aspectRatio;
         const minRange = 5;
         let wr = 0,
             hr = 0;
@@ -77,20 +79,20 @@ export class CameraComponent implements IComponent {
 
         mat4.ortho(-wr, wr, -hr, hr, 100, 0, this.projectionMtx);
 
-        this.currentAspect = Game.gpu.aspectRatio;
+        this.currentAspect = aspect;
         mat4.inverse(this.projectionMtx, this.invProjectionMtx);
         this.dirty = false;
     }
 
     public get projMtx() {
-        if (Game.gpu.aspectRatio !== this.currentAspect || this.dirty) {
+        if (Game.gpu2.aspectRatio !== this.currentAspect || this.dirty) {
             this.recompute();
         }
         return this.projectionMtx;
     }
 
     public get projMtxInv() {
-        if (Game.gpu.aspectRatio !== this.currentAspect || this.dirty) {
+        if (Game.gpu2.aspectRatio !== this.currentAspect || this.dirty) {
             this.recompute();
         }
         return this.invProjectionMtx;

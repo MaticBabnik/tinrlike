@@ -7,13 +7,15 @@ import {
     type Vec4,
     vec4,
 } from "wgpu-matrix";
-import type { HondaAccesor } from "./gltf";
+import type { GltfAccessor } from "./types";
 
 export enum AnimInterp {
     STEP = "STEP",
     LINEAR = "LINEAR",
     CUBICSPLINE = "CUBICSPLINE",
 }
+
+// TODO: move to honda/animation
 
 export type ASampler = SSampler | V3Sampler | V4Sampler;
 
@@ -48,8 +50,14 @@ function spline(
 export class SSampler {
     constructor(
         public readonly interp: AnimInterp,
-        public readonly inAcc: HondaAccesor<Float32Array, "SCALAR">,
-        public readonly outAcc: HondaAccesor<Float32Array, "SCALAR">,
+        public readonly inAcc: GltfAccessor<
+            Float32Array<ArrayBuffer>,
+            "SCALAR"
+        >,
+        public readonly outAcc: GltfAccessor<
+            Float32Array<ArrayBuffer>,
+            "SCALAR"
+        >,
     ) {}
 
     public sample(t: number): number {
@@ -104,8 +112,11 @@ export class SSampler {
 export class V3Sampler {
     constructor(
         public readonly interp: AnimInterp,
-        public readonly inAcc: HondaAccesor<Float32Array, "SCALAR">,
-        public readonly outAcc: HondaAccesor<Float32Array, "VEC3">,
+        public readonly inAcc: GltfAccessor<
+            Float32Array<ArrayBuffer>,
+            "SCALAR"
+        >,
+        public readonly outAcc: GltfAccessor<Float32Array<ArrayBuffer>, "VEC3">,
     ) {}
 
     public sample(t: number): Vec3 {
@@ -208,8 +219,11 @@ export class V3Sampler {
 export class V4Sampler {
     constructor(
         public readonly interp: AnimInterp,
-        public readonly inAcc: HondaAccesor<Float32Array, "SCALAR">,
-        public readonly outAcc: HondaAccesor<Float32Array, "VEC4">,
+        public readonly inAcc: GltfAccessor<
+            Float32Array<ArrayBuffer>,
+            "SCALAR"
+        >,
+        public readonly outAcc: GltfAccessor<Float32Array<ArrayBuffer>, "VEC4">,
     ) {}
 
     public sample(t: number): Vec4 {

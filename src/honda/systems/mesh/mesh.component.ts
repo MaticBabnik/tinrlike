@@ -1,22 +1,26 @@
 // snipers on the roof, please kill me if I lose
 
-import type { Material, Mesh, SceneNode } from "@/honda";
+import type { SceneNode } from "@/honda";
 import type { IComponent } from "@/honda/core/ecs";
 import type { SkinInfo } from "./skin";
 import { mat4, type Mat4 } from "wgpu-matrix";
+import type { IGPUMat, MeshV2 } from "@/honda/gpu2";
 
 export class MeshComponentBase implements IComponent {
     constructor(
-        public primitive: Mesh,
-        public material: Material,
+        public primitive: MeshV2,
+        public material: IGPUMat,
         public name: string,
-    ) {}
+    ) {
+        this.material.rcUse();
+        //TODO make meshes reference counted
+    }
 }
 
 export class MeshComponent extends MeshComponentBase implements IComponent {
     constructor(
-        primitive: Mesh,
-        material: Material,
+        public primitive: MeshV2,
+        public material: IGPUMat,
         name: string = `unknownMeshComponent`,
     ) {
         super(primitive, material, name);
@@ -32,8 +36,8 @@ export class SkinnedMeshComponent
     public boneMatrices: Float32Array;
 
     constructor(
-        primitive: Mesh,
-        material: Material,
+        public primitive: MeshV2,
+        public material: IGPUMat,
         public skin: SkinInfo, // bladee reference
         name: string = `unknownSkinnedMeshComponent`,
     ) {

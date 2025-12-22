@@ -27,7 +27,7 @@ export interface IAccessor {
     componentType: TComponentType;
     count: number;
     type: TAccessorType;
-    sparse?: never; // TODO(never): Sparse accessors fail SILENTLY!!!
+    sparse?: object;
 }
 //#endregion Accessor
 
