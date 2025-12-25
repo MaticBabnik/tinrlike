@@ -2,8 +2,8 @@ import type { Mat4, Vec3 } from "wgpu-matrix";
 import { StructBuffer } from "../buffer";
 import type { WGpu } from "../gpu";
 import type { IPass } from "./pass.interface";
-import type { Three } from "@/honda/gpu2";
-import type { ITViewable } from "../textures";
+import type { Three } from "@/honda";
+import type { IMipViewable, ITViewable } from "../texture";
 import type { UniformData } from "./gatherData.pass";
 import { getPostProcess } from "../pipelines";
 
@@ -15,6 +15,8 @@ export interface PostSettings {
 
     gamma: number;
     exposure: number;
+
+    bloom: number;
 }
 
 interface PostCfg extends PostSettings {
@@ -37,6 +39,7 @@ export class PostprocessPass implements IPass {
         private shaded: ITViewable,
         private depth: ITViewable,
         private edge: ITViewable,
+        private bloom: IMipViewable,
 
         private out: ITViewable,
     ) {
@@ -72,6 +75,10 @@ export class PostprocessPass implements IPass {
                 {
                     binding: 3,
                     resource: this.edge.view,
+                },
+                {
+                    binding: 4,
+                    resource: this.bloom.view,
                 },
             ],
         });

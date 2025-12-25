@@ -6,10 +6,6 @@ import {
     CameraSystem,
     LightSystem,
     DebugSystem,
-    GBufferPass,
-    ShadePass,
-    ShadowMapPass,
-    PostprocessPass,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
@@ -18,18 +14,7 @@ import { createScene } from "./scene";
 import { $ } from "./honda/util";
 import { FizSystem } from "./honda/systems/fiz";
 import { WGpu } from "./honda/backends/wg/gpu";
-import { Buffer, StructArrayBuffer } from "./honda/backends/wg/buffer";
-import {
-    type DrawCall,
-    GatherDataPass,
-    type Instance,
-    type UniformData,
-} from "./honda/backends/wg/passes/gatherData.pass";
-import {
-    ShadowMapTexture,
-    ViewportTexture,
-} from "./honda/backends/wg/textures";
-import { EdgePass } from "./honda/backends/wg/passes/edge.pass";
+import { createGpuPipeline } from "./pipeline";
 
 const MAX_STEP = 0.1; // Atleast 10 updates per second
 
@@ -81,184 +66,6 @@ setInterval(
 // TODO(mbabnik): Proper UI layer (vue?)
 // TODO(mbabnik): Add ability to pause the game loop (but keep some level of code running)
 
-function createGpuPipeline(gpu: WGpu) {
-    const N_SHADOWMAPS = 8;
-
-    const base = new ViewportTexture("rgba8unorm-srgb", 1, "gBase");
-    const normal = new ViewportTexture("rgba8unorm", 1, "gNormal");
-    const mtlRgh = new ViewportTexture("rg8unorm", 1, "gMetalRough");
-    const emission = new ViewportTexture("rgba8unorm", 1, "gEmission");
-    const depth = new ViewportTexture("depth24plus", 1, "gDepth");
-    const edge = new ViewportTexture("r8unorm", 1, "edge");
-    const shaded = new ViewportTexture("rgba16float", 1, "shaded");
-
-    const shadowmaps = new ShadowMapTexture(
-        N_SHADOWMAPS,
-        "depth24plus",
-        2048,
-        "shadowmaps",
-    );
-    shadowmaps.alloc(gpu.device);
-
-    // register for resizing
-    gpu.addViewport(base);
-    gpu.addViewport(normal);
-    gpu.addViewport(mtlRgh);
-    gpu.addViewport(emission);
-    gpu.addViewport(depth);
-    gpu.addViewport(edge);
-    gpu.addViewport(shaded);
-
-    const drawCalls = [] as DrawCall[];
-    const skinInstances = [] as Instance[];
-    const uniformData = {} as UniformData;
-
-    const shadowBuffer = new Buffer(
-        gpu,
-        Math.max(gpu.device.limits.minUniformBufferOffsetAlignment, 64) *
-            N_SHADOWMAPS,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        "shadowmapUniforms",
-    );
-
-    const meshBuf = new StructArrayBuffer(
-        gpu,
-        gpu.getStruct("g", "Instance"),
-        8192,
-        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-        "meshInstanceBuffer",
-    );
-
-    const skinBuf = new StructArrayBuffer(
-        gpu,
-        gpu.getStruct("gskin", "Instance"),
-        100,
-        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-        "skinInstanceBuffer",
-    );
-
-    const lightBuf = new StructArrayBuffer(
-        gpu,
-        gpu.getStruct("shade", "Light"),
-        128,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        "lightInstanceBuffer",
-    );
-
-    gpu.addPass(
-        new GatherDataPass(
-            gpu,
-
-            Game.ecs.getSystem(CameraSystem),
-            Game.ecs.getSystem(MeshSystem),
-            Game.ecs.getSystem(LightSystem),
-
-            drawCalls,
-            meshBuf,
-            skinInstances,
-            skinBuf,
-
-            lightBuf,
-            shadowBuffer,
-
-            uniformData,
-        ),
-    );
-
-    gpu.addPass(
-        new GBufferPass(
-            gpu,
-
-            uniformData,
-            drawCalls,
-            meshBuf,
-            skinInstances,
-            skinBuf,
-
-            base,
-            normal,
-            mtlRgh,
-            emission,
-            depth,
-        ),
-    );
-
-    gpu.addPass(
-        new ShadowMapPass(
-            gpu,
-
-            uniformData,
-            drawCalls,
-            meshBuf,
-            skinInstances,
-            skinBuf,
-
-            shadowBuffer,
-
-            shadowmaps,
-        ),
-    );
-
-    gpu.addPass(
-        new EdgePass(
-            gpu,
-            {
-                normalBoost: 1.0,
-                depthBoost: 1.0,
-            },
-
-            uniformData,
-
-            normal,
-            depth,
-
-            edge,
-        ),
-    );
-
-    gpu.addPass(
-        new ShadePass(
-            gpu,
-
-            uniformData,
-            lightBuf,
-
-            base,
-            normal,
-            mtlRgh,
-            emission,
-            depth,
-
-            shadowmaps,
-
-            shaded,
-        ),
-    );
-
-    gpu.addPass(
-        new PostprocessPass(
-            gpu,
-
-            {
-                exposure: 1,
-                gamma: 1.5,
-
-                fogColor: [0.5, 0.6, 0.7],
-                fogStart: 10,
-                fogEnd: 100,
-                fogDensity: 0,
-            },
-
-            uniformData,
-            shaded,
-            depth,
-            edge,
-
-            gpu.canvasTexture,
-        ),
-    );
-}
-
 async function mount() {
     const canvas = $<HTMLCanvasElement>("canvas");
 
@@ -271,18 +78,25 @@ async function mount() {
     Game.ecs.addSystem(new LightSystem());
     Game.ecs.addSystem(new FizSystem());
 
+    /**
+     * Initalize GPU backend & create rendering pipeline
+     */
     const gpu = await WGpu.obtainForCanvas(
         {
             anisotropy: 4,
             renderScale: 1,
             shadowMapSize: 2048,
+            debugRenderers: true,
         },
         canvas,
     );
+    createGpuPipeline(gpu, Game.ecs);
+    gpu.onError = (err) => setError(err.toString());
     Game.gpu2 = gpu;
 
-    createGpuPipeline(gpu);
-
+    /**
+     * Create first scene
+     */
     await createScene();
     setStatus(undefined);
     Game.time = performance.now() / 1000; // get inital timestamp so delta isnt broken

@@ -1,10 +1,6 @@
+import type { Three } from "@/honda";
 import { nMips } from "../common/utils";
-import {
-    type GPUTexFormat,
-    GPUTexShape,
-    type GPUTexUsage,
-    type Three,
-} from "../interface";
+import { type GPUTexFormat, GPUTexShape, type GPUTexUsage } from "../interface";
 import type {
     IGPUTexData,
     IGPUTexDataDesc,

@@ -16,6 +16,7 @@ import {
     StaticPhysicsObject,
     FIZ_LAYER_PHYS,
     nn,
+    MeshComponent,
 } from "@/honda";
 import { quat } from "wgpu-matrix";
 import { setStatus } from "./honda/util/status";
@@ -31,6 +32,9 @@ export async function createScene() {
 
     const level = new GltfLoader(await GltfBinary.fromUrl("./next.glb"));
     const tc = new GltfLoader(await GltfBinary.fromUrl("./testchr.glb"));
+    const sc = new GltfLoader(
+        await GltfBinary.fromUrl("./SummoningCircle.glb"),
+    );
 
     setStatus("building scene");
 
@@ -252,6 +256,24 @@ export async function createScene() {
             })(),
         ),
     );
+
+    {
+        const scn = sc.sceneAsNode();
+        const scMesh = scn.assertChildComponent(MeshComponent);
+        scMesh.castShadow = false;
+        scMesh.material.emissionFactor = [4, 0, 0];
+        scMesh.material.push();
+
+        scn.transform.translation.set([0, 0.1, 0]);
+        scn.transform.update();
+
+        const anim = sc.getAnimation(0);
+        anim.attach(scn);
+        const ap = new AnimationPlayerScript(anim);
+        scn.addComponent(new ScriptComponent(ap));
+
+        Game.scene.addChild(scn);
+    }
 
     console.groupCollapsed("scene");
     console.log(Game.scene.tree());

@@ -8,9 +8,10 @@ import type {
     MeshSystem,
     THondaLight,
 } from "@/honda/systems";
-import type { IGPUMat, MeshV2, Three } from "@/honda/gpu2";
+import type { IGPUMat, MeshV2 } from "@/honda/gpu2";
 import type { WGpu } from "../gpu";
 import type { WGMat } from "../resources/mat";
+import type { Three } from "@/honda";
 
 type MeshInstance = {
     transform: Mat4;
@@ -37,6 +38,7 @@ type LightInstance = {
 };
 
 export type DrawCall = {
+    shadow: boolean;
     mat: IGPUMat;
     mesh: MeshV2;
     firstInstance: number;
@@ -44,6 +46,7 @@ export type DrawCall = {
 };
 
 export type Instance = {
+    shadow: boolean;
     mat: IGPUMat;
     mesh: MeshV2;
 };
@@ -135,7 +138,7 @@ export class GatherDataPass implements IPass {
             previousMat: IGPUMat | undefined;
 
         for (const [
-            { material: mat, primitive: mesh },
+            { material: mat, primitive: mesh, castShadow },
             { transform: tc },
         ] of sortedEntities) {
             this.meshInstanceBuffer.set(i, {
@@ -149,6 +152,7 @@ export class GatherDataPass implements IPass {
                     nInstances: 1,
                     mat,
                     mesh,
+                    shadow: castShadow,
                 });
                 previousMat = mat;
                 previousMesh = mesh;
@@ -171,7 +175,11 @@ export class GatherDataPass implements IPass {
                 break;
             }
 
-            this.skinMeshInstances.push({ mat: c.material, mesh: c.primitive });
+            this.skinMeshInstances.push({
+                mat: c.material,
+                mesh: c.primitive,
+                shadow: c.castShadow,
+            });
 
             this.skinMeshInstanceBuffer.set(idx++, {
                 transform: n.transform.$glbMtx,

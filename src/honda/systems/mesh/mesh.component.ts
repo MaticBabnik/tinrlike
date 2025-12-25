@@ -11,6 +11,7 @@ export class MeshComponentBase implements IComponent {
         public primitive: MeshV2,
         public material: IGPUMat,
         public name: string,
+        public castShadow = true,
     ) {
         this.material.rcUse();
         //TODO make meshes reference counted

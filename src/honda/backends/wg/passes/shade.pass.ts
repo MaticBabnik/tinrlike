@@ -1,7 +1,7 @@
 import type { IPass } from "./pass.interface";
 import type { WGpu } from "../gpu";
 import type { UniformData } from "./gatherData.pass";
-import type { ITViewable, ShadowMapTexture } from "../textures";
+import type { ITViewable, ShadowMapTexture } from "../texture";
 import { getShadePipeline } from "../pipelines";
 import { type StructArrayBuffer, StructBuffer } from "../buffer";
 

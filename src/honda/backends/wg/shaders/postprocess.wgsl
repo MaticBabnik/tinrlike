@@ -9,18 +9,16 @@ struct PostCfg {
 
     gamma: f32,
     exposure: f32,
+    bloom: f32,
 }
 
 const bigTri = array(vec2f(- 1, 3), vec2f(- 1, - 1), vec2f(3, - 1),);
 
-@group(0) @binding(0)
-var<uniform> post: PostCfg;
-@group(0) @binding(1)
-var shaded: texture_2d<f32>;
-@group(0) @binding(2)
-var depth: texture_depth_2d;
+@group(0) @binding(0) var<uniform> post: PostCfg;
+@group(0) @binding(1) var shaded: texture_2d<f32>;
+@group(0) @binding(2) var depth: texture_depth_2d;
 @group(0) @binding(3) var edge: texture_2d<f32>;
-// @group(0) @binding(4) var bloom: texture_2d<f32>;
+@group(0) @binding(4) var bloom: texture_2d<f32>;
 
 @vertex
 fn vs(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
@@ -86,11 +84,12 @@ fn agx_tonemap_punchy(c: vec3<f32>, exposure: f32) -> vec3<f32> {
 @fragment
 fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
     let p = vec2<u32>(fragCoord.xy);
-
+    
+    let b = textureLoad(bloom, p, 0);    
     let s = textureLoad(shaded, p, 0);
-    let edgeFactor = textureLoad(edge, p, 0).x;
+    let edgeFactor = textureLoad(edge, p, 0).r;
 
-    let shadedColor = (1.0 - edgeFactor) * s.xyz;
+    let shadedColor = (1.0 - edgeFactor) * s.rgb + post.bloom * b.rgb;
     let toneMappedColor = agx_tonemap_punchy(shadedColor, post.exposure);
     let gammaCorrected = pow(toneMappedColor, vec3(1.0 / post.gamma));
 

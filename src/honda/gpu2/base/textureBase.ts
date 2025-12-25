@@ -1,10 +1,10 @@
+import type { Three } from "@/honda";
 import {
     GPUTexFilter,
     GPUTexAddr,
     type IGPUTexData,
     type IGPUTex,
     type IGPUTexDesc,
-    type Three,
 } from "../interface";
 import { RefCntBase } from "./refCountBase";
 

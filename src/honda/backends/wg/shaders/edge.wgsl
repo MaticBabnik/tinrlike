@@ -24,6 +24,15 @@ struct VertexOut {
     @location(0) uv: vec2<f32>,
 }
 
+@vertex
+fn vs(@builtin(vertex_index) index: u32) -> VertexOut {
+    var out: VertexOut;
+    out.position = vec4f(bigTri[index], 0, 1);
+    out.uv = (bigTri[index] * vec2f(0.5, -0.5)) + vec2f(0.5, 0.5);
+    return out;
+}
+
+
 fn linDepth(depth: f32) -> f32 {
     if (uniforms.isOrtho == 1u) {
         return uniforms.near + depth * (uniforms.far - uniforms.near);
@@ -32,13 +41,6 @@ fn linDepth(depth: f32) -> f32 {
     }
 }
 
-@vertex
-fn vs(@builtin(vertex_index) index: u32) -> VertexOut {
-    var out: VertexOut;
-    out.position = vec4f(bigTri[index], 0, 1);
-    out.uv = (bigTri[index] * vec2f(0.5, -0.5)) + vec2f(0.5, 0.5);
-    return out;
-}
 
 @fragment
 fn fs(v: VertexOut) -> @location(0) vec4f {

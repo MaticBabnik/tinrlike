@@ -1,7 +1,7 @@
 import type { IPass } from "./pass.interface";
 import type { Buffer, StructArrayBuffer } from "../buffer";
 import type { DrawCall, Instance, UniformData } from "./gatherData.pass";
-import type { ShadowMapTexture } from "../textures";
+import type { ShadowMapTexture } from "../texture";
 import type { WGpu } from "../gpu";
 import { getShadowPipeline } from "../pipelines";
 import type { WGBuf } from "../resources/buf";
@@ -104,6 +104,7 @@ export class ShadowMapPass implements IPass {
             rp.setBindGroup(0, this.meshBindGroup, [i * this.matrixAlign]);
 
             for (const c of this.meshDrawCalls) {
+                if (!c.shadow) continue;
                 rp.setVertexBuffer(0, (c.mesh.position as WGBuf).buffer);
                 rp.setVertexBuffer(1, (c.mesh.texCoord as WGBuf).buffer);
 
@@ -132,6 +133,7 @@ export class ShadowMapPass implements IPass {
             rp.setPipeline(this.shadowSkinPipeline);
             rp.setBindGroup(0, this.skinBindGroup, [i * this.matrixAlign]);
             for (const c of this.skinMeshInstances) {
+                if (!c.shadow) continue;
                 rp.setVertexBuffer(0, (c.mesh.position as WGBuf).buffer);
                 rp.setVertexBuffer(1, (c.mesh.joints as WGBuf).buffer);
                 rp.setVertexBuffer(2, (c.mesh.weights as WGBuf).buffer);

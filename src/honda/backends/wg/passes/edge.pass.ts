@@ -2,10 +2,10 @@ import type { Vec2 } from "wgpu-matrix";
 import { StructBuffer } from "../buffer";
 import type { WGpu } from "../gpu";
 import { getEdge } from "../pipelines";
-import type { ITViewable } from "../textures";
+import type { ITViewable } from "../texture";
 import type { UniformData } from "./gatherData.pass";
 import type { IPass } from "./pass.interface";
-import type { Two } from "@/honda/gpu2";
+import type { Two } from "@/honda/";
 
 interface EdgeSettings {
     normalBoost: number;

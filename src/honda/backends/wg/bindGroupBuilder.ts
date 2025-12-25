@@ -1,4 +1,4 @@
-import { assert } from "../../util";
+import { assert } from "@/honda/util";
 
 type __BGLTypeMap = {
     buffer: GPUBufferBindingLayout;

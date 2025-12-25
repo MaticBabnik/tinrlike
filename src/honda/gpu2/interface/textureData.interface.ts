@@ -1,6 +1,6 @@
 import type { GPUTexFormat, GPUTexShape, GPUTexUsage } from "./enums";
 import type { IRefCnt } from "./rc.interface";
-import type { Three } from "./types";
+import type { Three } from "@/honda";
 
 export interface IGPUTexDataDesc {
     shape: GPUTexShape;

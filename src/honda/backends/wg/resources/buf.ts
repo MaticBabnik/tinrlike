@@ -1,5 +1,5 @@
-import { GPUBufBase } from "../../../gpu2/base/bufferBase";
-import { GPUBufUsage, type IGPUBuf } from "../../../gpu2/interface";
+import { GPUBufBase } from "@/honda/gpu2/base/bufferBase";
+import { GPUBufUsage, type IGPUBuf } from "@/honda/gpu2/interface";
 import type { WGpu } from "../gpu";
 
 export function toWgBufferUsage(usage: GPUBufUsage): number {

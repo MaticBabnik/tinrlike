@@ -1,15 +1,15 @@
-import { MaterialBase } from "../../../gpu2/base/materialBase";
+import { MaterialBase } from "@/honda/gpu2/base/materialBase";
 import {
     GPUMatAlpha,
-    type Four,
     type IGPUMat,
     type IGPUMatDesc,
-    type Three,
-} from "../../../gpu2/interface";
+} from "@/honda/gpu2/interface";
+
 import { StructBuffer } from "../buffer";
 import type { WGpu } from "../gpu";
 import type { WGTex } from "./tex";
 import type { WGTexData } from "./texData";
+import type { Four, Three } from "@/honda";
 
 export class WGMat extends MaterialBase implements IGPUMat {
     private static _materialIdCounter = 0;

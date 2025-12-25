@@ -4,9 +4,10 @@ import type { WGpu } from "../gpu";
 import type { DrawCall, Instance, UniformData } from "./gatherData.pass";
 import type { WGMat } from "../resources/mat";
 import type { WGBuf } from "../resources/buf";
-import { type Four, MeshIndexType } from "@/honda/gpu2";
-import type { ITViewable } from "../textures";
+import { MeshIndexType } from "@/honda/gpu2";
+import type { ITViewable } from "../texture";
 import { getGPipeline } from "../pipelines";
+import type { Four } from "@/honda/util/types";
 
 export class GBufferPass implements IPass {
     protected uniforms: StructBuffer;
@@ -116,6 +117,7 @@ export class GBufferPass implements IPass {
                 depthStoreOp: "store",
                 depthClearValue: 0,
             },
+            timestampWrites: this.g.timestamp("gBuffer"),
         });
 
         this.render(rp);

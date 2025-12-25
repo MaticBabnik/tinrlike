@@ -17,7 +17,7 @@ interface IShaderModule {
     module?: GPUShaderModule;
 }
 
-export function getModules() {
+export function getShaderSources() {
     const ax = {} as Record<string, IShaderModule>;
 
     for (const key in shaderSources) {

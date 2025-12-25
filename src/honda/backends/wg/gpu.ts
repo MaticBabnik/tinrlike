@@ -1,10 +1,9 @@
-import { nn } from "../../util";
-import { Limits } from "./limits";
+import { nn } from "@/honda/util";
 
-import { getModules } from "./shaders";
-import type { IResizable, ITViewable } from "./textures";
+import { Limits } from "./limits";
+import { getShaderSources } from "./shaders";
+import type { IResizable, ITViewable } from "./texture";
 import { createBindGroupLayouts } from "./bindGroupLayouts";
-import { setError } from "../../util/status";
 import type { Buffer, StructArrayBuffer, StructBuffer } from "./buffer";
 import { DEFAULT_SETTINGS, type WGSettings } from "./gpuSettings";
 import {
@@ -23,10 +22,7 @@ import {
     type IGPUTexDataDesc,
     type IGPUTexDesc,
 } from "@/honda/gpu2";
-import { WGBuf } from "./resources/buf";
-import { WGMat } from "./resources/mat";
-import { WGTex } from "./resources/tex";
-import { WGTexData } from "./resources/texData";
+import { WGTexData, WGBuf, WGMat, WGTex } from "./resources";
 import type { IPass } from "./passes";
 
 export const enum WGStatus {
@@ -56,9 +52,11 @@ export class WGpu implements IGPUImplementation {
 
     public pFormat = navigator.gpu.getPreferredCanvasFormat();
 
+    public onError: ((err: GPUError | string) => void) | null = null;
+
     private viewPortTextures: IResizable[] = [];
 
-    private _shaders = getModules();
+    private _shaders = getShaderSources();
     public bindGroupLayouts: ReturnType<typeof createBindGroupLayouts>;
     private _queuedResize?: [number, number];
     public wasResized = false;
@@ -185,7 +183,7 @@ export class WGpu implements IGPUImplementation {
         this.renderScale = this.settings.renderScale;
 
         this.device.lost.then((x) => {
-            setError("Lost device");
+            this.onError?.("Lost device");
             console.error("lost device", x);
             device.destroy();
             this.device = null!; // cause device accesses to error out
@@ -194,7 +192,7 @@ export class WGpu implements IGPUImplementation {
         const old = this.device.onuncapturederror;
         this.device.onuncapturederror = (err) => {
             old?.call(this.device, err);
-            setError(`Lost device ${err.error.message}`);
+            this.onError?.(`Lost device ${err.error.message}`);
             console.error("gpu error", err);
             device.destroy();
             this.device = null!;
@@ -302,6 +300,10 @@ export class WGpu implements IGPUImplementation {
         } else {
             this.device.queue.submit([this.cmdEncoder.finish()]);
         }
+
+        this.viewPortTextures.forEach((t) => {
+            t.resized = false;
+        });
 
         if (this.destroyQueue.length > 0) {
             const q = this.destroyQueue;

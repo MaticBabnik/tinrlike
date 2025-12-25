@@ -1,5 +1,5 @@
 import type { IGPUTex } from "./texture.interface";
-import type { Four, Three } from "./types";
+import type { Four, Three } from "@/honda";
 import type { IRefCnt } from "./rc.interface";
 import type { GPUMatAlpha } from "./enums";
 

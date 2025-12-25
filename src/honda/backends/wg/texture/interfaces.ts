@@ -22,6 +22,12 @@ export interface ITViewable {
     get resized(): boolean | undefined;
 }
 
+export interface IMipViewable extends ITViewable {
+    get mipLevels(): number;
+
+    get views(): GPUTextureView[];
+}
+
 /**
  * Ping-pongable texture interface
  */

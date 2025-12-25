@@ -133,6 +133,11 @@ export function perfRenderer(
                                   .toFixed(0)
                                   .padStart(6, " ")}us`,
                       )
-                      .join("\n");
+                      .join("\n") +
+                  `\n${"= TOTAL".padEnd(30)} ${(
+                      g.map((x) => x[1]).reduce((c, p) => c + p, 0) / 1000
+                  )
+                      .toFixed(0)
+                      .padStart(6, " ")}us`;
     };
 }

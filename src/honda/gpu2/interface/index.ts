@@ -1,5 +1,4 @@
 export * from "./enums";
-export * from "./types";
 export * from "./rc.interface";
 export * from "./gpu.interface";
 export * from "./buffer.interface";

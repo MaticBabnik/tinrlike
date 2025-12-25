@@ -1,114 +1,108 @@
-// import { Game } from "../../../state";
-// import { makeStructuredView } from "webgpu-utils";
-// import type { IPass } from "./pass.interface";
-// import { CameraSystem, DebugSystem } from "@/honda/systems";
+import type { DebugSystem } from "@/honda/systems";
+import { StructBuffer } from "../buffer";
+import type { WGpu } from "../gpu";
+import type { ITViewable } from "../texture";
+import type { UniformData } from "./gatherData.pass";
+import type { IPass } from "./pass.interface";
+import { getDebuglinePipeline } from "../pipelines";
 
-// export class DebugLinePass implements IPass {
-//     protected uniforms = makeStructuredView(
-//         Game.gpu.shaderModules.devline.defs.structs.Uniforms,
-//     );
+export class DebugLinePass implements IPass {
+    private uniforms: StructBuffer;
+    private vertexGpu: GPUBuffer;
+    private colorGpu: GPUBuffer;
+    private bindGroup: GPUBindGroup;
+    private pipeline: GPURenderPipeline;
 
-//     protected debugSystem: DebugSystem;
-//     protected cameraSystem: CameraSystem;
+    constructor(
+        private gpu: WGpu,
+        private debugSystem: DebugSystem,
+        private uniformData: UniformData,
+        private out: ITViewable,
+    ) {
+        this.pipeline = getDebuglinePipeline(gpu, out.format);
 
-//     protected uniformsGpu: GPUBuffer;
-//     protected vertexGpu: GPUBuffer;
-//     protected colorGpu: GPUBuffer;
+        this.uniforms = new StructBuffer(
+            gpu,
+            gpu.getStruct("devline", "Uniforms"),
+            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            "debugLineUniforms",
+        );
 
-//     protected bindGroup: GPUBindGroup;
+        this.vertexGpu = gpu.device.createBuffer({
+            size: this.debugSystem.$vertPositionBuffer.byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            label: "debugLineVertexBuffer",
+        });
 
-//     constructor() {
-//         this.debugSystem = Game.ecs.getSystem(DebugSystem);
-//         this.cameraSystem = Game.ecs.getSystem(CameraSystem);
+        this.colorGpu = gpu.device.createBuffer({
+            size: this.debugSystem.$instColorBuffer.byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            label: "debugLineColorBuffer",
+        });
 
-//         this.uniformsGpu = Game.gpu.device.createBuffer({
-//             size: this.uniforms.arrayBuffer.byteLength,
-//             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-//         });
+        this.bindGroup = gpu.device.createBindGroup({
+            layout: gpu.bindGroupLayouts.debugline,
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this.uniforms.gpuBuf,
+                    },
+                },
+                {
+                    binding: 1,
+                    resource: {
+                        buffer: this.vertexGpu,
+                    },
+                },
+                {
+                    binding: 2,
+                    resource: {
+                        buffer: this.colorGpu,
+                    },
+                },
+            ],
+        });
+    }
 
-//         this.vertexGpu = Game.gpu.device.createBuffer({
-//             size: this.debugSystem.$vertPositionBuffer.byteLength,
-//             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-//         });
+    apply() {
+        const n = this.debugSystem.$lineCount;
+        if (n === 0) return;
 
-//         this.colorGpu = Game.gpu.device.createBuffer({
-//             size: this.debugSystem.$instColorBuffer.byteLength,
-//             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-//         });
+        this.uniforms.set({
+            viewProjection: this.uniformData.vp,
+        });
+        this.uniforms.push();
 
-//         this.bindGroup = Game.gpu.device.createBindGroup({
-//             layout: Game.gpu.bindGroupLayouts.debugline,
-//             entries: [
-//                 {
-//                     binding: 0,
-//                     resource: {
-//                         buffer: this.uniformsGpu,
-//                     },
-//                 },
+        this.gpu.device.queue.writeBuffer(
+            this.vertexGpu,
+            0,
+            this.debugSystem.$vertPositionBuffer.buffer,
+            0,
+            n * 2 * 4 * 4,
+        );
+        this.gpu.device.queue.writeBuffer(
+            this.colorGpu,
+            0,
+            this.debugSystem.$instColorBuffer.buffer,
+            0,
+            n * 4 * 4,
+        );
 
-//                 {
-//                     binding: 1,
-//                     resource: {
-//                         buffer: this.vertexGpu,
-//                     },
-//                 },
-//                 {
-//                     binding: 2,
-//                     resource: {
-//                         buffer: this.colorGpu,
-//                     },
-//                 },
-//             ],
-//         });
-//     }
+        const pass = this.gpu.cmdEncoder.beginRenderPass({
+            colorAttachments: [
+                {
+                    loadOp: "load",
+                    storeOp: "store",
+                    view: this.out.view,
+                },
+            ],
+            timestampWrites: this.gpu.timestamp("debug"),
+        });
 
-//     apply() {
-//         const n = this.debugSystem.$lineCount;
-//         if (n === 0) return;
-
-//         this.uniforms.set({
-//             viewProjection: this.cameraSystem.viewProjMtx,
-//         });
-
-//         Game.gpu.device.queue.writeBuffer(
-//             this.uniformsGpu,
-//             0,
-//             this.uniforms.arrayBuffer,
-//         );
-
-//         Game.gpu.device.queue.writeBuffer(
-//             this.vertexGpu,
-//             0,
-//             this.debugSystem.$vertPositionBuffer.buffer,
-//             0,
-//             n * 2 * 4 * 4,
-//         );
-
-//         Game.gpu.device.queue.writeBuffer(
-//             this.colorGpu,
-//             0,
-//             this.debugSystem.$instColorBuffer.buffer,
-//             0,
-//             n * 4 * 4,
-//         );
-
-//         const pass = Game.cmdEncoder.beginRenderPass({
-//             colorAttachments: [
-//                 {
-//                     loadOp: "load",
-//                     storeOp: "store",
-//                     view: Game.gpu.canvasView,
-//                 },
-//             ],
-//             timestampWrites: Game.gpu.timestamp("debug_line"),
-//         });
-
-//         pass.setPipeline(Game.gpu.pipelines.debugline);
-
-//         pass.setBindGroup(0, this.bindGroup);
-
-//         pass.draw(n * 2);
-
-//         pass.end();
-//     }
-// }
+        pass.setPipeline(this.pipeline);
+        pass.setBindGroup(0, this.bindGroup);
+        pass.draw(n * 2);
+        pass.end();
+    }
+}
