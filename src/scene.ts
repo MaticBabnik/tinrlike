@@ -2,7 +2,6 @@ import {
     Game,
     SceneNode,
     CameraComponent,
-    GltfLoader,
     ScriptComponent,
     Script,
     LightComponent,
@@ -19,24 +18,18 @@ import {
     MeshComponent,
 } from "@/honda";
 import { quat } from "wgpu-matrix";
-import { setStatus } from "./honda/util/status";
 import { AnimationPlayerScript } from "@/scripts/animplayer.script";
 import { TL_LAYER_PLAYER } from "./constants";
 import { PlayerScript } from "./scripts/player.script";
 import { LerpCameraScript } from "./scripts/lerpCamera.script";
 import { SpikeScript } from "./scripts/spike.script";
-import { GltfBinary } from "./honda/util/gltf";
+import { AssetSystem } from "./honda/systems/asset/asset.system";
 
-export async function createScene() {
-    setStatus("loading assets");
-
-    const level = new GltfLoader(await GltfBinary.fromUrl("./next.glb"));
-    const tc = new GltfLoader(await GltfBinary.fromUrl("./testchr.glb"));
-    const sc = new GltfLoader(
-        await GltfBinary.fromUrl("./SummoningCircle.glb"),
-    );
-
-    setStatus("building scene");
+export function createScene() {
+    const as = Game.ecs.getSystem(AssetSystem);
+    const level = as.getAsset("level");;
+    const tc = as.getAsset("testchr");
+    const sc = as.getAsset("summoningcircle");
 
     Game.scene.addChild(level.sceneAsNode());
 
