@@ -19,15 +19,16 @@ import { createGpuPipeline } from "./pipeline";
 import { GltfBinary } from "./honda/util/gltf";
 import { AssetSystem } from "./honda/systems/asset/asset.system";
 
-const MAX_STEP = 0.1; // Atleast 10 updates per second
+const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
 
 async function frame() {
     Game.perf.startFrame();
     Game.input.frame();
 
-    const now = Math.min(performance.now() / 1000, Game.time + MAX_STEP);
-    Game.deltaTime = now - Game.time;
-    Game.time = now;
+    const realNow = performance.now() / 1000;
+    const delta = Math.min(Math.max(realNow - Game.time, 0), MAX_STEP);
+    Game.deltaTime = delta;
+    Game.time += delta;
 
     Game.perf.measure("earlyUpdate");
     Game.ecs.earlyUpdate();
@@ -61,9 +62,9 @@ setInterval(
         $<HTMLSpanElement>("#mspf"),
         $<HTMLSpanElement>("#ents"),
         $<HTMLPreElement>("#measured"),
-        $<HTMLPreElement>("#measured-gpu"),
+        $<HTMLPreElement>("#measured-gpu")
     ),
-    500,
+    500
 );
 
 async function gameEntry() {
@@ -72,10 +73,9 @@ async function gameEntry() {
     const level = new GltfLoader(await GltfBinary.fromUrl("./next.glb"));
     const tc = new GltfLoader(await GltfBinary.fromUrl("./testchr.glb"));
     const sc = new GltfLoader(
-        await GltfBinary.fromUrl("./SummoningCircle.glb"),
+        await GltfBinary.fromUrl("./SummoningCircle.glb")
     );
     const eg = new GltfLoader(await GltfBinary.fromUrl("./EnemyGeneric.glb"));
-
 
     as.registerAsset("level", level);
     as.registerAsset("testchr", tc);
@@ -109,18 +109,17 @@ async function mount() {
             shadowMapSize: 2048,
             debugRenderers: true,
         },
-        canvas,
+        canvas
     );
     createGpuPipeline(gpu, Game.ecs);
     gpu.onError = (err) => setError(err.toString());
     Game.gpu2 = gpu;
 
-    
     setStatus("init");
     await gameEntry();
     createScene();
     setStatus(undefined);
-    Game.time = performance.now() / 1000; // get inital timestamp so delta isnt broken
+    Game.time = 0;
     requestAnimationFrame(frame);
 }
 

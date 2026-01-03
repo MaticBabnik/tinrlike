@@ -19,15 +19,20 @@ import {
 } from "@/honda";
 import { quat } from "wgpu-matrix";
 import { AnimationPlayerScript } from "@/scripts/animplayer.script";
-import { TL_LAYER_PLAYER } from "./constants";
+import {
+    TL_LAYER_ENEMY,
+    TL_LAYER_PLAYER,
+    TL_LAYER_PLAYER_PROJECTILE,
+} from "./constants";
 import { PlayerScript } from "./scripts/player.script";
 import { LerpCameraScript } from "./scripts/lerpCamera.script";
 import { SpikeScript } from "./scripts/spike.script";
 import { AssetSystem } from "./honda/systems/asset/asset.system";
+import { BasicStateMachine } from "./scripts/ai/basicStateMachine";
 
 export function createScene() {
     const as = Game.ecs.getSystem(AssetSystem);
-    const level = as.getAsset("level");;
+    const level = as.getAsset("level");
     const tc = as.getAsset("testchr");
     const sc = as.getAsset("summoningcircle");
 
@@ -42,64 +47,64 @@ export function createScene() {
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(7, 7), [-12, 12]),
                 "FrontWall",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(7, 7), [12, -12]),
                 "BackWall",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 2), [-8, -8]),
                 "BoxesLeft",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 2), [8, 8]),
                 "BoxesRight",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(22, 2), [0, -19]),
                 "WallLeftBack",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(22, 2), [0, 19]),
                 "WallRightFront",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 18), [-19, 0]),
                 "WallLeftFront",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 18), [19, 0]),
                 "WallRightBack",
-                CopyTransformMode.None,
-            ),
+                CopyTransformMode.None
+            )
         );
 
         Game.scene.addChild(a);
@@ -107,25 +112,23 @@ export function createScene() {
 
     // hurt thingy
     {
-        const spikeNode = nn(
-            Game.scene.findChild((x) => x.name === "floor_tile_big_spikes"),
-        );
-
-        spikeNode.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(
-                    new AABBShape(1.4, 1.4),
-                    [0, 0],
-                    0,
-                    0,
-                    TL_LAYER_PLAYER,
-                ),
-                "HurtZone",
-                CopyTransformMode.PositionXZ,
-            ),
-        );
-
-        spikeNode.addComponent(new ScriptComponent(new SpikeScript()));
+        // const spikeNode = nn(
+        //     Game.scene.findChild((x) => x.name === "floor_tile_big_spikes"),
+        // );
+        // spikeNode.addComponent(
+        //     new FizComponent(
+        //         new StaticPhysicsObject(
+        //             new AABBShape(1.4, 1.4),
+        //             [0, 0],
+        //             0,
+        //             0,
+        //             TL_LAYER_PLAYER,
+        //         ),
+        //         "HurtZone",
+        //         CopyTransformMode.PositionXZ,
+        //     ),
+        // );
+        // spikeNode.addComponent(new ScriptComponent(new SpikeScript()));
     }
 
     const DEG = Math.PI / 180;
@@ -143,11 +146,11 @@ export function createScene() {
                     0.05,
                     FIZ_LAYER_PHYS | TL_LAYER_PLAYER,
                     0,
-                    new FizMaterial(0.1, 0.6),
+                    new FizMaterial(0.1, 0.6)
                 ),
                 "Player",
-                CopyTransformMode.PositionXZ,
-            ),
+                CopyTransformMode.PositionXZ
+            )
         );
         player.addComponent(new ScriptComponent(new PlayerScript()));
 
@@ -160,10 +163,10 @@ export function createScene() {
             anim2.attach(tcn);
 
             tcn.addComponent(
-                new ScriptComponent(new AnimationPlayerScript(anim)),
+                new ScriptComponent(new AnimationPlayerScript(anim))
             );
             tcn.addComponent(
-                new ScriptComponent(new AnimationPlayerScript(anim2)),
+                new ScriptComponent(new AnimationPlayerScript(anim2))
             );
             player.addChild(tcn);
         }
@@ -181,7 +184,7 @@ export function createScene() {
                     intensity: 5,
                     maxRange: 10,
                     castShadows: false,
-                }),
+                })
             );
 
             player.addChild(n);
@@ -202,7 +205,7 @@ export function createScene() {
             -45 * DEG,
             0,
             "zyx",
-            cameraHolder.transform.rotation,
+            cameraHolder.transform.rotation
         );
         cameraHolder.transform.update();
 
@@ -217,12 +220,12 @@ export function createScene() {
         sun.name = "sun";
         sun.addComponent(
             new LightComponent({
-                castShadows: true,
+                castShadows: false,
                 color: [1, 0.953, 0.871],
                 intensity: 10,
                 type: "directional",
                 maxRange: 20,
-            }),
+            })
         );
 
         sun.transform.rotation = quat.fromEuler(-45, -45, 0, "xyz");
@@ -246,8 +249,8 @@ export function createScene() {
                     this.d.line([0, 0, 0], [0, 1, 0], [0, 1, 0]);
                     this.d.line([0, 0, 0], [0, 0, 1], [0, 0, 1]);
                 }
-            })(),
-        ),
+            })()
+        )
     );
 
     {
@@ -265,7 +268,39 @@ export function createScene() {
         const ap = new AnimationPlayerScript(anim);
         scn.addComponent(new ScriptComponent(ap));
 
-        Game.scene.addChild(scn);
+        // Game.scene.addChild(scn);
+    }
+
+    {
+        const enemy1 = new SceneNode();
+        enemy1.name = "Enemy1";
+        enemy1.transform.translation.set([-5, 0, -5]);
+        enemy1.transform.update();
+
+        const eg = as.getAsset("enemyGeneric");
+        const egNode = eg.sceneAsNode();
+
+        enemy1.addChild(egNode);
+
+        enemy1.addComponent(
+            new FizComponent(
+                new DynamicPhysicsObject(
+                    new CircleShape(0.5),
+                    [-5, -5],
+                    0,
+                    0.1,
+                    FIZ_LAYER_PHYS | TL_LAYER_ENEMY,
+                    TL_LAYER_PLAYER_PROJECTILE,
+                    new FizMaterial(0.1, 0.6)
+                ),
+                "Enemy1",
+                CopyTransformMode.PositionXZ
+            )
+        );
+
+        enemy1.addComponent(new ScriptComponent(new BasicStateMachine()));
+
+        Game.scene.addChild(enemy1);
     }
 
     console.groupCollapsed("scene");
