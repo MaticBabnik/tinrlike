@@ -5,6 +5,7 @@ import {
     nn,
     Script,
     type SkinnedMeshComponent,
+    SoundSystem,
 } from "@/honda";
 import type { IGPUMat } from "@/honda/gpu2";
 import { vec2, quat } from "wgpu-matrix";
@@ -26,8 +27,11 @@ export class PlayerScript extends Script {
     protected ROT = quat.fromEuler(0, -Math.PI / 4, 0, "xyz");
 
     protected fiz: DynamicPhysicsObject = null!;
+    protected ssys: SoundSystem = null!;
 
     protected material!: IGPUMat;
+
+    protected stepTimer = 0;
 
     override onAttach(): void {
         this.fiz =
@@ -41,6 +45,7 @@ export class PlayerScript extends Script {
         ) as SkinnedMeshComponent;
 
         this.material = nn(mesh.material);
+        this.ssys = Game.ecs.getSystem(SoundSystem);
     }
 
     override update(): void {
@@ -94,6 +99,15 @@ export class PlayerScript extends Script {
             );
 
             this.fiz.applyForce(this.moveBaseVec);
+
+            // Play footstep sounds
+            this.stepTimer -= Game.deltaTime;
+            if (this.stepTimer <= 0) {
+                const stepInterval = boost ? 0.25 : 0.4;
+                this.stepTimer = stepInterval;
+                const stepSound = Math.floor(Math.random() * 4) + 1;
+                this.ssys.playAudio(`step${stepSound}`, false, 0.1);
+            }
         }
     }
 

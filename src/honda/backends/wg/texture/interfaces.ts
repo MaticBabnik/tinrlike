@@ -1,16 +1,24 @@
+export interface ILabelable {
+    label?: string;
+}
+
 /**
  * Resizable texture interface
  */
-export interface IResizable {
+export interface IResizable extends ILabelable {
     resize(dev: GPUDevice, viewportW: number, viewportH: number): void;
 
     resized: boolean;
+
+    get width(): number;
+
+    get height(): number;
 }
 
 /**
  * Trivially viewable texture interface
  */
-export interface ITViewable {
+export interface ITViewable extends ILabelable {
     get width(): number;
 
     get height(): number;
@@ -31,7 +39,7 @@ export interface IMipViewable extends ITViewable {
 /**
  * Ping-pongable texture interface
  */
-export interface IPingPongable {
+export interface IPingPongable extends ILabelable {
     get width(): number;
 
     get height(): number;

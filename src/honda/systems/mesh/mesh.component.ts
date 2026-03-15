@@ -16,6 +16,11 @@ export class MeshComponentBase implements IComponent {
         this.material.rcUse();
         //TODO make meshes reference counted
     }
+
+    public destroy(): void {
+        this.material.rcRelease();
+        console.log("kinda-leaked mesh (no refcounting yet)")
+    }
 }
 
 export class MeshComponent extends MeshComponentBase implements IComponent {
@@ -106,5 +111,10 @@ export class SkinnedMeshComponent
             // recurse into children
             this.bonez(ct, c);
         }
+    }
+
+    public destroy(): void {
+        super.destroy();
+        this.boneMatrices = null!;
     }
 }

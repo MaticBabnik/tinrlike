@@ -5,7 +5,8 @@ body {
     height: 100%;
 }
 
-canvas {
+canvas,
+#vue-app {
     position: fixed;
     top: 0;
     left: 0;
@@ -13,6 +14,10 @@ canvas {
     bottom: 0;
     width: 100%;
     height: 100%;
+}
+
+.no-pointer-events {
+    pointer-events: none;
 }
 
 #perf,
@@ -61,4 +66,32 @@ canvas {
     padding: 0.5rem;
     font-size: 1rem;
     outline: 1px solid white;
+}
+
+@font-face {
+    font-display: block;
+    font-family: "rsQuill";
+    src: url("./assets/RuneScape-Quill.otf") format("opentype");
+}
+
+@font-face {
+    font-display: block;
+    font-family: "rsPlain";
+    font-weight: normal;
+    src: url("./assets/RuneScape-Plain-12.otf") format("opentype");
+}
+
+@font-face {
+    font-display: block;
+    font-family: "rsPlain";
+    font-weight: bold;
+    src: url("./assets/RuneScape-Bold-12.otf") format("opentype");
+}
+
+.pxfont {
+    image-rendering: pixelated;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: none;
+    text-rendering: optimizeSpeed;
+    font-smooth: never;
 }

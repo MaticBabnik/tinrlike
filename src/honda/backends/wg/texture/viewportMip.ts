@@ -31,8 +31,6 @@ export class ViewportMipTexture<
     public resize(dev: GPUDevice, viewportW: number, viewportH: number) {
         this.mipLevels = Math.min(this.maxMips, nMips(viewportW, viewportH));
 
-        console.log(this.mipLevels);
-
         this.tex?.destroy();
         this.tex = dev.createTexture({
             format: this.format,

@@ -1,4 +1,19 @@
-import { type Mat4, vec3, quat, mat4 } from "wgpu-matrix";
+import { type Mat4, vec3, quat, mat4, type Vec3, type Quat } from "wgpu-matrix";
+
+interface ITransformData {
+    translation: Vec3;
+    rotation: Quat;
+    scale: Vec3;
+}
+
+export interface ITransform extends ITransformData {
+    $glbMtx: Mat4;
+    $glbInvMtx: Mat4;
+
+    update(): void;
+    materialize(): void;
+    $updateGlobal(parent: Transform): void;
+}
 
 /**
  * transform? trans form
@@ -6,7 +21,7 @@ import { type Mat4, vec3, quat, mat4 } from "wgpu-matrix";
  * 🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️
  * woke agenda cultural marxism
  */
-export class Transform {
+export class Transform implements ITransform {
     private _locMtx: Mat4;
     private _locInvMtx: Mat4;
     public $glbMtx: Mat4;

@@ -1,12 +1,14 @@
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 import { visualizer } from "rollup-plugin-visualizer";
+import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
     build: {
         target: "esnext",
     },
     plugins: [
+        vue(),
         visualizer({
             emitFile: true,
             filename: "stats.html",

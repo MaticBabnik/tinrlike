@@ -16,4 +16,21 @@ export class Scene extends SceneNode {
     public computeTransforms() {
         updateTransforms(this);
     }
+
+
+    protected _active = false;
+
+    protected override isNodeInScene(): boolean {
+        return this._active;
+    }
+
+    public activate() {
+        this._active = true;
+        this.attachComponents();
+    }
+
+    public deactivate() {
+        this._active = false;
+        this.detachComponents();
+    }
 }

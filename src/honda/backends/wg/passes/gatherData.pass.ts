@@ -74,6 +74,8 @@ const TYPE_MAP: Record<THondaLight["type"], number> = {
 
 const MATRIX_SIZE = 4 * 4 * 4;
 
+const M4ID = mat4.identity();
+
 export class GatherDataPass implements IPass {
     private matrixAlign: number;
     private maxNShadowmaps: number;
@@ -109,7 +111,17 @@ export class GatherDataPass implements IPass {
 
     gatherCameraData(): void {
         const cam = this.cameraSystem.activeCamera;
-        if (!cam) return;
+        if (!cam) {
+            this.uniformData.v = M4ID;
+            this.uniformData.vInv = M4ID;
+            this.uniformData.vp = M4ID;
+            this.uniformData.vpInv = M4ID;
+            this.uniformData.pInv = M4ID;
+            this.uniformData.near = 0;
+            this.uniformData.far = 1;
+            this.uniformData.isOrtho = 1;
+            return;
+        }
 
         this.uniformData.v = this.cameraSystem.viewMtx;
         this.uniformData.vInv = this.cameraSystem.viewMtxInv;

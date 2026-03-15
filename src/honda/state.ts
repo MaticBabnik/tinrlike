@@ -3,18 +3,20 @@
 import type { Input } from "./util/input";
 import { Perf } from "./util/perf";
 import { ECS } from "./core/ecs";
-import { Scene } from "./core/scene";
 import type { IGPUImplementation } from "./gpu2";
+import { SceneManager } from "./core/sceneManager";
+import type { UIManager } from "./ui/ui";
 
 export const Game = {
     ecs: new ECS(),
 
-    //TODO(mbabnik): Scene management?
-    scene: new Scene(),
+    sceneManager: new SceneManager(),
 
-    // TODO(mbabnik): Be specifica about when this is set/valid/...
+    // TODO(mbabnik): Be specific about when this is set/valid/...
     time: 0,
     deltaTime: 0,
+
+    // chronos: new 
 
     input: null! as Input,
     cmdEncoder: null! as GPUCommandEncoder,
@@ -22,6 +24,8 @@ export const Game = {
     perf: new Perf(),
 
     gpu2: null! as IGPUImplementation,
+
+    ui: null! as UIManager,
 };
 
 //@ts-expect-error expose state to the console

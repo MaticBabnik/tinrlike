@@ -12,6 +12,7 @@ export class ECS {
     public registerComponent(node: SceneNode, component: IComponent) {
         for (const sys of this._systems) {
             if (component instanceof sys.componentType) {
+                // console.log("Registering component", component, "with system", sys);
                 sys.componentCreated(node, component);
                 return;
             }
@@ -22,6 +23,7 @@ export class ECS {
     public destroyComponent(node: SceneNode, component: IComponent) {
         for (const sys of this._systems) {
             if (component instanceof sys.componentType) {
+                // console.log("Destroying component", component, "from system", sys);
                 sys.componentDestroyed(node, component);
             }
         }
@@ -66,6 +68,7 @@ export abstract class System {
     public earlyUpdate() {}
     public update() {}
     public lateUpdate() {}
+    public fixedUpdate?() {}
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public componentCreated(_node: SceneNode, _component: IComponent): void {}

@@ -13,9 +13,12 @@ export class SceneNode {
 
     public meta: Record<string, unknown> = {};
 
+    protected _pendAttach = false;
+
     protected isNodeInScene(): boolean {
-        if ((this as SceneNode) === Game.scene) return true;
-        if (this.parent === Game.scene) return true;
+        const scene = Game.sceneManager.scene;
+        if ((this as SceneNode) === scene) return true;
+        if (this.parent === scene) return true;
 
         return this.parent?.isNodeInScene() ?? false;
     }
@@ -33,36 +36,16 @@ export class SceneNode {
             c.parent.removeChild(c);
         }
 
+        // console.log(this, "adding child", c);
+
         this.children.add(c);
         c.parent = this;
-        c.attachComponents();
-    }
-
-    protected detachComponents() {
-        if (!this.parent) return;
-        this._attached = false;
-        this.children.forEach((x) => {
-            x.detachComponents();
-        });
-        this.components.forEach((x) => {
-            Game.ecs.destroyComponent(this, x);
-        });
-    }
-
-    protected _attached = true;
-
-    protected attachComponents() {
-        if (this._attached) return;
-        this._attached = true;
-        this.children.forEach((x) => {
-            x.attachComponents();
-        });
-        this.components.forEach((x) => {
-            Game.ecs.registerComponent(this, x);
-        });
+        if (this.isNodeInScene()) c.attachComponents();
     }
 
     public removeChild(c: SceneNode) {
+        // console.log(this, "removing child", c);
+
         if (this.children.delete(c)) {
             c.detachComponents();
             c.parent = undefined;
@@ -74,18 +57,49 @@ export class SceneNode {
     }
 
     public addComponent<T extends IComponent>(c: T) {
+        // console.log(this, "adding component", c);
+
         if (this.isNodeInScene()) {
+            // console.log("registering component immediately");
             Game.ecs.registerComponent(this, c);
         } else {
-            this._attached = false;
+            // console.log("deferring component registration");
+            this._pendAttach = true;
         }
 
         this.components.push(c);
     }
 
     public removeComponent<T extends IComponent>(c: T) {
+        // console.log(this, "removing component", c);
         Game.ecs.destroyComponent(this, c);
         this.components = this.components.filter((x) => x !== c);
+        if (this.components.length === 0) this._pendAttach = false;
+    }
+
+    protected attachComponents() {
+        // console.log(this, "attachComponents()");
+        this.children.forEach((x) => {
+            x.attachComponents();
+        });
+
+        if (!this._pendAttach) return;
+        // console.log("registering deferred components");
+        this.components.forEach((x) => {
+            Game.ecs.registerComponent(this, x);
+        });
+        this._pendAttach = false;
+    }
+
+    protected detachComponents() {
+        // console.log(this, "detachComponents()");
+        this.children.forEach((x) => {
+            x.detachComponents();
+        });
+        this.components.forEach((x) => {
+            Game.ecs.destroyComponent(this, x);
+        });
+        this._pendAttach = true;
     }
 
     // Destroys self and all remaining children

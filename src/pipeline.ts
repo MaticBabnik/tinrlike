@@ -26,16 +26,22 @@ import {
     ShadowMapPass,
     type UniformData,
 } from "./honda/backends/wg/passes";
+import { getMsaaKernel } from "./honda/backends/wg/util/getMsaaKernel";
 
-export function createGpuPipeline(gpu: WGpu, ecs: ECS) {
+export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
     const N_SHADOWMAPS = 8;
     const BLUR_PASSES = 10;
 
-    const base = new ViewportTexture("rgba8unorm-srgb", 1, "gBase");
-    const normal = new ViewportTexture("rgba8unorm", 1, "gNormal");
-    const mtlRgh = new ViewportTexture("rg8unorm", 1, "gMetalRough");
-    const emission = new ViewportTexture("rgba16float", 1, "gEmission");
-    const depth = new ViewportTexture("depth24plus", 1, "gDepth");
+    const msaa = 1; // gpu.settings.multisample;
+
+    const kernelShape = await getMsaaKernel(gpu);
+    console.log(kernelShape);
+
+    const base = new ViewportTexture("rgba8unorm-srgb", 1, "gBase", msaa);
+    const normal = new ViewportTexture("rgba8unorm", 1, "gNormal", msaa);
+    const mtlRgh = new ViewportTexture("rg8unorm", 1, "gMetalRough", msaa);
+    const emission = new ViewportTexture("rgba16float", 1, "gEmission", msaa);
+    const depth = new ViewportTexture("depth24plus", 1, "gDepth", msaa);
     const edge = new ViewportTexture("r8unorm", 1, "edge");
     const shaded = new ViewportTexture("rgba16float", 1, "shaded");
     const bloom = new ViewportMipTexture(
@@ -246,4 +252,6 @@ export function createGpuPipeline(gpu: WGpu, ecs: ECS) {
             gpu.canvasTexture,
         ),
     );
+
+    gpu.printPipeline();
 }

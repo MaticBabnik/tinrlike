@@ -8,7 +8,7 @@ export class AxesScript extends Script {
 
     override lateUpdate(): void {
         const d = Game.ecs.getSystem(DebugSystem);
-        Game.scene.computeTransforms();
+        Game.sceneManager.scene.computeTransforms();
 
         this.i.set([0, 0, 0]);
         vec4.transformMat4(this.i, this.node.transform.$glbMtx, this.r1);

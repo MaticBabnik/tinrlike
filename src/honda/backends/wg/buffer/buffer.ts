@@ -30,6 +30,19 @@ export class Buffer {
         );
     }
 
+    public async pull() {
+        if (!(this.usage & GPUBufferUsage.MAP_READ)) {
+            throw new Error(
+                `Buffer ${this.name} was not created with MAP_READ usage flag!`,
+            );
+        }
+
+        await this.gpuBuf.mapAsync(GPUMapMode.READ);
+        const copy = this.gpuBuf.getMappedRange();
+        new Uint8Array(this.cpuBuf).set(new Uint8Array(copy));
+        this.gpuBuf.unmap();
+    }
+
     /**
      * Don't call while used in GPU operations
      */

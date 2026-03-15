@@ -20,4 +20,5 @@ export class AssetSystem extends System {
     public getAsset(name: string): GltfLoader {
         return nn(this._assets.get(name));
     }
+
 }

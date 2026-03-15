@@ -18,9 +18,9 @@ export class CameraComponent implements IComponent {
         protected _far: number,
         public name = "Camera",
     ) {
-        this.recompute();
         this._near = 100;
         this._far = 0; // TODO fix!
+        this.recompute();
     }
 
     public get fov() {
@@ -79,11 +79,22 @@ export class CameraComponent implements IComponent {
             hr = wr / aspect;
         }
 
-        mat4.ortho(-wr, wr, -hr, hr, this.near, this.far, this.projectionMtx);
+        mat4.ortho(-wr, wr, -hr, hr, this._near, this._far, this.projectionMtx);
 
         this.currentAspect = aspect;
         mat4.inverse(this.projectionMtx, this.invProjectionMtx);
         this.dirty = false;
+
+        // console.log(
+        //     {
+        //         aspect,
+        //         wr, hr,
+        //         _near: this._near,
+        //         _far: this._far,
+        //         proj: this.projectionMtx,
+        //         invProj: this.invProjectionMtx,
+        //     }
+        // )
     }
 
     public get projMtx() {

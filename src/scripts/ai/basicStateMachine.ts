@@ -1,10 +1,11 @@
 import {
     DebugSystem,
-    DynamicPhysicsObject,
+    type DynamicPhysicsObject,
     FizComponent,
     Game,
-    SceneNode,
+    type SceneNode,
     Script,
+    SoundSystem,
 } from "@/honda";
 import { vec2, vec3 } from "wgpu-matrix";
 
@@ -20,33 +21,38 @@ export class BasicStateMachine extends Script {
     private dSystem: DebugSystem = null!;
     private fiz!: DynamicPhysicsObject;
     private moveBaseVec = vec2.create(0, 0);
+    private ssys: SoundSystem = null!;
 
     public onAttach(): void {
         this.dSystem = Game.ecs.getSystem(DebugSystem);
-        this.player = Game.scene.assertChildWithName("Player");
+        this.player = Game.sceneManager.scene.assertChildWithName("Player");
         this.fiz = this.node.assertComponent(FizComponent)
             .object as DynamicPhysicsObject;
+        this.ssys = Game.ecs.getSystem(SoundSystem);
     }
 
     private idleTick() {
         const distance = vec3.distance(
             this.node.transform.translation,
-            this.player.transform.translation
+            this.player.transform.translation,
         );
 
         if (distance < this.detectionRadius) {
             this.currentState = State.Follow;
+
+            this.ssys.playAudio(`turret_active`, false, 0.2);
         }
     }
 
     private followTick() {
         const distance = vec3.distance(
             this.node.transform.translation,
-            this.player.transform.translation
+            this.player.transform.translation,
         );
 
         if (distance >= this.detectionRadius + 2) {
             this.currentState = State.Idle;
+            this.ssys.playAudio(`turret_search`, false, 0.2);
             return;
         }
 
@@ -65,7 +71,7 @@ export class BasicStateMachine extends Script {
             vec2.mulScalar(
                 this.moveBaseVec,
                 Game.deltaTime * 500,
-                this.moveBaseVec
+                this.moveBaseVec,
             );
 
             this.fiz.applyForce(this.moveBaseVec);
@@ -83,7 +89,7 @@ export class BasicStateMachine extends Script {
                         this.node.transform.translation[2],
                     ],
                     this.detectionRadius,
-                    [1, 0, 0, 1]
+                    [1, 0, 0, 1],
                 );
 
                 break;
@@ -95,7 +101,7 @@ export class BasicStateMachine extends Script {
                 this.dSystem.line(
                     this.node.transform.translation,
                     this.player.transform.translation,
-                    [1, 0, 0, 1]
+                    [1, 0, 0, 1],
                 );
 
                 break;

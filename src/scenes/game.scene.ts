@@ -14,8 +14,8 @@ import {
     FizMaterial,
     StaticPhysicsObject,
     FIZ_LAYER_PHYS,
-    nn,
     MeshComponent,
+    Scene,
 } from "@/honda";
 import { quat } from "wgpu-matrix";
 import { AnimationPlayerScript } from "@/scripts/animplayer.script";
@@ -23,12 +23,33 @@ import {
     TL_LAYER_ENEMY,
     TL_LAYER_PLAYER,
     TL_LAYER_PLAYER_PROJECTILE,
-} from "./constants";
-import { PlayerScript } from "./scripts/player.script";
-import { LerpCameraScript } from "./scripts/lerpCamera.script";
-import { SpikeScript } from "./scripts/spike.script";
-import { AssetSystem } from "./honda/systems/asset/asset.system";
-import { BasicStateMachine } from "./scripts/ai/basicStateMachine";
+} from "../constants";
+import { PlayerScript } from "../scripts/player.script";
+import { LerpCameraScript } from "../scripts/lerpCamera.script";
+import { AssetSystem } from "../honda/systems/asset/asset.system";
+import { BasicStateMachine } from "../scripts/ai/basicStateMachine";
+import GameHud from "@/ui/GameHud.vue";
+
+class UIScript extends Script {
+    public override onAttach(): void {
+        console.log("Attaching UI Script");
+        Game.ui.setView(GameHud, false);
+        Game.ui.sendMessage({
+            abilities: [
+                "Damage Boost II",
+                "Speed Boost I",
+                "Sneak Step IV",
+                "Lucky Dodge I",
+            ],
+        });
+    }
+
+    public override update(): void {
+        Game.ui.sendMessage({
+            health: (Game.time * 10) % 100,
+        });
+    }
+}
 
 export function createScene() {
     const as = Game.ecs.getSystem(AssetSystem);
@@ -36,7 +57,11 @@ export function createScene() {
     const tc = as.getAsset("testchr");
     const sc = as.getAsset("summoningcircle");
 
-    Game.scene.addChild(level.sceneAsNode());
+    const scene = new Scene();
+    scene.name = "GameScene";
+    scene.addComponent(new ScriptComponent(new UIScript()));
+
+    scene.addChild(level.sceneAsNode());
 
     // create coliders
     {
@@ -107,13 +132,13 @@ export function createScene() {
             )
         );
 
-        Game.scene.addChild(a);
+        scene.addChild(a);
     }
 
     // hurt thingy
     {
         // const spikeNode = nn(
-        //     Game.scene.findChild((x) => x.name === "floor_tile_big_spikes"),
+        //     scene.findChild((x) => x.name === "floor_tile_big_spikes"),
         // );
         // spikeNode.addComponent(
         //     new FizComponent(
@@ -190,7 +215,7 @@ export function createScene() {
             player.addChild(n);
         }
 
-        Game.scene.addChild(player);
+        scene.addChild(player);
 
         const cameraHolder = new SceneNode();
 
@@ -211,7 +236,7 @@ export function createScene() {
 
         cameraHolder.addChild(camera);
         cameraHolder.addComponent(new ScriptComponent(new LerpCameraScript()));
-        Game.scene.addChild(cameraHolder);
+        scene.addChild(cameraHolder);
     }
 
     {
@@ -231,10 +256,10 @@ export function createScene() {
         sun.transform.rotation = quat.fromEuler(-45, -45, 0, "xyz");
         sun.transform.update();
 
-        Game.scene.addChild(sun);
+        scene.addChild(sun);
     }
 
-    Game.scene.addComponent(
+    scene.addComponent(
         new ScriptComponent(
             new (class extends Script {
                 private d: DebugSystem = null!;
@@ -268,7 +293,7 @@ export function createScene() {
         const ap = new AnimationPlayerScript(anim);
         scn.addComponent(new ScriptComponent(ap));
 
-        // Game.scene.addChild(scn);
+        // scene.addChild(scn);
     }
 
     {
@@ -300,14 +325,16 @@ export function createScene() {
 
         enemy1.addComponent(new ScriptComponent(new BasicStateMachine()));
 
-        Game.scene.addChild(enemy1);
+        scene.addChild(enemy1);
     }
 
     console.groupCollapsed("scene");
-    console.log(Game.scene.tree());
+    console.log(scene.tree());
     console.groupEnd();
 
     console.groupCollapsed("GPU ref counts");
     (Game.gpu2 as { printRcStats?: () => void }).printRcStats?.();
     console.groupEnd();
+
+    return scene;
 }

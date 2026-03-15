@@ -31,6 +31,15 @@ export const enum WGStatus {
     Lost,
 }
 
+function getAdapterString(a: GPUAdapterInfo): string {
+    if (a.description) return a.description;
+    if (a.vendor && a.architecture) return `${a.vendor} ${a.architecture}`;
+    if (a.vendor) return `${a.vendor} unknown`;
+    if (a.architecture) return a.architecture;
+    if (a.device) return a.device;
+    return "Unknown GPU";
+}
+
 export class WGpu implements IGPUImplementation {
     private ro: ResizeObserver;
 
@@ -144,7 +153,7 @@ export class WGpu implements IGPUImplementation {
             "font-family: sans-serif; font-weight: bold; font-size: 2rem; color: #ffd6ffff; text-shadow: 0 0 10px #ff00ff; background-color: #3f003f; padding: 0.4rem 0.8rem; border-radius: 0.4rem",
         );
         console.log(
-            `%cGPU: %c${adapter.info.description}`,
+            `%cGPU: %c${getAdapterString(adapter.info)}`,
             "font-family: sans-serif; font-weight: bold; font-size: 1rem",
             "font-family: sans-serif; font-size: 1rem",
         );
@@ -183,7 +192,6 @@ export class WGpu implements IGPUImplementation {
         this.renderScale = this.settings.renderScale;
 
         this.device.lost.then((x) => {
-            this.onError?.("Lost device");
             console.error("lost device", x);
             device.destroy();
             this.device = null!; // cause device accesses to error out
@@ -424,6 +432,21 @@ export class WGpu implements IGPUImplementation {
 
     public addPass(p: IPass) {
         this._passes.push(p);
+    }
+
+    public printPipeline() {
+        console.log("Active WebGPU pipeline:");
+
+        console.log(
+            this.viewPortTextures
+                .map(
+                    (t) =>
+                        t.label ?? `<unnamed texture ${t.width}x${t.height}>`,
+                )
+                .join(",\n"), '\n'
+        );
+
+        console.log(this._passes.map((p) => p.constructor.name).join(" -> \n"));
     }
 
     public render() {

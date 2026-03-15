@@ -6,3 +6,4 @@ export * from "./sound";
 export * from "./fiz";
 export * from "./debug";
 export * from "./sprite2d";
+export * from "./asset";

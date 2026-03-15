@@ -1,8 +1,9 @@
 export * from "./state";
 
 export * from "./core/ecs";
-export * from "./core/scene";
 export * from "./core/node";
+export * from "./core/scene";
+export * from "./core/sceneManager";
 
 export * from "./systems";
 
