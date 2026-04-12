@@ -1,8 +1,8 @@
-import type { WGpu } from "../gpu";
-import { TRI_LIST_CULLED } from "./constants";
+import type { WGpu } from "../../gpu";
+import { TRI_LIST_CULLED } from "../constants";
 
 function createShade(g: WGpu, targetFormat: GPUTextureFormat) {
-    const module = g.getShaderModule("shade");
+    const module = g.getShaderModule("def1/shade");
 
     return g.device.createRenderPipeline({
         label: `shade:${targetFormat}`,

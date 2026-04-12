@@ -81,6 +81,27 @@ const layouts = [
         .binding(1, "f", "texture")
         .binding(2, "f", "texture", { sampleType: "unfilterable-float" })
         .binding(3, "f", "sampler", { type: "non-filtering" }),
+
+    bindGroupLayout("toonf/depth")
+        .binding(0, "v", "buffer", { type: "uniform" })
+        .binding(1, "v", "buffer", { type: "read-only-storage" }),
+
+    bindGroupLayout("toonf/main")
+        .binding(0, "vf", "buffer", { type: "uniform" })
+        .binding(1, "v", "buffer", { type: "read-only-storage" })
+        .binding(2, "f", "buffer", { type: "uniform" }),
+
+    bindGroupLayout("toonf/mat-alpha-clip")
+        .binding(0, "f", "buffer", { type: "uniform" })
+        .binding(1, "f", "texture")
+        .binding(2, "f", "sampler"),
+
+    bindGroupLayout("toonf/postresolve").binding(0, "f", "texture", {
+        sampleType: "unfilterable-float",
+        multisampled: true,
+    }),
+
+    bindGroupLayout("toonf/post").binding(0, "f", "texture"),
 ] as const;
 
 export function createBindGroupLayouts(g: WGpu) {

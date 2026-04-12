@@ -36,17 +36,17 @@ class UIScript extends Script {
         Game.ui.setView(GameHud, false);
         Game.ui.sendMessage({
             abilities: [
-                "Damage Boost II",
-                "Speed Boost I",
-                "Sneak Step IV",
-                "Lucky Dodge I",
+                "It all returns",
+                "to nothing",
+                "I just keep letting me",
+                "down, letting me down",
             ],
         });
     }
 
     public override update(): void {
         Game.ui.sendMessage({
-            health: (Game.time * 10) % 100,
+            health: 6767,
         });
     }
 }
@@ -54,8 +54,8 @@ class UIScript extends Script {
 export function createScene() {
     const as = Game.ecs.getSystem(AssetSystem);
     const level = as.getAsset("level");
-    const tc = as.getAsset("testchr");
     const sc = as.getAsset("summoningcircle");
+    const alpha = as.getAsset("alphatest");
 
     const scene = new Scene();
     scene.name = "GameScene";
@@ -72,64 +72,64 @@ export function createScene() {
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(7, 7), [-12, 12]),
                 "FrontWall",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(7, 7), [12, -12]),
                 "BackWall",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 2), [-8, -8]),
                 "BoxesLeft",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 2), [8, 8]),
                 "BoxesRight",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(22, 2), [0, -19]),
                 "WallLeftBack",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(22, 2), [0, 19]),
                 "WallRightFront",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 18), [-19, 0]),
                 "WallLeftFront",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         a.addComponent(
             new FizComponent(
                 new StaticPhysicsObject(new AABBShape(2, 18), [19, 0]),
                 "WallRightBack",
-                CopyTransformMode.None
-            )
+                CopyTransformMode.None,
+            ),
         );
 
         scene.addChild(a);
@@ -171,30 +171,29 @@ export function createScene() {
                     0.05,
                     FIZ_LAYER_PHYS | TL_LAYER_PLAYER,
                     0,
-                    new FizMaterial(0.1, 0.6)
+                    new FizMaterial(0.1, 0.6),
                 ),
                 "Player",
-                CopyTransformMode.PositionXZ
-            )
+                CopyTransformMode.PositionXZ,
+            ),
         );
         player.addComponent(new ScriptComponent(new PlayerScript()));
 
-        {
-            const tcn = tc.sceneAsNode();
-            const anim = tc.getAnimation(0);
-            const anim2 = tc.getAnimation(1);
+        const hatsunefuckingmiku = as
+            .getAsset("hatsunefuckingmiku")
+            .sceneAsNode();
 
-            anim.attach(tcn);
-            anim2.attach(tcn);
+        hatsunefuckingmiku.transform.scale.fill(0.2);
+        quat.fromEuler(
+            0,
+            (-1 * Math.PI) / 4,
+            0,
+            "xyz",
+            hatsunefuckingmiku.transform.rotation,
+        );
+        hatsunefuckingmiku.transform.update();
 
-            tcn.addComponent(
-                new ScriptComponent(new AnimationPlayerScript(anim))
-            );
-            tcn.addComponent(
-                new ScriptComponent(new AnimationPlayerScript(anim2))
-            );
-            player.addChild(tcn);
-        }
+        player.addChild(hatsunefuckingmiku);
 
         {
             const n = new SceneNode();
@@ -209,7 +208,7 @@ export function createScene() {
                     intensity: 5,
                     maxRange: 10,
                     castShadows: false,
-                })
+                }),
             );
 
             player.addChild(n);
@@ -230,7 +229,7 @@ export function createScene() {
             -45 * DEG,
             0,
             "zyx",
-            cameraHolder.transform.rotation
+            cameraHolder.transform.rotation,
         );
         cameraHolder.transform.update();
 
@@ -247,13 +246,13 @@ export function createScene() {
             new LightComponent({
                 castShadows: false,
                 color: [1, 0.953, 0.871],
-                intensity: 10,
+                intensity: 2,
                 type: "directional",
                 maxRange: 20,
-            })
+            }),
         );
 
-        sun.transform.rotation = quat.fromEuler(-45, -45, 0, "xyz");
+        sun.transform.rotation = quat.fromEuler(-65, -45, 0, "xyz");
         sun.transform.update();
 
         scene.addChild(sun);
@@ -274,8 +273,8 @@ export function createScene() {
                     this.d.line([0, 0, 0], [0, 1, 0], [0, 1, 0]);
                     this.d.line([0, 0, 0], [0, 0, 1], [0, 0, 1]);
                 }
-            })()
-        )
+            })(),
+        ),
     );
 
     {
@@ -316,16 +315,76 @@ export function createScene() {
                     0.1,
                     FIZ_LAYER_PHYS | TL_LAYER_ENEMY,
                     TL_LAYER_PLAYER_PROJECTILE,
-                    new FizMaterial(0.1, 0.6)
+                    new FizMaterial(0.1, 0.6),
                 ),
                 "Enemy1",
-                CopyTransformMode.PositionXZ
-            )
+                CopyTransformMode.PositionXZ,
+            ),
         );
 
         enemy1.addComponent(new ScriptComponent(new BasicStateMachine()));
 
         scene.addChild(enemy1);
+    }
+
+    for (let i = 0; i < 3; i++) {
+        const an = alpha.sceneAsNode();
+
+        an.name = `Alpha ${i}`;
+        an.transform.translation[0] = i * 2;
+        an.transform.translation[1] = 1;
+        an.transform.scale.set([0.5, 0.5, 0.5]);
+        an.transform.update();
+
+        an.addComponent(
+            new ScriptComponent(
+                new (class extends Script {
+                    public update(): void {
+                        quat.fromAxisAngle(
+                            [0, 1, 0],
+                            Game.time * 0.5,
+                            this.node.transform.rotation,
+                        );
+                        this.node.transform.update();
+                    }
+                })(),
+            ),
+        );
+
+        scene.addChild(an);
+    }
+
+    {
+        const spheres = as.getAsset("spheres").sceneAsNode();
+        spheres.transform.scale.fill(0.5);
+        quat.fromEuler(
+            0,
+            (-3 * Math.PI) / 4,
+            0,
+            "xyz",
+            spheres.transform.rotation,
+        );
+        spheres.transform.update();
+
+        scene.addChild(spheres);
+    }
+
+    {
+        const hatsunefuckingmiku = as
+            .getAsset("hatsunefuckingmiku")
+            .sceneAsNode();
+
+        hatsunefuckingmiku.transform.scale.fill(0.3);
+        quat.fromEuler(
+            0,
+            (-1 * Math.PI) / 4,
+            0,
+            "xyz",
+            hatsunefuckingmiku.transform.rotation,
+        );
+        hatsunefuckingmiku.transform.update();
+
+        scene.addChild(hatsunefuckingmiku);
     }
 
     console.groupCollapsed("scene");

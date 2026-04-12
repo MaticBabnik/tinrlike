@@ -1,10 +1,10 @@
 import type { Vec2 } from "wgpu-matrix";
-import { StructBuffer } from "../buffer";
-import type { WGpu } from "../gpu";
-import { getEdge } from "../pipelines";
-import type { ITViewable } from "../texture";
+import { StructBuffer } from "../../buffer";
+import type { WGpu } from "../../gpu";
+import { getEdge } from "../../pipelines/def1";
+import type { ITViewable } from "../../texture";
 import type { UniformData } from "./gatherData.pass";
-import type { IPass } from "./pass.interface";
+import type { IPass } from "../pass.interface";
 import type { Two } from "@/honda/";
 
 interface EdgeSettings {
@@ -44,7 +44,7 @@ export class EdgePass implements IPass {
         });
         this.uniforms = new StructBuffer(
             gpu,
-            gpu.getStruct("edge", "Uniforms"),
+            gpu.getStruct("def1/edge", "Uniforms"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "edgeUniforms",
         );

@@ -1,7 +1,6 @@
 import { System, type SceneNode, CameraSystem } from "@/honda";
 import { SoundEmmiter } from "./sound-emitter.component";
 import { Game } from "@/honda";
-import { vec3 } from "wgpu-matrix";
 
 export class SoundSystem extends System {
     public componentType = SoundEmmiter;
@@ -15,9 +14,18 @@ export class SoundSystem extends System {
     protected activeComponentSources: Map<SoundEmmiter, AudioBufferSourceNode> =
         new Map();
     protected activeComponentPanners: Map<SoundEmmiter, PannerNode> = new Map();
+
     constructor() {
         super();
         this.audioContext = new AudioContext();
+
+        window.addEventListener(
+            "mousedown",
+            () => {
+                this.audioContext.resume();
+            },
+            { once: true },
+        );
     }
 
     public componentCreated(node: SceneNode, component: SoundEmmiter) {
@@ -39,38 +47,27 @@ export class SoundSystem extends System {
 
     public update(): void {
         const cameraSystem = Game.ecs.getSystem(CameraSystem);
-
         const node = cameraSystem.getActiveCameraNode();
-        if (!node) {
+
+        if (!node || this.audioContext.state !== "running") {
             return;
         }
 
         const cameraTransform = node.transform;
         const position = cameraTransform.translation;
 
-        const forward = vec3.fromValues(
-            -cameraTransform.$glbMtx[8],
-            -cameraTransform.$glbMtx[9],
-            -cameraTransform.$glbMtx[10],
-        );
-
-        const up = vec3.fromValues(
-            cameraTransform.$glbMtx[4],
-            cameraTransform.$glbMtx[5],
-            cameraTransform.$glbMtx[6],
-        );
-
         this.audioContext.listener.positionX.value = position[0];
         this.audioContext.listener.positionY.value = position[1];
         this.audioContext.listener.positionZ.value = position[2];
 
-        this.audioContext.listener.forwardX.value = forward[0];
-        this.audioContext.listener.forwardY.value = forward[1];
-        this.audioContext.listener.forwardZ.value = forward[2];
+        this.audioContext.listener.forwardX.value = -cameraTransform.$glbMtx[8];
+        this.audioContext.listener.forwardY.value = -cameraTransform.$glbMtx[9];
+        this.audioContext.listener.forwardZ.value =
+            -cameraTransform.$glbMtx[10];
 
-        this.audioContext.listener.upX.value = up[0];
-        this.audioContext.listener.upY.value = up[1];
-        this.audioContext.listener.upZ.value = up[2];
+        this.audioContext.listener.upX.value = cameraTransform.$glbMtx[4];
+        this.audioContext.listener.upY.value = cameraTransform.$glbMtx[5];
+        this.audioContext.listener.upZ.value = cameraTransform.$glbMtx[6];
 
         this.components.keys().forEach((x) => {
             const node = this.components.get(x);
@@ -229,5 +226,65 @@ export class SoundSystem extends System {
 
     public isPlaying(audioId: string) {
         return this.activeSources.has(audioId);
+    }
+}
+
+// Firefox is a piece of shit
+export class FirefoxSoundSystem extends SoundSystem {
+    public override update(): void {
+        const cameraSystem = Game.ecs.getSystem(CameraSystem);
+        const node = cameraSystem.getActiveCameraNode();
+
+        if (!node || this.audioContext.state !== "running") {
+            return;
+        }
+
+        const cameraTransform = node.transform;
+        const position = cameraTransform.translation;
+
+        // use outdated setPosition and setOrientation methods for Firefox compatibility
+        this.audioContext.listener.setPosition(
+            position[0],
+            position[1],
+            position[2],
+        );
+        this.audioContext.listener.setOrientation(
+            -cameraTransform.$glbMtx[8],
+            -cameraTransform.$glbMtx[9],
+            -cameraTransform.$glbMtx[10],
+            cameraTransform.$glbMtx[4],
+            cameraTransform.$glbMtx[5],
+            cameraTransform.$glbMtx[6],
+        );
+
+        this.components.keys().forEach((x) => {
+            const node = this.components.get(x);
+            if (!node) {
+                return;
+            }
+
+            const panner = this.activeComponentPanners.get(x);
+            if (panner) {
+                panner.positionX.value = node.transform.translation[0];
+                panner.positionY.value = node.transform.translation[1];
+                panner.positionZ.value = node.transform.translation[2];
+            }
+
+            if (x.shouldPlay() && !x.isPlaying()) {
+                this.playComponentAudio(x);
+            }
+
+            if (!x.shouldPlay() && x.isPlaying()) {
+                this.stopComponentAudio(x);
+            }
+        });
+    }
+}
+
+export function createSoundSystem() {
+    if ("positionX" in AudioListener.prototype) {
+        return new SoundSystem();
+    } else {
+        return new FirefoxSoundSystem();
     }
 }

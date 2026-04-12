@@ -1,10 +1,10 @@
 import type { DebugSystem } from "@/honda/systems";
-import { StructBuffer } from "../buffer";
-import type { WGpu } from "../gpu";
-import type { ITViewable } from "../texture";
+import { StructBuffer } from "../../buffer";
+import type { WGpu } from "../../gpu";
+import type { ITViewable } from "../../texture";
 import type { UniformData } from "./gatherData.pass";
-import type { IPass } from "./pass.interface";
-import { getDebuglinePipeline } from "../pipelines";
+import type { IPass } from "../pass.interface";
+import { getDebuglinePipeline } from "../../pipelines/def1";
 
 export class DebugLinePass implements IPass {
     private uniforms: StructBuffer;
@@ -23,7 +23,7 @@ export class DebugLinePass implements IPass {
 
         this.uniforms = new StructBuffer(
             gpu,
-            gpu.getStruct("devline", "Uniforms"),
+            gpu.getStruct("def1/devline", "Uniforms"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "debugLineUniforms",
         );

@@ -44,6 +44,7 @@ export class Perf {
     public measureEnd() {
         const l = this.activeLabel;
         if (!l) return;
+        this.activeLabel = undefined;
         const t = performance.now() - this.labelStart;
         this.labelTimes[l] = (this.labelTimes[l] ?? 0) + t;
     }
@@ -141,3 +142,4 @@ export function perfRenderer(
                       .padStart(6, " ")}us`;
     };
 }
+

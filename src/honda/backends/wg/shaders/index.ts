@@ -3,7 +3,7 @@ import {
     type ShaderDataDefinitions,
 } from "webgpu-utils";
 
-const shaderSources = import.meta.glob("./*.wgsl", {
+const shaderSources = import.meta.glob("./**/*.wgsl", {
     eager: true,
     query: "raw",
     import: "default",

@@ -1,9 +1,9 @@
-import type { IResizable, ITViewable } from "./interfaces";
+import type { IResizable, ITViewable, IMultiSamplable } from "./interfaces";
 
 export class ViewportTexture<
     Tformat extends GPUTextureFormat = GPUTextureFormat,
 >
-    implements IResizable, ITViewable
+    implements IResizable, ITViewable, IMultiSamplable
 {
     public tex!: GPUTexture;
     public view!: GPUTextureView;

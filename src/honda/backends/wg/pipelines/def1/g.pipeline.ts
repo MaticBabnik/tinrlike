@@ -1,15 +1,15 @@
 import type { Four } from "@/honda";
-import type { WGpu } from "../gpu";
+import type { WGpu } from "../../gpu";
 import {
     TRI_LIST_CULLED,
     DEPTHTEST_GREATER_WRITE,
     VERTEX_POS_UV_NORM,
     VERTEX_POS_UV_NORM_TAN,
     VERTEX_POS_UV_NORM_SKIN,
-} from "./constants";
+} from "../constants";
 
 function createG(g: WGpu, formats: Four<GPUTextureFormat>) {
-    const module = g.getShaderModule("g");
+    const module = g.getShaderModule("def1/g");
 
     return g.device.createRenderPipeline({
         label: "gbuf",
@@ -38,7 +38,7 @@ function createG(g: WGpu, formats: Four<GPUTextureFormat>) {
 }
 
 function createGNorm(g: WGpu, formats: Four<GPUTextureFormat>) {
-    const module = g.getShaderModule("gnorm");
+    const module = g.getShaderModule("def1/gnorm");
 
     return g.device.createRenderPipeline({
         label: "gbuf(norm)",
@@ -67,7 +67,7 @@ function createGNorm(g: WGpu, formats: Four<GPUTextureFormat>) {
 }
 
 function createGSkin(g: WGpu, formats: Four<GPUTextureFormat>) {
-    const module = g.getShaderModule("gskin");
+    const module = g.getShaderModule("def1/gskin");
 
     return g.device.createRenderPipeline({
         label: "gbuf-skin",

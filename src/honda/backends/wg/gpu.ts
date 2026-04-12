@@ -23,7 +23,7 @@ import {
     type IGPUTexDesc,
 } from "@/honda/gpu2";
 import { WGTexData, WGBuf, WGMat, WGTex } from "./resources";
-import type { IPass } from "./passes";
+import type { IPass } from "./passes/pass.interface";
 
 export const enum WGStatus {
     Idle,
@@ -42,7 +42,8 @@ function getAdapterString(a: GPUAdapterInfo): string {
 
 export class WGpu implements IGPUImplementation {
     private ro: ResizeObserver;
-
+    private _frameNo = 0;
+    public adapterString: string;
     public status: WGStatus = WGStatus.Idle;
     public destroyQueue: (GPUBuffer | GPUTexture)[] = [];
 
@@ -77,7 +78,7 @@ export class WGpu implements IGPUImplementation {
     protected queryIndex = 0;
     protected queryBuffer: GPUBuffer;
     protected queryMapBuffer: GPUBuffer;
-    protected wasQueryReady = false;
+    protected queryReadBufferAvailable = true;
     protected timestampLabels: Record<number, string> = {};
 
     public cmdEncoder: GPUCommandEncoder = null!;
@@ -108,6 +109,19 @@ export class WGpu implements IGPUImplementation {
         return nn(s.defs.structs[name]);
     }
 
+    private static FEATURES_REQUIRED = [] as const satisfies GPUFeatureName[];
+    private static FEATURES_OPTIONAL = [
+        "timestamp-query",
+        "rg11b10ufloat-renderable",
+        "float32-filterable",
+    ] as const satisfies GPUFeatureName[];
+
+    public hasOptFeature(
+        feature: (typeof WGpu.FEATURES_OPTIONAL)[number],
+    ): boolean {
+        return this.device.features.has(feature);
+    }
+
     static async obtainForCanvas(
         settings: WGSettings,
         canvas: HTMLCanvasElement,
@@ -118,12 +132,21 @@ export class WGpu implements IGPUImplementation {
             }),
             "Your browser doesn't support WebGPU",
         );
+
+        const availableOptionals = WGpu.FEATURES_OPTIONAL.filter((f) =>
+            adapter.features.has(f),
+        );
+
         const device = nn(
             await adapter.requestDevice({
-                requiredFeatures: ["timestamp-query"],
+                requiredFeatures: [
+                    ...WGpu.FEATURES_REQUIRED,
+                    ...availableOptionals,
+                ],
             }),
             "Couldn't obtain WebGPU device",
         );
+
         const wg = nn(
             canvas.getContext("webgpu"),
             "Couldn't obtain WebGPU context",
@@ -149,18 +172,27 @@ export class WGpu implements IGPUImplementation {
         public readonly ctx: GPUCanvasContext,
     ) {
         console.log(
-            "%ctinrlike/Honda (WG)",
-            "font-family: sans-serif; font-weight: bold; font-size: 2rem; color: #ffd6ffff; text-shadow: 0 0 10px #ff00ff; background-color: #3f003f; padding: 0.4rem 0.8rem; border-radius: 0.4rem",
+            "%ctinrlike / Honda WG",
+            `font-family: sans-serif; 
+             font-weight: bold; 
+             font-size: 2rem;
+             color: #ffd6ffff;
+             text-shadow: 0 0 10px #ff00ff;
+             background-color: #3f003f;
+             padding: 0.4rem 0.8rem;
+             border-radius: 0.4rem
+            `,
         );
+        this.adapterString = getAdapterString(adapter.info);
         console.log(
-            `%cGPU: %c${getAdapterString(adapter.info)}`,
+            `%cGPU: %c${this.adapterString}`,
             "font-family: sans-serif; font-weight: bold; font-size: 1rem",
             "font-family: sans-serif; font-size: 1rem",
         );
         console.groupCollapsed("GPU Info");
-        console.log("Prefered texture format:", this.pFormat);
         console.log(adapter.info);
-        console.table(device.limits);
+        console.log("Prefered texture format:", this.pFormat);
+        console.log("Features:", Array.from(device.features));
         console.groupEnd();
 
         this.settings = {
@@ -270,7 +302,6 @@ export class WGpu implements IGPUImplementation {
         }
 
         this.queryIndex = 0;
-        this.wasQueryReady = this.queryMapBuffer.mapState === "unmapped";
 
         this.cmdEncoder = this.device.createCommandEncoder({
             label: "frame",
@@ -279,7 +310,7 @@ export class WGpu implements IGPUImplementation {
 
     private times = new BigInt64Array(2 * Limits.MAX_GPU_TIMESTAMPS);
 
-    public async frameEnd() {
+    public frameEnd() {
         this.cmdEncoder.resolveQuerySet(
             this.querySet,
             0,
@@ -288,7 +319,7 @@ export class WGpu implements IGPUImplementation {
             0,
         );
 
-        if (this.wasQueryReady) {
+        if (this.queryReadBufferAvailable) {
             const readBuf = this.queryMapBuffer;
             this.cmdEncoder.copyBufferToBuffer(
                 this.queryBuffer,
@@ -299,12 +330,8 @@ export class WGpu implements IGPUImplementation {
             );
 
             this.device.queue.submit([this.cmdEncoder.finish()]);
-
-            await readBuf.mapAsync(GPUMapMode.READ);
-
-            const times = new BigInt64Array(readBuf.getMappedRange());
-            this.times.set(times);
-            readBuf.unmap();
+            this.queryReadBufferAvailable = false;
+            readBuf.mapAsync(GPUMapMode.READ).then(() => this.queryCallback());
         } else {
             this.device.queue.submit([this.cmdEncoder.finish()]);
         }
@@ -322,11 +349,17 @@ export class WGpu implements IGPUImplementation {
                 });
             });
         }
+        this._frameNo++;
+    }
+
+    private queryCallback() {
+        const times = new BigInt64Array(this.queryMapBuffer.getMappedRange());
+        this.times.set(times);
+        this.queryMapBuffer.unmap();
+        this.queryReadBufferAvailable = true;
     }
 
     public get perf() {
-        if (!this.wasQueryReady) return undefined;
-
         return {
             labels: this.timestampLabels,
             times: this.times,
@@ -343,7 +376,8 @@ export class WGpu implements IGPUImplementation {
     }
 
     public timestamp(label: string): GPURenderPassTimestampWrites | undefined {
-        if (!this.wasQueryReady) return;
+        if (!this.hasOptFeature("timestamp-query")) return;
+        if (!this.queryReadBufferAvailable) return;
         if (this.queryIndex + 2 > Limits.MAX_GPU_TIMESTAMPS) {
             console.warn("Not enough space for timestamps");
             return;
@@ -434,24 +468,38 @@ export class WGpu implements IGPUImplementation {
         this._passes.push(p);
     }
 
+    public $pipelineIdentifier = "?";
+
     public printPipeline() {
-        console.log("Active WebGPU pipeline:");
+        const viewports = this.viewPortTextures
+            .map((t) => t.label ?? `<${t.format} ${t.width}x${t.height}>`)
+            .join(", ");
+
+        const passes = this._passes.map((p) => p.constructor.name).join(", ");
 
         console.log(
-            this.viewPortTextures
-                .map(
-                    (t) =>
-                        t.label ?? `<unnamed texture ${t.width}x${t.height}>`,
-                )
-                .join(",\n"), '\n'
+            `%cPipeline: ${this.$pipelineIdentifier}
+    Viewports: ${viewports}
+    Passes: ${passes}`,
+            `
+            line-height: 1.5;
+            font-size: 1rem;
+            font-family: sans-serif;
+            `,
         );
-
-        console.log(this._passes.map((p) => p.constructor.name).join(" -> \n"));
     }
 
     public render() {
         for (const p of this._passes) {
             p.apply();
         }
+    }
+
+    public get fragmentCount(): number {
+        return this.viewportWidth * this.viewportHeight * this.settings.multisample;
+    }
+
+    public get frameNo() {
+        return this._frameNo;
     }
 }

@@ -1,4 +1,4 @@
-export * from "./pass.interface";
+export * from "../pass.interface";
 
 export * from "./bloom.pass";
 export * from "./debugline.pass";

@@ -53,5 +53,5 @@ export interface IGPUImplementation {
      * submits commands,
      * then cleans up deleted resources.
      */
-    frameEnd(): Promise<void>;
+    frameEnd(): void;
 }

@@ -1,7 +1,7 @@
-import type { WGpu } from "../gpu";
+import type { WGpu } from "../../gpu";
 
 function createDebugline(g: WGpu, format: GPUTextureFormat): GPURenderPipeline {
-    const module = g.getShaderModule("devline");
+    const module = g.getShaderModule("def1/devline");
 
     return g.device.createRenderPipeline({
         label: "debugline",

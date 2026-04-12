@@ -20,8 +20,7 @@ export interface IGPUMatDesc {
 }
 
 export interface IGPUMat
-    extends IRefCnt,
-        Required<Omit<IGPUMatDesc, `${string}Texture`>> {
+    extends IRefCnt, Required<Omit<IGPUMatDesc, `${string}Texture`>> {
     get baseTexture(): IGPUTex | undefined;
     get metRhgTexture(): IGPUTex | undefined;
     get normalTexture(): IGPUTex | undefined;
@@ -29,3 +28,22 @@ export interface IGPUMat
 
     push(): void;
 }
+
+// export interface IGPUMat2Base<T extends string> extends IRefCnt {
+//     get materialType(): T;
+//     get alphaMode(): GPUMatAlpha;
+//     get alphaCutoff(): number;
+//     get castsShadows(): boolean;
+
+//     push(): void;
+// }
+
+// export interface IGPUMat2DefaultBRDF extends IGPUMat2Base<"default"> {
+//     get baseTexture(): IGPUTex | undefined;
+//     get metRhgTexture(): IGPUTex | undefined;
+//     get normalTexture(): IGPUTex | undefined;
+//     get emissionTexture(): IGPUTex | undefined;
+// }
+
+// export interface IGPUMat2Fresnel extends IGPUMat2Base<"fresnel"> {
+// }

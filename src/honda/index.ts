@@ -7,7 +7,7 @@ export * from "./core/sceneManager";
 
 export * from "./systems";
 
-export * from "./backends/wg/passes";
+export * from "./backends/wg/passes/def1";
 
 export * from "./util/gltf/loader";
 export * from "./util/input";

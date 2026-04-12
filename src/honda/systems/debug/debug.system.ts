@@ -53,7 +53,7 @@ export class DebugSystem extends System {
         const height = 0;
         const v1 = [0, height, 0];
         const v2 = [0, height, 0];
-        const CSEG = 12;
+        const CSEG = 32;
 
         for (let i = 0; i < CSEG; i++) {
             const angle1 = (i / CSEG) * Math.PI * 2;

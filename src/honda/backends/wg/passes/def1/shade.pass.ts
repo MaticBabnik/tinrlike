@@ -1,9 +1,9 @@
-import type { IPass } from "./pass.interface";
-import type { WGpu } from "../gpu";
+import type { IPass } from "../pass.interface";
+import type { WGpu } from "../../gpu";
 import type { UniformData } from "./gatherData.pass";
-import type { ITViewable, ShadowMapTexture } from "../texture";
-import { getShadePipeline } from "../pipelines";
-import { type StructArrayBuffer, StructBuffer } from "../buffer";
+import type { ITViewable, ShadowMapTexture } from "../../texture";
+import { getShadePipeline } from "../../pipelines/def1";
+import { type StructArrayBuffer, StructBuffer } from "../../buffer";
 
 export class ShadePass implements IPass {
     private shadePipeline: GPURenderPipeline;
@@ -37,7 +37,7 @@ export class ShadePass implements IPass {
 
         this.uniforms = new StructBuffer(
             this.g,
-            this.g.getStruct("shade", "ShadeUniforms"),
+            this.g.getStruct("def1/shade", "ShadeUniforms"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "shadeUniforms",
         );

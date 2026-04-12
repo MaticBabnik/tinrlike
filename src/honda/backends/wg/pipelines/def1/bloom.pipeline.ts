@@ -1,7 +1,7 @@
-import type { WGpu } from "../gpu";
+import type { WGpu } from "../../gpu";
 
 function createBloomThreshold(gpu: WGpu, fmt: GPUTextureFormat) {
-    const module = gpu.getShaderModule("bloom");
+    const module = gpu.getShaderModule("def1/bloom");
 
     return gpu.device.createRenderPipeline({
         label: `bloom:threshold:${fmt}`,
@@ -21,7 +21,7 @@ function createBloomBlur(
     fmt: GPUTextureFormat,
     additive: boolean = false,
 ) {
-    const module = gpu.getShaderModule("blur");
+    const module = gpu.getShaderModule("def1/blur");
 
     return gpu.device.createRenderPipeline({
         label: `bloom:blur:${fmt}${additive ? ":additive" : ""}`,

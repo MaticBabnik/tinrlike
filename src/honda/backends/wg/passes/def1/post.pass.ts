@@ -1,11 +1,11 @@
 import type { Mat4, Vec3 } from "wgpu-matrix";
-import { StructBuffer } from "../buffer";
-import type { WGpu } from "../gpu";
-import type { IPass } from "./pass.interface";
+import { StructBuffer } from "../../buffer";
+import type { WGpu } from "../../gpu";
+import type { IPass } from "../pass.interface";
 import type { Three } from "@/honda";
-import type { IMipViewable, ITViewable } from "../texture";
+import type { IMipViewable, ITViewable } from "../../texture";
 import type { UniformData } from "./gatherData.pass";
-import { getPostProcess } from "../pipelines";
+import { getPostProcess } from "../../pipelines/def1";
 
 export interface PostSettings {
     fogColor: Vec3 | Three<number>;
@@ -45,7 +45,7 @@ export class PostprocessPass implements IPass {
     ) {
         this.settings = new StructBuffer<PostCfg>(
             gpu,
-            gpu.getStruct("postprocess", "PostCfg"),
+            gpu.getStruct("def1/postprocess", "PostCfg"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "postSettings",
         );

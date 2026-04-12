@@ -1,11 +1,11 @@
-import type { WGpu } from "../gpu";
-import { TRI_LIST_CULLED } from "./constants";
+import type { WGpu } from "../../gpu";
+import { TRI_LIST_CULLED } from "../constants";
 
 export function createEdge(
     g: WGpu,
     format: GPUTextureFormat,
 ): GPURenderPipeline {
-    const module = g.getShaderModule("edge");
+    const module = g.getShaderModule("def1/edge");
 
     return g.device.createRenderPipeline({
         label: `edge:${format}`,

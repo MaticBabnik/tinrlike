@@ -1,6 +1,6 @@
-import type { IPass } from "./pass.interface";
+import type { IPass } from "../pass.interface";
 import { mat4, vec4, type Mat4, type Vec3 } from "wgpu-matrix";
-import type { Buffer, StructArrayBuffer } from "../buffer";
+import type { Buffer, StructArrayBuffer } from "../../buffer";
 import type {
     CameraSystem,
     ISpotLight,
@@ -9,8 +9,8 @@ import type {
     THondaLight,
 } from "@/honda/systems";
 import type { IGPUMat, MeshV2 } from "@/honda/gpu2";
-import type { WGpu } from "../gpu";
-import type { WGMat } from "../resources/mat";
+import type { WGpu } from "../../gpu";
+import type { WGMat } from "../../resources/mat";
 import type { Three } from "@/honda";
 
 type MeshInstance = {

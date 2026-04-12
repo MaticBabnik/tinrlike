@@ -354,10 +354,11 @@ export class GltfLoader {
             metRhgTexture: mrTex,
             emissionTexture: emsTex,
             normalTexture: norTex,
-
-            colorFactor: gMaterial.pbrMetallicRoughness?.baseColorFactor,
-            metallicFactor: gMaterial.pbrMetallicRoughness?.metallicFactor,
-            roughnessFactor: gMaterial.pbrMetallicRoughness?.roughnessFactor,
+            
+            // found out about the 1.0 defaults the hard way :(
+            colorFactor: gMaterial.pbrMetallicRoughness?.baseColorFactor ?? [1, 1, 1, 1],
+            metallicFactor: gMaterial.pbrMetallicRoughness?.metallicFactor ?? 1,
+            roughnessFactor: gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
             emissionFactor: gMaterial.emissiveFactor,
             normalScale: gMaterial.normalTexture?.scale,
 

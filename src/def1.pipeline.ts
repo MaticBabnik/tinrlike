@@ -25,18 +25,15 @@ import {
     ShadePass,
     ShadowMapPass,
     type UniformData,
-} from "./honda/backends/wg/passes";
-import { getMsaaKernel } from "./honda/backends/wg/util/getMsaaKernel";
+} from "./honda/backends/wg/passes/def1";
 
 export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
     const N_SHADOWMAPS = 8;
     const BLUR_PASSES = 10;
 
+    gpu.$pipelineIdentifier = "def1";
+
     const msaa = 1; // gpu.settings.multisample;
-
-    const kernelShape = await getMsaaKernel(gpu);
-    console.log(kernelShape);
-
     const base = new ViewportTexture("rgba8unorm-srgb", 1, "gBase", msaa);
     const normal = new ViewportTexture("rgba8unorm", 1, "gNormal", msaa);
     const mtlRgh = new ViewportTexture("rg8unorm", 1, "gMetalRough", msaa);
@@ -59,7 +56,7 @@ export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
     );
     shadowmaps.alloc(gpu.device);
 
-    gpu.getShaderModule("bloom");
+    gpu.getShaderModule("def1/bloom");
 
     // register for resizing
     gpu.addViewport(base);
@@ -85,7 +82,7 @@ export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
 
     const meshBuf = new StructArrayBuffer(
         gpu,
-        gpu.getStruct("g", "Instance"),
+        gpu.getStruct("def1/g", "Instance"),
         8192,
         GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         "meshInstanceBuffer",
@@ -93,7 +90,7 @@ export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
 
     const skinBuf = new StructArrayBuffer(
         gpu,
-        gpu.getStruct("gskin", "Instance"),
+        gpu.getStruct("def1/gskin", "Instance"),
         100,
         GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         "skinInstanceBuffer",
@@ -101,7 +98,7 @@ export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
 
     const lightBuf = new StructArrayBuffer(
         gpu,
-        gpu.getStruct("shade", "Light"),
+        gpu.getStruct("def1/shade", "Light"),
         128,
         GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         "lightInstanceBuffer",

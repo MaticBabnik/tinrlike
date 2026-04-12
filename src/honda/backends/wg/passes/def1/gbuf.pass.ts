@@ -1,12 +1,12 @@
-import type { IPass } from "./pass.interface";
-import { type StructArrayBuffer, StructBuffer } from "../buffer";
-import type { WGpu } from "../gpu";
+import type { IPass } from "../pass.interface";
+import { type StructArrayBuffer, StructBuffer } from "../../buffer";
+import type { WGpu } from "../../gpu";
 import type { DrawCall, Instance, UniformData } from "./gatherData.pass";
-import type { WGMat } from "../resources/mat";
-import type { WGBuf } from "../resources/buf";
+import type { WGMat } from "../../resources/mat";
+import type { WGBuf } from "../../resources/buf";
 import { MeshIndexType } from "@/honda/gpu2";
-import type { ITViewable } from "../texture";
-import { getGPipeline } from "../pipelines";
+import type { ITViewable } from "../../texture";
+import { getGPipeline } from "../../pipelines/def1";
 import type { Four } from "@/honda/util/types";
 
 export class GBufferPass implements IPass {
@@ -35,7 +35,7 @@ export class GBufferPass implements IPass {
     ) {
         this.uniforms = new StructBuffer(
             g,
-            g.getStruct("g", "Uniforms"),
+            g.getStruct("def1/g", "Uniforms"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "gbufUniforms",
         );

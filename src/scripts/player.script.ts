@@ -2,12 +2,9 @@ import {
     type DynamicPhysicsObject,
     FizComponent,
     Game,
-    nn,
     Script,
-    type SkinnedMeshComponent,
     SoundSystem,
 } from "@/honda";
-import type { IGPUMat } from "@/honda/gpu2";
 import { vec2, quat } from "wgpu-matrix";
 
 const ORIGIN = vec2.create(0, 0);
@@ -29,8 +26,6 @@ export class PlayerScript extends Script {
     protected fiz: DynamicPhysicsObject = null!;
     protected ssys: SoundSystem = null!;
 
-    protected material!: IGPUMat;
-
     protected stepTimer = 0;
 
     override onAttach(): void {
@@ -39,21 +34,18 @@ export class PlayerScript extends Script {
                 FizComponent,
             ).object;
 
-        const cube = this.node.findChild((x) => x.name === "Cube");
-        const mesh = cube?.components.find(
-            (x) => x.name === "skinnedMesh0.prim0",
-        ) as SkinnedMeshComponent;
+        // const cube = this.node.findChild((x) => x.name === "Cube");
+        // const mesh = cube?.components.find(
+        //     (x) => x.name === "skinnedMesh0.prim0",
+        // ) as SkinnedMeshComponent;
 
-        this.material = nn(mesh.material);
+        // this.material = nn(mesh.material);
         this.ssys = Game.ecs.getSystem(SoundSystem);
     }
 
     override update(): void {
         let boost = false;
         const g = Game.input.activeGamepad;
-
-        this.material.colorFactor[0] = Math.abs(Math.sin(Game.time));
-        this.material.push();
 
         if (g) {
             boost = g.buttons[0].pressed;
@@ -73,10 +65,9 @@ export class PlayerScript extends Script {
         vec2.rotate(this.moveBaseVec, ORIGIN, Math.PI / 4, this.moveBaseVec);
 
         if (this.moveBaseVec[0] !== 0 || this.moveBaseVec[1] !== 0) {
-            const newAngle = Math.atan2(
-                this.moveBaseVec[0],
-                this.moveBaseVec[1],
-            );
+            const newAngle =
+                Math.atan2(this.moveBaseVec[0], this.moveBaseVec[1]) +
+                Math.PI / 4;
 
             // This is not great... Watch https://www.youtube.com/watch?v=LSNQuFEDOyQ
             this.angle = aLerp(this.angle, newAngle, 0.2);

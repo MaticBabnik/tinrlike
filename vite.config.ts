@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
-import { visualizer } from "rollup-plugin-visualizer";
+// import { analyzer } from 'vite-bundle-analyzer'
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
@@ -9,10 +9,7 @@ export default defineConfig({
     },
     plugins: [
         vue(),
-        visualizer({
-            emitFile: true,
-            filename: "stats.html",
-        }),
+        // analyzer(),
     ],
     resolve: {
         alias: {

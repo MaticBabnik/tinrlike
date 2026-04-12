@@ -1,11 +1,11 @@
-import type { WGpu } from "../gpu";
-import { TRI_LIST_CULLED } from "./constants";
+import type { WGpu } from "../../gpu";
+import { TRI_LIST_CULLED } from "../constants";
 
 export function createPostProcess(
     g: WGpu,
     format: GPUTextureFormat,
 ): GPURenderPipeline {
-    const module = g.getShaderModule("postprocess");
+    const module = g.getShaderModule("def1/postprocess");
 
     return g.device.createRenderPipeline({
         label: "post",

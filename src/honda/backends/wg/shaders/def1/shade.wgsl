@@ -143,13 +143,22 @@ fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4f {
         uni.VPInv
     );
 
+    let isOrtho = uni.camera[3][3] != 0.0; // assumes camera = projection matrix
+
     let bas = textureLoad(gBase, fc, 0).rgb;
     let N = normalize(textureLoad(gNorm, fc, 0).rgb * 2.0 - 1.0);
     let metRgh = textureLoad(gMetRgh, fc, 0).rg;
     let met = metRgh.r;
     let rgh = min(metRgh.g, 0.99);
     let ems = textureLoad(gEms, fc, 0).rgb;
-    let V = normalize(uni.VInv[3].xyz - pos);
+
+    var V: vec3f;
+    if isOrtho {
+        V = normalize(uni.VInv[2].xyz);
+    } else {
+        V = normalize(uni.VInv[3].xyz - pos);
+    } 
+
     var lit = vec3f(0.0);
 
     // fries in bag

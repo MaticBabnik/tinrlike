@@ -1,10 +1,10 @@
-import type { IPass } from "./pass.interface";
-import type { Buffer, StructArrayBuffer } from "../buffer";
+import type { IPass } from "../pass.interface";
+import type { Buffer, StructArrayBuffer } from "../../buffer";
 import type { DrawCall, Instance, UniformData } from "./gatherData.pass";
-import type { ShadowMapTexture } from "../texture";
-import type { WGpu } from "../gpu";
-import { getShadowPipeline } from "../pipelines";
-import type { WGBuf } from "../resources/buf";
+import type { ShadowMapTexture } from "../../texture";
+import type { WGpu } from "../../gpu";
+import { getShadowPipeline } from "../../pipelines/def1";
+import type { WGBuf } from "../../resources/buf";
 import { MeshIndexType } from "@/honda/gpu2";
 
 const MATRIX_SIZE = 4 * 4 * 4;

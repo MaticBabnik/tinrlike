@@ -25,6 +25,7 @@ export class WGMat extends MaterialBase implements IGPUMat {
         ignoreAlpha: number;
     }>;
     public bindGroup: GPUBindGroup;
+    public alphaClipGroup: GPUBindGroup;
 
     public hasNormal: boolean = false;
 
@@ -42,7 +43,7 @@ export class WGMat extends MaterialBase implements IGPUMat {
 
         this.uniforms = new StructBuffer(
             gpu,
-            gpu.getStruct("g", "Material"),
+            gpu.getStruct("def1/g", "Material"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             d.label,
         );
@@ -87,6 +88,27 @@ export class WGMat extends MaterialBase implements IGPUMat {
                 {
                     binding: 6,
                     resource: emission.sampler,
+                },
+            ],
+        });
+
+        this.alphaClipGroup = gpu.device.createBindGroup({
+            label: `${this.label} AlphaClip`,
+            layout: gpu.bindGroupLayouts["toonf/mat-alpha-clip"],
+            entries: [
+                {
+                    binding: 0,
+                    resource: { buffer: this.uniforms.gpuBuf },
+                },
+                {
+                    binding: 1,
+                    resource: (base.data as WGTexData).views[
+                        "rgba8unorm-srgb"
+                    ]!,
+                },
+                {
+                    binding: 2,
+                    resource: base.sampler,
                 },
             ],
         });

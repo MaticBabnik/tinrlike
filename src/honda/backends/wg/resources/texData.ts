@@ -170,6 +170,13 @@ export class WGTexData extends GPUTexDataBase implements IGPUTexData {
             usage: toWgTexUsage(this.usage),
             mipLevelCount: this.mip,
             dimension: DIMENSION_MAP[this.shape],
+            /*
+                TODO: Mip-map generation fails without this property in firefox
+                (due to core-features-and-limits not being present in GPU features)
+                verify this works in all cases
+            */
+            textureBindingViewDimension:
+                this.shape === GPUTexShape.TCube ? "cube" : "2d",
         });
 
         this.nativeView = this.texture.createView();

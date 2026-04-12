@@ -1,12 +1,12 @@
-import type { WGpu } from "../gpu";
-import { TRI_LIST_CULLED, VERTEX_POS_SKIN, VERTEX_POS_UV } from "./constants";
+import type { WGpu } from "../../gpu";
+import { TRI_LIST_CULLED, VERTEX_POS_SKIN, VERTEX_POS_UV } from "../constants";
 
 export function createShadowSkin(
     g: WGpu,
     kind: "shadow" | "shadowSkin",
     format: GPUTextureFormat,
 ): GPURenderPipeline {
-    const module = g.getShaderModule(kind);
+    const module = g.getShaderModule(`def1/${kind}`);
 
     return g.device.createRenderPipeline({
         label: `${kind}:${format}`,

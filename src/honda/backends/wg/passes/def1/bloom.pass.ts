@@ -1,9 +1,9 @@
-import type { IMipViewable, ITViewable } from "../texture";
-import type { IPass } from "./pass.interface";
-import { StructArrayBuffer, StructBuffer } from "../buffer";
-import type { WGpu } from "../gpu";
-import { getBloomBlurPipeline, getBloomThresholdPipeline } from "../pipelines";
-import { align } from "../utils";
+import type { IMipViewable, ITViewable } from "../../texture";
+import type { IPass } from "../pass.interface";
+import { StructArrayBuffer, StructBuffer } from "../../buffer";
+import type { WGpu } from "../../gpu";
+import { getBloomBlurPipeline, getBloomThresholdPipeline } from "../../pipelines/def1";
+import { align } from "../../utils";
 
 export interface IBloomPassParams {
     threshold: number;
@@ -50,7 +50,7 @@ export class BloomPass implements IPass {
             addressModeV: "clamp-to-edge",
         });
 
-        const bus = gpu.getStruct("blur", "Uniforms");
+        const bus = gpu.getStruct("def1/blur", "Uniforms");
         this.blurUniAlign = align(
             bus.size,
             gpu.device.limits.minUniformBufferOffsetAlignment,
@@ -58,14 +58,14 @@ export class BloomPass implements IPass {
 
         this.uniformBufferThreshold = new StructBuffer(
             gpu,
-            gpu.getStruct("bloom", "Uniforms"),
+            gpu.getStruct("def1/bloom", "Uniforms"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "bloomThresholdUniforms",
         );
 
         this.uniformBufferBlur = new StructArrayBuffer(
             gpu,
-            gpu.getStruct("blur", "Uniforms"),
+            gpu.getStruct("def1/blur", "Uniforms"),
             this.maxPasses * 2,
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "bloomBlurUniforms",
