@@ -83,13 +83,22 @@ const layouts = [
         .binding(3, "f", "sampler", { type: "non-filtering" }),
 
     bindGroupLayout("toonf/depth")
-        .binding(0, "v", "buffer", { type: "uniform" })
+        .binding(0, "v", "buffer", {
+            type: "uniform",
+            hasDynamicOffset: true,
+            minBindingSize: 64,
+        })
         .binding(1, "v", "buffer", { type: "read-only-storage" }),
 
     bindGroupLayout("toonf/main")
         .binding(0, "vf", "buffer", { type: "uniform" })
         .binding(1, "v", "buffer", { type: "read-only-storage" })
-        .binding(2, "f", "buffer", { type: "uniform" }),
+        .binding(2, "f", "buffer", { type: "uniform" })
+        .binding(3, "f", "texture", {
+            sampleType: "depth",
+            viewDimension: "2d-array",
+        })
+        .binding(4, "f", "sampler", { type: "comparison" }),
 
     bindGroupLayout("toonf/mat-alpha-clip")
         .binding(0, "f", "buffer", { type: "uniform" })

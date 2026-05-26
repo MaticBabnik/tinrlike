@@ -1,11 +1,12 @@
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 // import { analyzer } from 'vite-bundle-analyzer'
-import vue from '@vitejs/plugin-vue';
+import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
     build: {
         target: "esnext",
+        chunkSizeWarningLimit: 1024,
     },
     plugins: [
         vue(),

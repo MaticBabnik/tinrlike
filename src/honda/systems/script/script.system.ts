@@ -1,4 +1,4 @@
-import { type SceneNode, System } from "@/honda";
+import { hsym, type SceneNode, System } from "@/honda";
 import { ScriptComponent } from "./script.component";
 
 interface PrivateScript {
@@ -44,3 +44,5 @@ export class ScriptSystem extends System {
         });
     }
 }
+
+export const ScriptSys = hsym<ScriptSystem>("script");

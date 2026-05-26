@@ -80,16 +80,18 @@ export class GltfBinary extends GltfFileBase implements IGltfFile {
             `%c[glTF Binary]%c Loaded ${url} in ${(
                 performance.now() - start
             ).toFixed(1)}ms`,
-            'background-color: darkgreen; color: white',
-            'font-weight: 400;',
+            "background-color: darkgreen; color: white",
+            "font-weight: 400;",
         );
 
-        console.log([
-            `Version:    ${gltf.json.asset.version}`,
-            `Generator:  ${gltf.json.asset.generator ?? "unknown"}`,
-            `Copyright:  ${gltf.json.asset.copyright ?? "unknown"}`,
-            `Extensions: ${gltf.json.extensionsUsed?.join(",") ?? ""}`,
-        ].join("\n"));
+        console.log(
+            [
+                `Version:    ${gltf.json.asset.version}`,
+                `Generator:  ${gltf.json.asset.generator ?? "unknown"}`,
+                `Copyright:  ${gltf.json.asset.copyright ?? "unknown"}`,
+                `Extensions: ${gltf.json.extensionsUsed?.join(",") ?? ""}`,
+            ].join("\n"),
+        );
 
         console.groupEnd();
 

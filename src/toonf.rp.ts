@@ -1,12 +1,7 @@
-import {
-    CameraSystem,
-    LightSystem,
-    MeshSystem,
-    type ECS,
-    type UniformData,
-} from "./honda";
+import { CameraSys, LightSys, MeshSys, type ECS } from "./honda";
 import {
     Buffer,
+    ShadowMapTexture,
     StructArrayBuffer,
     ViewportTexture,
     type WGpu,
@@ -16,36 +11,64 @@ import {
     GatherDataPass,
     type ToonMeshInstance,
     type MeshDraws,
+    type UniformData,
 } from "./honda/backends/wg/passes/toonf/gather.pass";
 import { MainPass } from "./honda/backends/wg/passes/toonf/main.pass";
 import { PostPass } from "./honda/backends/wg/passes/toonf/post.pass";
+import { ResolvePass } from "./honda/backends/wg/passes/toonf/resolve.pass";
+import { ShadowPass } from "./honda/backends/wg/passes/toonf/shadow.pass";
 
-export async function createToonForwardPipeline(gpu: WGpu, ecs: ECS) {
+export async function createToonRP(gpu: WGpu, ecs: ECS) {
     const { multisample, renderScale, shadowMapSize } = gpu.settings;
 
-    void shadowMapSize;
+    console.log(gpu.settings);
 
-    gpu.$pipelineIdentifier = "toonF";
+    gpu.$rpId = "toonF";
 
-    const shaded = new ViewportTexture(
+    let shadedRead: ViewportTexture<"rgba16float">;
+
+    const shadedRenderTarget = new ViewportTexture(
         "rgba16float",
         renderScale,
         "shaded",
         multisample,
     );
+
+    if (multisample > 1) {
+        shadedRead = new ViewportTexture(
+            "rgba16float",
+            renderScale,
+            "shadedResolve",
+            false,
+        );
+        gpu.addViewport(shadedRead);
+    } else {
+        shadedRead = shadedRenderTarget;
+    }
+
     const depth = new ViewportTexture(
         "depth24plus",
         renderScale,
         "depth",
         multisample,
     );
+    const shadowmaps = new ShadowMapTexture(
+        4,
+        "depth24plus",
+        shadowMapSize * 4,
+        "shadowmaps",
+    );
+
+    shadowmaps.alloc(gpu.device);
 
     const meshDraws: MeshDraws = {
         blend: [],
         opaque: [],
     };
 
-    const uniformData = {} as UniformData;
+    const uniformData = {
+        maxShadowmaps: shadowmaps.nLights,
+    } as UniformData;
 
     const shadowBuffer = new Buffer(
         gpu,
@@ -71,16 +94,16 @@ export async function createToonForwardPipeline(gpu: WGpu, ecs: ECS) {
         "lightInstanceBuffer",
     );
 
-    gpu.addViewport(shaded);
+    gpu.addViewport(shadedRenderTarget);
     gpu.addViewport(depth);
 
     // 0. gather data
     gpu.addPass(
         new GatherDataPass(
             gpu,
-            ecs.getSystem(CameraSystem),
-            ecs.getSystem(MeshSystem),
-            ecs.getSystem(LightSystem),
+            ecs.getSystem(CameraSys),
+            ecs.getSystem(MeshSys),
+            ecs.getSystem(LightSys),
             meshDraws,
             meshBuf,
             lightBuf,
@@ -93,9 +116,18 @@ export async function createToonForwardPipeline(gpu: WGpu, ecs: ECS) {
     gpu.addPass(new DepthPass(gpu, uniformData, meshDraws, meshBuf, depth));
 
     // 2. shadowmaps
-    // TODO: impl shadows
+    gpu.addPass(
+        new ShadowPass(
+            gpu,
+            uniformData,
+            meshDraws,
+            meshBuf,
+            shadowmaps,
+            shadowBuffer.gpuBuf,
+        ),
+    );
 
-    // 3. render opaque & alpha clip
+    // 3. render all
     gpu.addPass(
         new MainPass(
             gpu,
@@ -103,16 +135,18 @@ export async function createToonForwardPipeline(gpu: WGpu, ecs: ECS) {
             meshDraws,
             meshBuf,
             lightBuf,
-            shaded,
+            shadedRenderTarget,
             depth,
+            shadowmaps,
         ),
     );
-    // + inverse hull outlines ?
 
-    // 4. transparent
-    // + inverse hull outlines ?
+    if (multisample > 1) {
+        // 3.a resolve
+        gpu.addPass(new ResolvePass(gpu, shadedRenderTarget, shadedRead));
+    }
 
     // 5. postprocess (bloom, tone mapping, HDR??)
 
-    gpu.addPass(new PostPass(gpu, shaded, gpu.canvasTexture));
+    gpu.addPass(new PostPass(gpu, shadedRead, gpu.canvasTexture));
 }

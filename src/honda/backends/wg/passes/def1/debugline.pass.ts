@@ -1,10 +1,10 @@
-import type { DebugSystem } from "@/honda/systems";
 import { StructBuffer } from "../../buffer";
 import type { WGpu } from "../../gpu";
 import type { ITViewable } from "../../texture";
 import type { UniformData } from "./gatherData.pass";
 import type { IPass } from "../pass.interface";
 import { getDebuglinePipeline } from "../../pipelines/def1";
+import type { DebugService } from "@/honda/services";
 
 export class DebugLinePass implements IPass {
     private uniforms: StructBuffer;
@@ -15,7 +15,7 @@ export class DebugLinePass implements IPass {
 
     constructor(
         private gpu: WGpu,
-        private debugSystem: DebugSystem,
+        private debugService: DebugService,
         private uniformData: UniformData,
         private out: ITViewable,
     ) {
@@ -29,13 +29,13 @@ export class DebugLinePass implements IPass {
         );
 
         this.vertexGpu = gpu.device.createBuffer({
-            size: this.debugSystem.$vertPositionBuffer.byteLength,
+            size: this.debugService.$vertPositionBuffer.byteLength,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
             label: "debugLineVertexBuffer",
         });
 
         this.colorGpu = gpu.device.createBuffer({
-            size: this.debugSystem.$instColorBuffer.byteLength,
+            size: this.debugService.$instColorBuffer.byteLength,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
             label: "debugLineColorBuffer",
         });
@@ -66,7 +66,7 @@ export class DebugLinePass implements IPass {
     }
 
     apply() {
-        const n = this.debugSystem.$lineCount;
+        const n = this.debugService.$lineCount;
         if (n === 0) return;
 
         this.uniforms.set({
@@ -77,14 +77,14 @@ export class DebugLinePass implements IPass {
         this.gpu.device.queue.writeBuffer(
             this.vertexGpu,
             0,
-            this.debugSystem.$vertPositionBuffer.buffer,
+            this.debugService.$vertPositionBuffer.buffer,
             0,
             n * 2 * 4 * 4,
         );
         this.gpu.device.queue.writeBuffer(
             this.colorGpu,
             0,
-            this.debugSystem.$instColorBuffer.buffer,
+            this.debugService.$instColorBuffer.buffer,
             0,
             n * 4 * 4,
         );

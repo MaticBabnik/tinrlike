@@ -2,7 +2,10 @@ import type { IMipViewable, ITViewable } from "../../texture";
 import type { IPass } from "../pass.interface";
 import { StructArrayBuffer, StructBuffer } from "../../buffer";
 import type { WGpu } from "../../gpu";
-import { getBloomBlurPipeline, getBloomThresholdPipeline } from "../../pipelines/def1";
+import {
+    getBloomBlurPipeline,
+    getBloomThresholdPipeline,
+} from "../../pipelines/def1";
 import { align } from "../../utils";
 
 export interface IBloomPassParams {

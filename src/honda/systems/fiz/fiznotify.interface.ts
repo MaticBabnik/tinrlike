@@ -1,4 +1,4 @@
-import type { SceneNode } from "@/honda/core/node";
+import type { SceneNode } from "@/honda/core/ecs";
 import type { TPhysicsObject } from "./object";
 import type { CollisionManifold } from "./collisions";
 

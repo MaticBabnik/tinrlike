@@ -5,23 +5,28 @@ import {
     MeshSystem,
     CameraSystem,
     LightSystem,
-    DebugSystem,
     GltfLoader,
-    SoundSystem,
     createSoundSystem,
+    ScriptSys,
+    MeshSys,
+    CameraSys,
+    LightSys,
+    SoundSys,
+    DebugSrv,
+    DebugService,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
 import { $ } from "./honda/util";
-import { FizSystem } from "./honda/systems/fiz";
+import { FizSys, FizSystem } from "./honda/systems/fiz";
 import { WGpu } from "./honda/backends/wg/gpu";
 import { GltfBinary } from "./honda/util/gltf";
-import { AssetSystem } from "./honda/systems/asset/asset.system";
+import { AssetSrv, AssetService } from "./honda/services/asset.service";
 import { createScene } from "./scenes/game.scene";
 import { UIManager } from "./honda/ui/ui";
 import { GameStorage } from "./storage";
 import { DEFAULT_SETTINGS } from "./honda/backends/wg";
-import { createToonForwardPipeline } from "./toonf.pipeline";
+import { createToonRP } from "./toonf.rp";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
 
@@ -92,11 +97,11 @@ function setPlatformInfo(gpu: WGpu) {
     $<HTMLSpanElement>("#cpuinfo").innerText = cpuInfo;
     $<HTMLSpanElement>("#gpuinfo").innerText = gpuInfo;
     $<HTMLSpanElement>("#pipelineinfo").innerText =
-        `${gpu.$pipelineIdentifier} ${gpu.settings.multisample ? "4xMSAA" : "no MSAA"}`;
+        `${gpu.$rpId} ${gpu.settings.multisample ? "4xMSAA" : "no MSAA"}`;
 }
 
 async function gameEntry() {
-    const as = Game.ecs.getSystem(AssetSystem);
+    const as = Game.ecs.getService(AssetSrv);
 
     const level = new GltfLoader(await GltfBinary.fromUrl("./next.glb"));
     const tc = new GltfLoader(await GltfBinary.fromUrl("./testchr.glb"));
@@ -109,7 +114,7 @@ async function gameEntry() {
     as.registerAsset("testchr", tc);
     as.registerAsset("summoningcircle", sc);
     as.registerAsset("enemyGeneric", eg);
-    
+
     as.registerAsset(
         "alphatest",
         new GltfLoader(await GltfBinary.fromUrl("./smile.glb")),
@@ -125,7 +130,7 @@ async function gameEntry() {
         new GltfLoader(await GltfBinary.fromUrl("./hatsunefuckingmiku.glb")),
     );
 
-    await Game.ecs.getSystem(SoundSystem).loadAudioFiles({
+    await Game.ecs.getSystem(SoundSys).loadAudioFiles({
         step1: "/sound/step1.opus",
         step2: "/sound/step2.opus",
         step3: "/sound/step3.opus",
@@ -147,14 +152,15 @@ async function mount() {
     Game.ui = new UIManager($("#vue-app"));
     Game.input = new Input(canvas);
 
-    Game.ecs.addSystem(new AssetSystem());
-    Game.ecs.addSystem(new DebugSystem());
-    Game.ecs.addSystem(new ScriptSystem());
-    Game.ecs.addSystem(new MeshSystem());
-    Game.ecs.addSystem(new CameraSystem());
-    Game.ecs.addSystem(new LightSystem());
-    Game.ecs.addSystem(new FizSystem());
-    Game.ecs.addSystem(createSoundSystem());
+    Game.ecs.registerSystem(ScriptSys, new ScriptSystem());
+    Game.ecs.registerSystem(MeshSys, new MeshSystem());
+    Game.ecs.registerSystem(CameraSys, new CameraSystem());
+    Game.ecs.registerSystem(LightSys, new LightSystem());
+    Game.ecs.registerSystem(FizSys, new FizSystem());
+    Game.ecs.registerSystem(SoundSys, createSoundSystem());
+
+    Game.ecs.registerService(AssetSrv, new AssetService());
+    Game.ecs.registerService(DebugSrv, new DebugService());
 
     /**
      * Initalize GPU backend & create rendering pipeline
@@ -168,8 +174,8 @@ async function mount() {
     );
 
     // createGpuPipeline(gpu, Game.ecs);
-    createToonForwardPipeline(gpu, Game.ecs);
-    gpu.printPipeline();
+    createToonRP(gpu, Game.ecs);
+    gpu.printRenderPath();
     gpu.onError = (err) => setError(err.toString());
     Game.gpu2 = gpu;
 

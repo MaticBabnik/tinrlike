@@ -1,8 +1,8 @@
 import { mat4 } from "wgpu-matrix";
 import { CameraComponent } from "./camera.component";
-import { System } from "@/honda/core/ecs";
-import type { SceneNode } from "@/honda/core/node";
+import { type SceneNode, System } from "@/honda/core/ecs";
 import type { Transform } from "@/honda/core/transform";
+import { hsym } from "@/honda/core/sym";
 
 export class CameraSystem extends System {
     public componentType = CameraComponent;
@@ -77,3 +77,5 @@ export class CameraSystem extends System {
         return this.activeCamera && this.components.get(this.activeCamera);
     }
 }
+
+export const CameraSys = hsym<CameraSystem>("camera");

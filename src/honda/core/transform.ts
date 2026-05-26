@@ -15,12 +15,6 @@ export interface ITransform extends ITransformData {
     $updateGlobal(parent: Transform): void;
 }
 
-/**
- * transform? trans form
- * TRANS FEM
- * 🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️🏳️‍⚧️
- * woke agenda cultural marxism
- */
 export class Transform implements ITransform {
     private _locMtx: Mat4;
     private _locInvMtx: Mat4;

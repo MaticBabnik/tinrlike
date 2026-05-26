@@ -1,5 +1,5 @@
 import {
-    AssetSystem,
+    AssetSrv,
     CameraComponent,
     Game,
     MeshComponent,
@@ -11,7 +11,7 @@ import { AnimationPlayerScript } from "@/scripts/animplayer.script";
 import { quat } from "wgpu-matrix";
 
 export function createTestScene(): Scene {
-    const as = Game.ecs.getSystem(AssetSystem);
+    const as = Game.ecs.getService(AssetSrv);
     const sc = as.getAsset("summoningcircle");
 
     const scene = new Scene();

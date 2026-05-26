@@ -7,7 +7,7 @@ import type {
     ISpotLight,
     THondaLight,
 } from "@/honda/systems/light";
-import { SceneNode } from "@/honda/core/node";
+import { SceneNode } from "@/honda/core/ecs";
 import { LightComponent } from "@/honda/systems/light";
 import {
     AnimInterp,
@@ -354,11 +354,14 @@ export class GltfLoader {
             metRhgTexture: mrTex,
             emissionTexture: emsTex,
             normalTexture: norTex,
-            
+
             // found out about the 1.0 defaults the hard way :(
-            colorFactor: gMaterial.pbrMetallicRoughness?.baseColorFactor ?? [1, 1, 1, 1],
+            colorFactor: gMaterial.pbrMetallicRoughness?.baseColorFactor ?? [
+                1, 1, 1, 1,
+            ],
             metallicFactor: gMaterial.pbrMetallicRoughness?.metallicFactor ?? 1,
-            roughnessFactor: gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
+            roughnessFactor:
+                gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
             emissionFactor: gMaterial.emissiveFactor,
             normalScale: gMaterial.normalTexture?.scale,
 

@@ -1,5 +1,4 @@
-import type { SceneNode } from "@/honda/core/node";
-import { System } from "../../core/ecs";
+import { hsym, System, type SceneNode } from "../../core/ecs";
 import {
     type MeshComponent,
     MeshComponentBase,
@@ -53,3 +52,5 @@ export class MeshSystem extends System {
         }
     }
 }
+
+export const MeshSys = hsym<MeshSystem>("mesh");

@@ -1,7 +1,11 @@
 import { MeshIndexType } from "@/honda/gpu2";
 import { StructBuffer, type StructArrayBuffer } from "../../buffer";
 import type { WGpu } from "../../gpu";
-import type { IMultiSamplable, ITViewable } from "../../texture";
+import type {
+    IMultiSamplable,
+    ITViewable,
+    ShadowMapTexture,
+} from "../../texture";
 import type { UniformData } from "../def1";
 import type { IPass } from "../pass.interface";
 import type { MeshDraws } from "./gather.pass";
@@ -13,6 +17,7 @@ type MainUniforms = {
     vp: Mat4;
     vInv: Mat4;
     nLights: number;
+    nShadowmaps: number;
 };
 
 export class MainPass implements IPass {
@@ -30,6 +35,7 @@ export class MainPass implements IPass {
 
         private color: ITViewable & IMultiSamplable,
         private depth: ITViewable & IMultiSamplable,
+        private shadowmaps: ShadowMapTexture,
     ) {
         this.mainAlphaClipPipeline = getMainPipeline(
             g,
@@ -70,6 +76,19 @@ export class MainPass implements IPass {
                     binding: 2,
                     resource: { buffer: lightBuffer.gpuBuf },
                 },
+                {
+                    binding: 3,
+                    resource: this.shadowmaps.view,
+                },
+                {
+                    binding: 4,
+                    resource: this.g.device.createSampler({
+                        label: "shadowmapSampler",
+                        compare: "greater",
+                        minFilter: "linear",
+                        magFilter: "linear",
+                    }),
+                },
             ],
         });
     }
@@ -80,6 +99,7 @@ export class MainPass implements IPass {
             vp: this.uniforms.vp,
             vInv: this.uniforms.vInv,
             nLights: this.uniforms.nLights,
+            nShadowmaps: this.uniforms.nShadowmaps,
         });
         this.uniformBuf.push();
 

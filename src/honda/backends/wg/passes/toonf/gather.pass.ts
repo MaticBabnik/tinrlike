@@ -64,6 +64,7 @@ export type UniformData = {
 
     nLights: number;
     nShadowmaps: number;
+    maxShadowmaps: number;
 };
 
 const TYPE_MAP: Record<THondaLight["type"], number> = {
@@ -242,7 +243,6 @@ export class GatherDataPass implements IPass {
 
         // sort translucent meshes back to front
         this.meshDrawCalls.blend.sort((a, b) => b.distance - a.distance);
-
 
         // send instance data to GPU
         this.meshInstanceBuffer.push();

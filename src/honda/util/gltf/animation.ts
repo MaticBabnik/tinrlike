@@ -1,4 +1,4 @@
-import type { SceneNode } from "@/honda/core/node";
+import type { SceneNode } from "@/honda/core/ecs";
 import { nn } from "..";
 import { type ASampler, V3Sampler, V4Sampler } from "./animationsampler";
 import type { IAnimtionChannel } from "./gltf.types";

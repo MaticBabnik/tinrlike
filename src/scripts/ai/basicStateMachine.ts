@@ -1,11 +1,13 @@
 import {
-    DebugSystem,
+    DebugSrv,
+    type DebugService,
     type DynamicPhysicsObject,
     FizComponent,
     Game,
     type SceneNode,
     Script,
-    SoundSystem,
+    SoundSys,
+    type SoundSystem,
 } from "@/honda";
 import { vec2, vec3 } from "wgpu-matrix";
 
@@ -18,17 +20,17 @@ export class BasicStateMachine extends Script {
     private detectionRadius: number = 3.5;
     private player!: SceneNode;
     private currentState: State = State.Idle;
-    private dSystem: DebugSystem = null!;
+    private dSystem: DebugService = null!;
     private fiz!: DynamicPhysicsObject;
     private moveBaseVec = vec2.create(0, 0);
     private ssys: SoundSystem = null!;
 
     public onAttach(): void {
-        this.dSystem = Game.ecs.getSystem(DebugSystem);
+        this.dSystem = Game.ecs.getService(DebugSrv);
         this.player = Game.sceneManager.scene.assertChildWithName("Player");
         this.fiz = this.node.assertComponent(FizComponent)
             .object as DynamicPhysicsObject;
-        this.ssys = Game.ecs.getSystem(SoundSystem);
+        this.ssys = Game.ecs.getSystem(SoundSys);
     }
 
     private idleTick() {

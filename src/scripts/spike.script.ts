@@ -1,5 +1,12 @@
 import { TL_LAYER_PLAYER } from "@/constants";
-import { AABBShape, FizSystem, Game, type IFizNotify, Script } from "@/honda";
+import {
+    AABBShape,
+    FizSys,
+    type FizSystem,
+    Game,
+    type IFizNotify,
+    Script,
+} from "@/honda";
 import { PlayerScript } from "./player.script";
 
 const enum SpikeState {
@@ -21,7 +28,7 @@ export class SpikeScript extends Script implements IFizNotify {
     protected fiz: FizSystem = null!;
 
     override onAttach(): void {
-        this.fiz = Game.ecs.getSystem(FizSystem);
+        this.fiz = Game.ecs.getSystem(FizSys);
     }
 
     override update(): void {

@@ -1,7 +1,6 @@
 import z from "zod";
 import { HStorage } from "./honda/storage";
 
-
 export const GameStorage = new HStorage({
     settings: z.object({
         version: z.literal(2),
@@ -10,5 +9,5 @@ export const GameStorage = new HStorage({
         renderScale: z.number(),
         shadowMapSize: z.number(),
         debugRenderers: z.boolean(),
-    })
+    }),
 });

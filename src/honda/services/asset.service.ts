@@ -1,11 +1,10 @@
-import { System } from "@/honda/core/ecs";
-import { nn } from "@/honda/util";
+import type { IService } from "../core/ecs";
+import { hsym } from "../core/sym";
+import { nn } from "../util";
 import type { GltfLoader } from "@/honda/util/gltf";
 
-export class AssetSystem extends System {
-    public componentType = class {
-        constructor(public name: string) {}
-    };
+export class AssetService implements IService {
+    public readonly name = "AssetService";
 
     private _assets: Map<string, GltfLoader> = new Map();
 
@@ -20,5 +19,6 @@ export class AssetSystem extends System {
     public getAsset(name: string): GltfLoader {
         return nn(this._assets.get(name));
     }
-
 }
+
+export const AssetSrv = hsym<AssetService>("asset");

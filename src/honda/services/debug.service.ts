@@ -1,17 +1,14 @@
-import { System } from "@/honda/core/ecs";
+import type { IService } from "../core/ecs";
+import { hsym } from "../core/sym";
 
-export class DebugSystem extends System {
-    public componentType = class {
-        public name = "nop";
-    };
+export class DebugService implements IService {
+    public readonly name = "DebugService";
 
     public $instColorBuffer: Float32Array;
     public $vertPositionBuffer: Float32Array;
     public $lineCount: number = 0;
 
     constructor(public readonly maxLines: number = 1000) {
-        super();
-
         this.$vertPositionBuffer = new Float32Array(maxLines * 2 * 4);
         this.$instColorBuffer = new Float32Array(maxLines * 4);
     }
@@ -103,3 +100,5 @@ export class DebugSystem extends System {
         this.line(v1, v2, color);
     }
 }
+
+export const DebugSrv = hsym<DebugService>("debug");

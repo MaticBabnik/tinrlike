@@ -6,7 +6,7 @@ type TMainKind = "mainAlphaClip" | "mainAlphaBlend";
 const prefixMap: Record<TMainKind, string> = {
     mainAlphaClip: "mac",
     mainAlphaBlend: "mab",
-}
+};
 
 export function createMainPipeline(
     g: WGpu,
@@ -37,19 +37,21 @@ export function createMainPipeline(
             targets: [
                 {
                     format: colorFormat,
-                    blend: kind === "mainAlphaBlend" ? {
-                        color: {
-                            srcFactor: "src-alpha",
-                            dstFactor: "one-minus-src-alpha",
-                            operation: "add",
-                        },
-                        alpha: {
-                            srcFactor: "one",
-                            dstFactor: "one",
-                            operation: "max",
-                        },
-                    } : undefined,
-
+                    blend:
+                        kind === "mainAlphaBlend"
+                            ? {
+                                  color: {
+                                      srcFactor: "src-alpha",
+                                      dstFactor: "one-minus-src-alpha",
+                                      operation: "add",
+                                  },
+                                  alpha: {
+                                      srcFactor: "one",
+                                      dstFactor: "one",
+                                      operation: "max",
+                                  },
+                              }
+                            : undefined,
                 },
             ],
         },

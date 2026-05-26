@@ -19,7 +19,7 @@ export class MeshComponentBase implements IComponent {
 
     public destroy(): void {
         this.material.rcRelease();
-        console.log("kinda-leaked mesh (no refcounting yet)")
+        console.log("kinda-leaked mesh (no refcounting yet)");
     }
 }
 

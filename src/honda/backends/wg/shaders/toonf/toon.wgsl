@@ -94,6 +94,7 @@ struct MainUniforms {
     vp: mat4x4f,
     vInv: mat4x4f,
     nLights: u32,
+    nShadowMaps: u32,
 }
 
 //#endregion common structs
@@ -131,6 +132,11 @@ var<storage, read> instances: array<Instance>;
 // Main shaders get lights
 @group(0) @binding(2)
 var<uniform> m_lights: array<Light, 128>;
+
+@group(0) @binding(3)
+var m_shadowMaps: texture_depth_2d_array;
+@group(0) @binding(4) 
+var m_shadowSampler: sampler_comparison;
 
 // Materials are always the same
 @group(1) @binding(0)
@@ -210,11 +216,103 @@ fn m_vertex(input: VInIdxPosUvNorm) -> VOPosWposUvNorm {
     return VOPosWposUvNorm(pos, wpos, input.uv, normal);
 }
 
+fn getViewVector(w: vec3f) -> vec3f {
+    if m_camera_is_ortho {
+        return - m_uni.vInv[2].xyz;
+    }
+    else {
+        return m_uni.vInv[3].xyz - w;
+    }
+}
+
+fn evalToon(n: vec3f, v: vec3f, wpos: vec3f, baseColor: vec4f, roughness: f32, metallic: f32, emission: vec3f) -> vec3f {
+    var lit = vec3f(0.0);
+
+    for (var i = 0u; i < m_uni.nLights; i++) {
+
+        var atten = 1.0;
+        var l: vec3f;
+        var light = m_lights[i];
+
+        if light.ltype == L_DIR {
+            l = normalize(- light.direction);
+        }
+        else {
+            let delta = light.position - wpos;
+            l = normalize(delta);
+            let dist = length(delta);
+            atten = 1.0 / max(pow(dist, 2.0), 0.0001);
+        }
+
+        if light.ltype == L_SPOT {
+            // spotlight cone falloff
+            let coneI = cos(light.innerCone);
+            let coneO = cos(light.outerCone);
+
+            atten *= clamp((dot(l, normalize(- light.direction)) - coneO) / (coneI - coneO), 0.0, 1.0);
+        }
+
+        if light.shadowMap >= 0 {
+            let projected = light.VP * vec4(wpos, 1.0);
+            let ndc = projected.xyz / projected.w;
+            let texCoords = vec2f(0.5, -0.5) * ndc.xy + 0.5;
+            
+            atten *= textureSampleCompare(
+                m_shadowMaps,
+                m_shadowSampler,
+                texCoords,
+                light.shadowMap,
+                ndc.z
+            );
+        }
+
+        let h = normalize(l + v);
+
+        const w = 0.3;
+        const specThreshold = 0.5;
+        const diffSteps = 3.0;
+
+        // push back the diffuse shadows with `w`
+        let wrappedNdotL = saturate((dot(n, l) + w) / (1.0 + w));
+        let diffuse = wrappedNdotL;
+
+        // do some goofines to get "shininess"
+        let shininess = pow(128.0, 1.0 - max(roughness, 0.05));
+        let specular = pow(saturate(dot(n, h)), shininess);
+
+        // quantize to make it cinema
+        let toonDiffuse = floor(diffuse * diffSteps) / diffSteps;
+        let toonSpecular = step(specThreshold, specular);
+
+        // final round of light stuff
+        let f0 = mix(vec3(0.04), baseColor.rgb, metallic);
+        let diffuseColor = baseColor.rgb * (1.0 - metallic);
+        let lightColor = light.color * light.intensity;
+
+        lit += (diffuseColor * toonDiffuse + f0 * toonSpecular) * lightColor * atten;
+    }
+
+    // fresnel, ambient, emission
+    const p = 0.3;
+    const ambient = 0.3;
+    let fresnel = saturate(1 - pow(dot(v, n), p));
+    lit += baseColor.rgb * (ambient + fresnel) + emission;
+
+    return lit;
+}
+
 @fragment
 fn mo_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let baseColor = textureSample(m_tBase, m_sBase, input.uv) * m_material.baseFactor;
+    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv).rg;
+    let metallic = metrgh.r * m_material.metalFactor;
+    let roughness = metrgh.g * m_material.roughFactor;
+    let emission = textureSample(m_tEms, m_sEms, input.uv).rgb * m_material.emissionFactor;
 
-    return baseColor;
+    let v = getViewVector(input.wpos);
+    let n = input.normal;
+
+    return vec4f(evalToon(n, v, input.wpos, baseColor, roughness, metallic, emission), baseColor.a);
 }
 
 @fragment
@@ -231,100 +329,27 @@ fn mac_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let roughness = metrgh.g * m_material.roughFactor;
     let emission = textureSample(m_tEms, m_sEms, input.uv).rgb * m_material.emissionFactor;
 
-    var v: vec3f;
+    let v = getViewVector(input.wpos);
     let n = input.normal;
-    if m_camera_is_ortho {
-        v = normalize(m_uni.vInv[2].xyz);
-    }
-    else {
-        v = normalize(m_uni.vInv[3].xyz - input.wpos);
-    }
 
-    var lit = vec3f(0.0);
-
-    for (var i = 0u; i < m_uni.nLights; i++) {
-
-        var atten = 1.0;
-        var l: vec3f;
-        var light = m_lights[i];
-
-        if light.ltype == L_DIR {
-            l = normalize(- light.direction);
-        }
-        else {
-            let delta = light.position - input.wpos;
-            l = normalize(delta);
-            let dist = length(delta);
-            atten = 1.0 / max(pow(dist, 2.0), 0.0001);
-        }
-
-        if light.ltype == L_SPOT {
-            // spotlight cone falloff
-            let coneI = cos(light.innerCone);
-            let coneO = cos(light.outerCone);
-
-            atten *= clamp((dot(l, normalize(- light.direction)) - coneO) / (coneI - coneO), 0.0, 1.0);
-        }
-
-        let h = normalize(l + v);
-
-        // if light.shadowMap >= 0 {
-        //     let projected = light.VP * vec4(pos, 1.0);
-        //     let ndc = projected.xyz / projected.w;
-        //     let texCoords = vec2f(0.5, -0.5) * ndc.xy + 0.5;
-
-        //     let offset = 1.0 / f32(uni.shadowMapSize);
-        //     var factor = 0.0;
-
-        //     for (var y = -1 ; y <= 1 ; y++) {
-        //         for (var x = -1 ; x <= 1 ; x++) {
-        //             factor += textureSampleCompare(
-        //                 shadowMaps,
-        //                 shadowSampler,
-        //                 texCoords + vec2(f32(x) * offset, f32(y) * offset),
-        //                 light.shadowMap,
-        //                 ndc.z
-        //             );
-        //         }
-        //     }
-
-        //     atten *= factor / 9;
-        // }
-
-        let lightContribution = light.color * light.intensity * atten;
-
-        let w = 0.3;
-        let diffuseRaw = saturate((dot(n, l) + w) / ((1.0 + w) * (1.0 + w)));
-        let stepDiffuse = step(0.1, diffuseRaw);
-
-        let diffuseColor = baseColor.rgb * (1.0 - metallic);
-
-        let specRaw = pow(saturate(dot(n, h)), pow(128.0, 1.0 - max(roughness, 0.05)));
-        const steps = 2.0;
-        let stepSpecular = round(specRaw * steps) / steps;
-
-        let f0 = mix(0.3 * light.color, baseColor.rgb, metallic);
-        let specularColor = f0 * stepSpecular;
-
-        lit += (diffuseColor + specularColor) * stepDiffuse * lightContribution;
-    }
-
-    // fresnel + ambient
-    const p = 1.0;
-    let fresnel = 1 - pow(dot(v, n), p);
-    lit += baseColor.rgb * saturate(0.3 + fresnel);
-
-    return vec4f(lit, baseColor.a);
+    return vec4f(evalToon(n, v, input.wpos, baseColor, roughness, metallic, emission), baseColor.a);
 }
 
 @fragment
 fn mab_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let baseColor = textureSample(m_tBase, m_sBase, input.uv) * m_material.baseFactor;
+    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv).rg;
+    let metallic = metrgh.r * m_material.metalFactor;
+    let roughness = metrgh.g * m_material.roughFactor;
+    let emission = textureSample(m_tEms, m_sEms, input.uv).rgb * m_material.emissionFactor;
 
-    return baseColor;
+    let v = getViewVector(input.wpos);
+    let n = input.normal;
+
+    return vec4f(evalToon(n, v, input.wpos, baseColor, roughness, metallic, emission), baseColor.a);
 }
 
-//#endregion main alpha blend
+//#endregion main
 
 //#region post
 
@@ -378,8 +403,8 @@ fn p_vertex(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
 fn pr_fragment(@builtin(position) in: vec4f) -> @location(0) vec4f {
     let s = (textureLoad(pm_shaded, vec2u(in.xy), 0).xyz + textureLoad(pm_shaded, vec2u(in.xy), 1).xyz + textureLoad(pm_shaded, vec2u(in.xy), 2).xyz + textureLoad(pm_shaded, vec2u(in.xy), 3).xyz) * 0.25;
 
-    const exposure = 0.5;
-    const gamma = 1.8;
+    const exposure = 1;
+    const gamma = 2.2;
 
     let col = agx_tonemap_punchy(s.rgb, exposure);
 

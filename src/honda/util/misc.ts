@@ -1,4 +1,4 @@
-import type { SceneNode } from "../core/node";
+import type { SceneNode } from "../core/ecs";
 import { type Script, ScriptComponent } from "../systems";
 
 export function applyScriptToAllNodes<T extends Script>(

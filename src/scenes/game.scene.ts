@@ -5,7 +5,7 @@ import {
     ScriptComponent,
     Script,
     LightComponent,
-    DebugSystem,
+    type DebugService,
     AABBShape,
     CircleShape,
     CopyTransformMode,
@@ -16,6 +16,8 @@ import {
     FIZ_LAYER_PHYS,
     MeshComponent,
     Scene,
+    DebugSrv,
+    AssetSrv,
 } from "@/honda";
 import { quat } from "wgpu-matrix";
 import { AnimationPlayerScript } from "@/scripts/animplayer.script";
@@ -26,7 +28,6 @@ import {
 } from "../constants";
 import { PlayerScript } from "../scripts/player.script";
 import { LerpCameraScript } from "../scripts/lerpCamera.script";
-import { AssetSystem } from "../honda/systems/asset/asset.system";
 import { BasicStateMachine } from "../scripts/ai/basicStateMachine";
 import GameHud from "@/ui/GameHud.vue";
 
@@ -35,24 +36,19 @@ class UIScript extends Script {
         console.log("Attaching UI Script");
         Game.ui.setView(GameHud, false);
         Game.ui.sendMessage({
-            abilities: [
-                "It all returns",
-                "to nothing",
-                "I just keep letting me",
-                "down, letting me down",
-            ],
+            abilities: [],
         });
     }
 
     public override update(): void {
         Game.ui.sendMessage({
-            health: 6767,
+            health: 1,
         });
     }
 }
 
 export function createScene() {
-    const as = Game.ecs.getSystem(AssetSystem);
+    const as = Game.ecs.getService(AssetSrv);
     const level = as.getAsset("level");
     const sc = as.getAsset("summoningcircle");
     const alpha = as.getAsset("alphatest");
@@ -244,7 +240,7 @@ export function createScene() {
         sun.name = "sun";
         sun.addComponent(
             new LightComponent({
-                castShadows: false,
+                castShadows: true,
                 color: [1, 0.953, 0.871],
                 intensity: 2,
                 type: "directional",
@@ -261,10 +257,10 @@ export function createScene() {
     scene.addComponent(
         new ScriptComponent(
             new (class extends Script {
-                private d: DebugSystem = null!;
+                private d: DebugService = null!;
 
                 override onAttach(): void {
-                    this.d = Game.ecs.getSystem(DebugSystem);
+                    this.d = Game.ecs.getService(DebugSrv);
                 }
 
                 public override update(): void {

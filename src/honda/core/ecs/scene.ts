@@ -17,7 +17,6 @@ export class Scene extends SceneNode {
         updateTransforms(this);
     }
 
-
     protected _active = false;
 
     protected override isNodeInScene(): boolean {

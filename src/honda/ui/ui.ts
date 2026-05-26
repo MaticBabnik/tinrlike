@@ -17,7 +17,7 @@ interface Expose {
     currentViewComponent: Ref<Component | undefined>;
 
     /**
-     * Sends a message to the currently mounted view component 
+     * Sends a message to the currently mounted view component
      */
     sendMessageToView(message: unknown): void;
 
@@ -36,7 +36,7 @@ export class UIManager {
     private app: App<Element>;
     private expose: Expose;
     private instance: ComponentPublicInstance;
-    
+
     /**
      * Queue of messages to send to the Vue components
      */
@@ -56,10 +56,9 @@ export class UIManager {
         }
         this.vueQueue.length = 0;
 
-
         // Set the new view
         this.expose.currentViewComponent.value = t;
-        
+
         // Configure pointer events
         if (t && stealPointer) {
             this.root.classList.remove("no-pointer-events");

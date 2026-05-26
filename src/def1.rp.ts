@@ -1,10 +1,4 @@
-import {
-    CameraSystem,
-    DebugSystem,
-    type ECS,
-    LightSystem,
-    MeshSystem,
-} from "./honda";
+import { CameraSys, DebugSrv, LightSys, MeshSys, type ECS } from "./honda";
 import {
     Buffer,
     ShadowMapTexture,
@@ -27,11 +21,11 @@ import {
     type UniformData,
 } from "./honda/backends/wg/passes/def1";
 
-export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
+export async function createDef1RP(gpu: WGpu, ecs: ECS) {
     const N_SHADOWMAPS = 8;
     const BLUR_PASSES = 10;
 
-    gpu.$pipelineIdentifier = "def1";
+    gpu.$rpId = "def1";
 
     const msaa = 1; // gpu.settings.multisample;
     const base = new ViewportTexture("rgba8unorm-srgb", 1, "gBase", msaa);
@@ -108,9 +102,9 @@ export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
         new GatherDataPass(
             gpu,
 
-            ecs.getSystem(CameraSystem),
-            ecs.getSystem(MeshSystem),
-            ecs.getSystem(LightSystem),
+            ecs.getSystem(CameraSys),
+            ecs.getSystem(MeshSys),
+            ecs.getSystem(LightSys),
 
             drawCalls,
             meshBuf,
@@ -215,7 +209,7 @@ export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
             new DebugLinePass(
                 gpu,
 
-                ecs.getSystem(DebugSystem),
+                ecs.getService(DebugSrv),
 
                 uniformData,
 
@@ -250,5 +244,5 @@ export async function createGpuPipeline(gpu: WGpu, ecs: ECS) {
         ),
     );
 
-    gpu.printPipeline();
+    gpu.printRenderPath();
 }

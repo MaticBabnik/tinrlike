@@ -1,4 +1,4 @@
-import { DebugSystem, Game, Script } from "@/honda";
+import { DebugSrv, Game, Script } from "@/honda";
 import { vec4 } from "wgpu-matrix";
 
 export class AxesScript extends Script {
@@ -7,7 +7,7 @@ export class AxesScript extends Script {
     private r2 = vec4.create(0, 0, 0, 1);
 
     override lateUpdate(): void {
-        const d = Game.ecs.getSystem(DebugSystem);
+        const d = Game.ecs.getService(DebugSrv);
         Game.sceneManager.scene.computeTransforms();
 
         this.i.set([0, 0, 0]);

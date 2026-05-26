@@ -59,6 +59,10 @@ export class DepthPass implements IPass {
     }
 
     public apply(): void {
+        //FIXME: ???
+        void this.depthAlphaClipPipeline;
+        void this.meshInstanceBuffer;
+
         // push new VP
         this.g.device.queue.writeBuffer(
             this.vpBuffer,
@@ -80,7 +84,7 @@ export class DepthPass implements IPass {
             timestampWrites: this.g.timestamp("depthPrepass"),
         });
 
-        rp.setBindGroup(0, this.meshBindGroup);
+        rp.setBindGroup(0, this.meshBindGroup, [0]); // dynamic offset is 0 in depth pass
         rp.setPipeline(this.depthOpaquePipeline);
 
         let i: number;

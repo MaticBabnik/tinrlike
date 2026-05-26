@@ -1,7 +1,7 @@
-import { Game } from "../state";
-import type { IComponent } from "./ecs";
-import { Transform } from "./transform";
-import { nn } from "../util";
+import { Game } from "../../state";
+import type { IComponent } from "./component";
+import { Transform } from "../transform";
+import { nn } from "../../util";
 
 export class SceneNode {
     public name: string = "<unnammed>";
@@ -61,7 +61,7 @@ export class SceneNode {
 
         if (this.isNodeInScene()) {
             // console.log("registering component immediately");
-            Game.ecs.registerComponent(this, c);
+            Game.ecs.$registerComponent(this, c);
         } else {
             // console.log("deferring component registration");
             this._pendAttach = true;
@@ -72,7 +72,7 @@ export class SceneNode {
 
     public removeComponent<T extends IComponent>(c: T) {
         // console.log(this, "removing component", c);
-        Game.ecs.destroyComponent(this, c);
+        Game.ecs.$destroyComponent(this, c);
         this.components = this.components.filter((x) => x !== c);
         if (this.components.length === 0) this._pendAttach = false;
     }
@@ -86,7 +86,7 @@ export class SceneNode {
         if (!this._pendAttach) return;
         // console.log("registering deferred components");
         this.components.forEach((x) => {
-            Game.ecs.registerComponent(this, x);
+            Game.ecs.$registerComponent(this, x);
         });
         this._pendAttach = false;
     }
@@ -97,7 +97,7 @@ export class SceneNode {
             x.detachComponents();
         });
         this.components.forEach((x) => {
-            Game.ecs.destroyComponent(this, x);
+            Game.ecs.$destroyComponent(this, x);
         });
         this._pendAttach = true;
     }

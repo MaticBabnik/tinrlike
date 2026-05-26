@@ -1,4 +1,4 @@
-import { System, type SceneNode, CameraSystem } from "@/honda";
+import { System, type SceneNode, hsym, CameraSys } from "@/honda";
 import { SoundEmmiter } from "./sound-emitter.component";
 import { Game } from "@/honda";
 
@@ -46,7 +46,7 @@ export class SoundSystem extends System {
     }
 
     public update(): void {
-        const cameraSystem = Game.ecs.getSystem(CameraSystem);
+        const cameraSystem = Game.ecs.getSystem(CameraSys);
         const node = cameraSystem.getActiveCameraNode();
 
         if (!node || this.audioContext.state !== "running") {
@@ -232,7 +232,7 @@ export class SoundSystem extends System {
 // Firefox is a piece of shit
 export class FirefoxSoundSystem extends SoundSystem {
     public override update(): void {
-        const cameraSystem = Game.ecs.getSystem(CameraSystem);
+        const cameraSystem = Game.ecs.getSystem(CameraSys);
         const node = cameraSystem.getActiveCameraNode();
 
         if (!node || this.audioContext.state !== "running") {
@@ -288,3 +288,5 @@ export function createSoundSystem() {
         return new FirefoxSoundSystem();
     }
 }
+
+export const SoundSys = hsym<SoundSystem>("sound");

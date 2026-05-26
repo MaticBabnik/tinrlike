@@ -1,7 +1,7 @@
-import { System } from "@/honda/core/ecs";
+import { hsym, System } from "@/honda/core/ecs";
 import { CopyTransformMode, FizComponent } from "./fiz.component";
 import { PhysicsWorld } from "./world";
-import { DebugSystem, Game, type SceneNode, ScriptComponent } from "@/honda";
+import { DebugSrv, Game, type SceneNode, ScriptComponent } from "@/honda";
 import type { TPhysicsObject } from "./object";
 import type { CollisionManifold } from "./collisions";
 import type { IFizNotify, TCollisionCallback } from "./fiznotify.interface";
@@ -85,7 +85,7 @@ export class FizSystem extends System {
     }
 
     private debugRenderObjects(): void {
-        const d = Game.ecs.maybeGetSystem(DebugSystem);
+        const d = Game.ecs.maybeGetService(DebugSrv);
         if (!d) return;
 
         for (const obj of this.objToNode.keys()) {
@@ -161,7 +161,7 @@ export class FizSystem extends System {
         callback: TCollisionCallback,
     ): void {
         if (this.debug) {
-            const d = Game.ecs.maybeGetSystem(DebugSystem);
+            const d = Game.ecs.maybeGetService(DebugSrv);
             if (!d) return;
             switch (shape.type) {
                 case "aabb":
@@ -198,7 +198,7 @@ export class FizSystem extends System {
         callback: TCollisionCallback,
     ): void {
         if (this.debug) {
-            const d = Game.ecs.maybeGetSystem(DebugSystem);
+            const d = Game.ecs.maybeGetService(DebugSrv);
             if (!d) return;
 
             switch (shape.type) {
@@ -234,3 +234,5 @@ export class FizSystem extends System {
         );
     }
 }
+
+export const FizSys = hsym<FizSystem>("fiz");

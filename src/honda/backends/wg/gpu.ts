@@ -192,7 +192,7 @@ export class WGpu implements IGPUImplementation {
         console.groupCollapsed("GPU Info");
         console.log(adapter.info);
         console.log("Prefered texture format:", this.pFormat);
-        console.log("Features:", Array.from(device.features));
+        console.log("Features:", Array.from(device.features).join(" "));
         console.groupEnd();
 
         this.settings = {
@@ -468,9 +468,9 @@ export class WGpu implements IGPUImplementation {
         this._passes.push(p);
     }
 
-    public $pipelineIdentifier = "?";
+    public $rpId = "?";
 
-    public printPipeline() {
+    public printRenderPath() {
         const viewports = this.viewPortTextures
             .map((t) => t.label ?? `<${t.format} ${t.width}x${t.height}>`)
             .join(", ");
@@ -478,7 +478,7 @@ export class WGpu implements IGPUImplementation {
         const passes = this._passes.map((p) => p.constructor.name).join(", ");
 
         console.log(
-            `%cPipeline: ${this.$pipelineIdentifier}
+            `%cRender Path: ${this.$rpId}
     Viewports: ${viewports}
     Passes: ${passes}`,
             `
@@ -496,7 +496,9 @@ export class WGpu implements IGPUImplementation {
     }
 
     public get fragmentCount(): number {
-        return this.viewportWidth * this.viewportHeight * this.settings.multisample;
+        return (
+            this.viewportWidth * this.viewportHeight * this.settings.multisample
+        );
     }
 
     public get frameNo() {

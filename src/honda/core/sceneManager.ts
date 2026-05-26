@@ -1,4 +1,4 @@
-import { Scene } from "./scene";
+import { Scene } from "./ecs";
 
 const DEFAULT_SCENE = new Scene();
 DEFAULT_SCENE.name = "DEFAULT_SCENE";
@@ -12,7 +12,7 @@ export class SceneManager {
     public get scene(): Scene {
         return this._scene;
     }
-    
+
     public queueScene(s: SceneFactory) {
         this._switchToScene = s;
     }

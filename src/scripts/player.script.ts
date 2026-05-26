@@ -3,7 +3,8 @@ import {
     FizComponent,
     Game,
     Script,
-    SoundSystem,
+    SoundSys,
+    type SoundSystem,
 } from "@/honda";
 import { vec2, quat } from "wgpu-matrix";
 
@@ -40,7 +41,7 @@ export class PlayerScript extends Script {
         // ) as SkinnedMeshComponent;
 
         // this.material = nn(mesh.material);
-        this.ssys = Game.ecs.getSystem(SoundSystem);
+        this.ssys = Game.ecs.getSystem(SoundSys);
     }
 
     override update(): void {

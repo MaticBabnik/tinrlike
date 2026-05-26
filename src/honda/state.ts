@@ -16,7 +16,7 @@ export const Game = {
     time: 0,
     deltaTime: 0,
 
-    // chronos: new 
+    // chronos: new
 
     input: null! as Input,
     cmdEncoder: null! as GPUCommandEncoder,

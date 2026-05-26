@@ -142,4 +142,3 @@ export function perfRenderer(
                       .padStart(6, " ")}us`;
     };
 }
-

@@ -1,6 +1,5 @@
 import { LightComponent } from "./light.component";
-import { System } from "@/honda/core/ecs";
-import type { SceneNode } from "@/honda/core/node";
+import { hsym, System, type SceneNode } from "@/honda/core/ecs";
 
 export class LightSystem extends System {
     public componentType = LightComponent;
@@ -24,3 +23,5 @@ export class LightSystem extends System {
 
     public lateUpdate(): void {}
 }
+
+export const LightSys = hsym<LightSystem>("light");
