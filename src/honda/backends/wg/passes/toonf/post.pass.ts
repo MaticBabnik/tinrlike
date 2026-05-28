@@ -6,7 +6,7 @@ import type { IPass } from "../pass.interface";
 export class PostPass implements IPass {
     private pipeline: GPURenderPipeline;
     private bindGroup?: GPUBindGroup;
-    private sampler: GPUSampler
+    private sampler: GPUSampler;
 
     public constructor(
         private g: WGpu,
@@ -32,7 +32,7 @@ export class PostPass implements IPass {
             entries: [
                 {
                     binding: 0,
-                    resource: { buffer: this.postCfg }
+                    resource: { buffer: this.postCfg },
                 },
                 {
                     binding: 1,
@@ -45,7 +45,7 @@ export class PostPass implements IPass {
                 {
                     binding: 3,
                     resource: this.sampler,
-                }
+                },
             ],
         });
     }

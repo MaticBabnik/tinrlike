@@ -30,7 +30,6 @@ import { UIManager } from "./honda/ui/ui";
 import { GameStorage } from "./storage";
 import { DEFAULT_SETTINGS } from "./honda/backends/wg";
 import { createToonRP } from "./toonf.rp";
-import { createMainMenuScene } from "./scenes/mainMenu.scene";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
 

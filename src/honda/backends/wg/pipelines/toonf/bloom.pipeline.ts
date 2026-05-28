@@ -6,7 +6,7 @@ function createBloomThreshold(gpu: WGpu, fmt: GPUTextureFormat) {
     return gpu.device.createRenderPipeline({
         label: `bloomThreshold:${fmt}`,
         layout: gpu.device.createPipelineLayout({
-            bindGroupLayouts: [gpu.bindGroupLayouts['toonf/bloom']],
+            bindGroupLayouts: [gpu.bindGroupLayouts["toonf/bloom"]],
         }),
         vertex: { module, entryPoint: "bm_vertex" },
         fragment: {
@@ -16,7 +16,6 @@ function createBloomThreshold(gpu: WGpu, fmt: GPUTextureFormat) {
         },
     });
 }
-
 
 const cache = new Map<string, GPURenderPipeline>();
 

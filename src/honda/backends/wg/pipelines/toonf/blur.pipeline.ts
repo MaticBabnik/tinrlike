@@ -10,7 +10,7 @@ function createBlur(
     return gpu.device.createRenderPipeline({
         label: `blur:${fmt}${additive ? ":additive" : ""}`,
         layout: gpu.device.createPipelineLayout({
-            bindGroupLayouts: [gpu.bindGroupLayouts['toonf/blur']],
+            bindGroupLayouts: [gpu.bindGroupLayouts["toonf/blur"]],
         }),
         vertex: { module, entryPoint: "br_vertex" },
         fragment: {

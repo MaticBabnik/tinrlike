@@ -44,7 +44,6 @@ export class VisualService implements IService {
         colorAdd: [0, 0, 0],
         colorMul: [1, 1, 1],
     };
-
 }
 
-export const VisualSrv = hsym<VisualService>('VisualService');
+export const VisualSrv = hsym<VisualService>("VisualService");

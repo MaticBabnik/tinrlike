@@ -81,7 +81,7 @@ export class BloomPass implements IPass {
     public createBindGroups() {
         this.bindGroupThreshold = this.gpu.device.createBindGroup({
             label: "bloom1",
-            layout: this.gpu.bindGroupLayouts['toonf/bloom'],
+            layout: this.gpu.bindGroupLayouts["toonf/bloom"],
             entries: [
                 {
                     binding: 0,
@@ -109,7 +109,7 @@ export class BloomPass implements IPass {
 
             this.bindGroupBlur[i] = this.gpu.device.createBindGroup({
                 label: `bloom-blur:${i}`,
-                layout: this.gpu.bindGroupLayouts['toonf/blur'],
+                layout: this.gpu.bindGroupLayouts["toonf/blur"],
                 entries: [
                     {
                         binding: 0,
@@ -142,7 +142,7 @@ export class BloomPass implements IPass {
 
             this.bindGroupBlur[idx] = this.gpu.device.createBindGroup({
                 label: `bloom-blur:${i + this.passes}`,
-                layout: this.gpu.bindGroupLayouts['toonf/blur'],
+                layout: this.gpu.bindGroupLayouts["toonf/blur"],
                 entries: [
                     {
                         binding: 0,

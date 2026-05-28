@@ -1,11 +1,4 @@
-import {
-    CameraSys,
-    LightSys,
-    MeshSys,
-    VisualSrv,
-    type ECS,
-    type PostCfg,
-} from "./honda";
+import { CameraSys, LightSys, MeshSys, VisualSrv, type ECS } from "./honda";
 import {
     Buffer,
     ShadowMapTexture,
