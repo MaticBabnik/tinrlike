@@ -245,7 +245,7 @@ export class GltfLoader {
     private createTextureData(imageIdx: number): IGPUTexData {
         const image = this.getTextureImage(imageIdx);
 
-        const data = Game.gpu2.createTextureData({
+        const data = Game.gpu.createTextureData({
             label: image.name,
             usage:
                 GPUTexUsage.TextureBinding |
@@ -311,7 +311,7 @@ export class GltfLoader {
             nn(imageIdx, "No supported textures"),
         );
 
-        return Game.gpu2.createTexture(
+        return Game.gpu.createTexture(
             {
                 ...this.getSamplerParams(gTexture.sampler ?? 9999),
                 label: name,
@@ -347,7 +347,7 @@ export class GltfLoader {
         if (texEms !== undefined) emsTex = this.getTextureV2(texEms);
         if (texNor !== undefined) norTex = this.getTextureV2(texNor);
 
-        return Game.gpu2.createMaterial({
+        return Game.gpu.createMaterial({
             label: name,
 
             baseTexture: baseTex,
@@ -384,7 +384,7 @@ export class GltfLoader {
         hint: GPUBufHint = GPUBufHint.None,
     ): IGPUBuf {
         const size = accessor.accessor.byteLength;
-        const gpuBuf = Game.gpu2.createBuffer({
+        const gpuBuf = Game.gpu.createBuffer({
             size,
             usage: usage | GPUBufUsage.CopyDestination,
             label,

@@ -1,17 +1,28 @@
-import { CameraSys, LightSys, MeshSys, type ECS } from "./honda";
+import {
+    CameraSys,
+    LightSys,
+    MeshSys,
+    VisualSrv,
+    type ECS,
+    type PostCfg,
+} from "./honda";
 import {
     Buffer,
     ShadowMapTexture,
     StructArrayBuffer,
+    StructBuffer,
+    ViewportMipTexture,
     ViewportTexture,
     type WGpu,
 } from "./honda/backends/wg";
+import { BloomPass } from "./honda/backends/wg/passes/toonf/bloom.pass";
 import { DepthPass } from "./honda/backends/wg/passes/toonf/depth.pass";
 import {
     GatherDataPass,
     type ToonMeshInstance,
     type MeshDraws,
     type UniformData,
+    type GPUPostCfg,
 } from "./honda/backends/wg/passes/toonf/gather.pass";
 import { MainPass } from "./honda/backends/wg/passes/toonf/main.pass";
 import { PostPass } from "./honda/backends/wg/passes/toonf/post.pass";
@@ -45,6 +56,13 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
     } else {
         shadedRead = shadedRenderTarget;
     }
+
+    const bloom = new ViewportMipTexture(
+        "rgba16float",
+        undefined, // dont limit mips
+        renderScale,
+        "bloom",
+    );
 
     const depth = new ViewportTexture(
         "depth24plus",
@@ -94,8 +112,16 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
         "lightInstanceBuffer",
     );
 
+    const postBuf = new StructBuffer<GPUPostCfg>(
+        gpu,
+        gpu.getStruct("toonf/toon", "PostCfg"),
+        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        "postConfigBuffer",
+    );
+
     gpu.addViewport(shadedRenderTarget);
     gpu.addViewport(depth);
+    gpu.addViewport(bloom);
 
     // 0. gather data
     gpu.addPass(
@@ -104,11 +130,13 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
             ecs.getSystem(CameraSys),
             ecs.getSystem(MeshSys),
             ecs.getSystem(LightSys),
+            ecs.getService(VisualSrv),
             meshDraws,
             meshBuf,
             lightBuf,
             shadowBuffer,
             uniformData,
+            postBuf,
         ),
     );
 
@@ -146,7 +174,19 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
         gpu.addPass(new ResolvePass(gpu, shadedRenderTarget, shadedRead));
     }
 
-    // 5. postprocess (bloom, tone mapping, HDR??)
+    // 4. bloom
+    gpu.addPass(
+        new BloomPass(
+            gpu,
+            ecs.getService(VisualSrv).bloomConfig,
+            shadedRead,
+            bloom,
+        ),
+    );
 
-    gpu.addPass(new PostPass(gpu, shadedRead, gpu.canvasTexture));
+    // 5. postprocess
+
+    gpu.addPass(
+        new PostPass(gpu, postBuf.gpuBuf, shadedRead, bloom, gpu.canvasTexture),
+    );
 }

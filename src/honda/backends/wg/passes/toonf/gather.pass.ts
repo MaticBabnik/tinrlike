@@ -1,6 +1,6 @@
 import type { IPass } from "../pass.interface";
 import { mat4, vec4, type Mat4, type Vec3 } from "wgpu-matrix";
-import type { Buffer, StructArrayBuffer } from "../../buffer";
+import type { Buffer, StructArrayBuffer, StructBuffer } from "../../buffer";
 import type {
     CameraSystem,
     ISpotLight,
@@ -11,7 +11,7 @@ import type {
 import { GPUMatAlpha, type IGPUMat, type MeshV2 } from "@/honda/gpu2";
 import type { WGpu } from "../../gpu";
 import type { WGMat } from "../../resources/mat";
-import type { Three } from "@/honda";
+import type { PostCfg, Three, VisualService } from "@/honda";
 
 export type ToonMeshInstance = {
     transform: Mat4;
@@ -91,6 +91,10 @@ export interface MeshDraws {
     blend: ToonDrawCall[];
 }
 
+export interface GPUPostCfg extends PostCfg {
+    time: number;
+}
+
 export class GatherDataPass implements IPass {
     private matrixAlign: number;
     private maxNShadowmaps: number;
@@ -101,6 +105,7 @@ export class GatherDataPass implements IPass {
         private cameraSystem: CameraSystem,
         private meshSystem: MeshSystem,
         private lightSystem: LightSystem,
+        private visualService: VisualService,
 
         private meshDrawCalls: MeshDraws,
         private meshInstanceBuffer: StructArrayBuffer<ToonMeshInstance>,
@@ -109,6 +114,7 @@ export class GatherDataPass implements IPass {
         private lightInstanceBuffer: StructArrayBuffer<LightInstance>,
         private lightVPBuffer: Buffer,
         private uniformData: UniformData,
+        private postConfigBuffer: StructBuffer<GPUPostCfg>,
     ) {
         const minOffsetAlign =
             this.g.device.limits.minUniformBufferOffsetAlignment;
@@ -122,6 +128,7 @@ export class GatherDataPass implements IPass {
         this.gatherMeshData();
         this.gatherSkinData();
         this.gatherLightData();
+        this.gatherPostConfig();
     }
 
     private gatherCameraData(): void {
@@ -358,5 +365,12 @@ export class GatherDataPass implements IPass {
         this.uniformData.nShadowmaps = shadowIdx;
         this.lightInstanceBuffer.push();
         this.lightVPBuffer.push();
+    }
+
+    private gatherPostConfig(): void {
+        const c = this.visualService.postConfig;
+        this.postConfigBuffer.set(c);
+        this.postConfigBuffer.set({ time: performance.now() });
+        this.postConfigBuffer.push();
     }
 }

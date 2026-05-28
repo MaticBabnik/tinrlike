@@ -23,7 +23,7 @@ export const Game = {
 
     perf: new Perf(),
 
-    gpu2: null! as IGPUImplementation,
+    gpu: null! as IGPUImplementation,
 
     ui: null! as UIManager,
 };

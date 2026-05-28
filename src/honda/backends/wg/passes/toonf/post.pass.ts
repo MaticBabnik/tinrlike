@@ -6,28 +6,46 @@ import type { IPass } from "../pass.interface";
 export class PostPass implements IPass {
     private pipeline: GPURenderPipeline;
     private bindGroup?: GPUBindGroup;
-    private resolve: boolean;
+    private sampler: GPUSampler
 
     public constructor(
         private g: WGpu,
+        private postCfg: GPUBuffer,
         private color: ITViewable & Partial<IMultiSamplable>,
+        private bloom: ITViewable,
         private output: ITViewable,
     ) {
-        this.resolve = color.multisample !== undefined && color.multisample > 1;
-        this.pipeline = getPostPipeline(g, output.format, this.resolve);
+        this.pipeline = getPostPipeline(g, output.format);
+        this.sampler = g.device.createSampler({
+            label: "toonfPostSampler",
+            magFilter: "linear",
+            minFilter: "linear",
+            addressModeU: "clamp-to-edge",
+            addressModeV: "clamp-to-edge",
+        });
     }
 
     private createBindGroup() {
         this.bindGroup = this.g.device.createBindGroup({
             label: "toonfPostBG",
-            layout: this.g.bindGroupLayouts[
-                this.resolve ? "toonf/postresolve" : "toonf/post"
-            ],
+            layout: this.g.bindGroupLayouts["toonf/post"],
             entries: [
                 {
                     binding: 0,
+                    resource: { buffer: this.postCfg }
+                },
+                {
+                    binding: 1,
                     resource: this.color.view,
                 },
+                {
+                    binding: 2,
+                    resource: this.bloom.view,
+                },
+                {
+                    binding: 3,
+                    resource: this.sampler,
+                }
             ],
         });
     }

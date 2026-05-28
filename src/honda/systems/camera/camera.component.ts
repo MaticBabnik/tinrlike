@@ -64,7 +64,7 @@ export class CameraComponent implements IComponent {
         //     this.projectionMtx
         // );
 
-        const aspect = Game.gpu2.aspectRatio;
+        const aspect = Game.gpu.aspectRatio;
         const minRange = 5;
         let wr = 0,
             hr = 0;
@@ -98,14 +98,14 @@ export class CameraComponent implements IComponent {
     }
 
     public get projMtx() {
-        if (Game.gpu2.aspectRatio !== this.currentAspect || this.dirty) {
+        if (Game.gpu.aspectRatio !== this.currentAspect || this.dirty) {
             this.recompute();
         }
         return this.projectionMtx;
     }
 
     public get projMtxInv() {
-        if (Game.gpu2.aspectRatio !== this.currentAspect || this.dirty) {
+        if (Game.gpu.aspectRatio !== this.currentAspect || this.dirty) {
             this.recompute();
         }
         return this.invProjectionMtx;

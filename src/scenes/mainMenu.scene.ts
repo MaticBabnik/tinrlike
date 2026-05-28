@@ -33,7 +33,7 @@ export class MenuScript extends Script {
 
                 Game.ui.sendMessage({
                     type: "updateSettings",
-                    settings: (Game.gpu2 as WGpu).settings,
+                    settings: (Game.gpu as WGpu).settings,
                 });
 
                 break;

@@ -105,12 +105,23 @@ const layouts = [
         .binding(1, "f", "texture")
         .binding(2, "f", "sampler"),
 
-    bindGroupLayout("toonf/postresolve").binding(0, "f", "texture", {
-        sampleType: "unfilterable-float",
-        multisampled: true,
-    }),
+    bindGroupLayout("toonf/blur")
+        .binding(0, "f", "buffer", {
+            type: "uniform",
+            hasDynamicOffset: true,
+        })
+        .binding(1, "f", "texture")
+        .binding(2, "f", "sampler"),
 
-    bindGroupLayout("toonf/post").binding(0, "f", "texture"),
+    bindGroupLayout("toonf/bloom")
+        .binding(0, "f", "buffer", { type: "uniform" })
+        .binding(1, "f", "texture"),
+
+    bindGroupLayout("toonf/post")
+        .binding(0, "f", "buffer", { type: "uniform" })
+        .binding(1, "f", "texture")
+        .binding(2, "f", "texture")
+        .binding(3, "f", "sampler"),
 ] as const;
 
 export function createBindGroupLayouts(g: WGpu) {

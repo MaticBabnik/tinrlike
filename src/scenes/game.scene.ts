@@ -388,7 +388,7 @@ export function createScene() {
     console.groupEnd();
 
     console.groupCollapsed("GPU ref counts");
-    (Game.gpu2 as { printRcStats?: () => void }).printRcStats?.();
+    (Game.gpu as { printRcStats?: () => void }).printRcStats?.();
     console.groupEnd();
 
     return scene;

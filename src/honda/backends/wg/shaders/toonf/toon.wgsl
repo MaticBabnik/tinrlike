@@ -1,36 +1,5 @@
 /*
-    HONDA HONDA HONDA HO  A
-      N   H   A H   A HON A
-      N   H   A H   A H NDA
-      N   HONDA HONDA H  DA
-    
-    Honda WebGPU Backend - Toon Pipeline
-
-
-    Let me speak to the people, Bojan
-    Let me speak (No one's stopping you)
-    They need to hear this (30)
-    They need to hear this (One take)
-
-    I'm not a big fan of the WebGPU Enhanced Shading Language (30 on 30)
-    I'm not a big fan of the WebGPU Enhanced Shading Language (30 on 30 on 30)
-    I'm not a big fan of the WebGPU Enhanced Shading Language (30, 30, 30, 30, 30)
-    I'm not a big fan of the WebGPU Enhanced Shading Language
-    Not a big fan (30, 30, 30, 30 on 30)
-    I'm not a big fan of the WebGPU Enhanced Shading Language
-    I'm not a big fan of the WebGPU Enhanced Shading Language (30, 30, 30)
-    I'm not a big fan of the WebGPU Enhanced Shading Language (30, 30, 30)
-    I'm not a big fan of the WebGPU Enhanced Shading Language (30, 30, 30)
-
-    also not a big fan of:
-     - safari
-     - firefox webgpu impl
-     - uniformity analysis
-     - linux webgpu support
-     - nvidia
-     - nvidia
-     - nvidia (three times)
-     - nvidia nsight in particular
+    Toon Forward RP
 */
 
 //#region common structs
@@ -63,6 +32,29 @@ struct Light {
 
     shadowMap: i32,
     VP: mat4x4f,
+}
+
+struct BloomCfg {
+    threshold: f32,
+    knee: f32,
+}
+
+struct BlurUniforms {
+    pixelSize: vec2<f32>
+};
+
+
+struct PostCfg {
+    colorAdd: vec3f,
+    colorMul: vec3f,
+    gamma: f32,
+    exposure: f32,
+    bloomPower: f32,
+    saturation: f32,
+    vignette: f32,
+    grain: f32,
+    chromaticAberration: f32,
+    time: f32,
 }
 
 struct VInIdxPosUv {
@@ -154,13 +146,27 @@ var m_tEms: texture_2d<f32>;
 @group(1) @binding(6)
 var m_sEms: sampler;
 
-// Post processing shaders that get MSAA texture as input
 @group(0) @binding(0)
-var pm_shaded: texture_multisampled_2d<f32>;
+var<uniform> bm_cfg: BloomCfg;
+@group(0) @binding(1)
+var bm_shaded: texture_2d<f32>;
 
-// Post processing shaders that get non-MSAA texture as input
 @group(0) @binding(0)
+var<uniform> br_uniforms: BlurUniforms;
+@group(0) @binding(1)
+var br_input: texture_2d<f32>;
+@group(0) @binding(2)
+var br_smp: sampler;
+
+@group(0) @binding(0)
+var<uniform> p_cfg: PostCfg;
+@group(0) @binding(1)
 var p_shaded: texture_2d<f32>;
+@group(0) @binding(2)
+var p_bloom: texture_2d<f32>;
+@group(0) @binding(3)
+var p_sampler: sampler;
+
 
 //#endregion common bindgroups
 
@@ -351,6 +357,57 @@ fn mab_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
 
 //#endregion main
 
+//#region bloom
+
+@vertex
+fn bm_vertex(@builtin(vertex_index) idx: u32) -> @builtin(position) vec4<f32> {
+    return vec4<f32>(BIG_TRI[idx], 0.0, 1.0);
+}
+
+@fragment
+fn bm_fragment(@builtin(position) pos: vec4<f32>) -> @location(0) vec4f {
+    let c = textureLoad(p_shaded, vec2u(pos.xy), 0);
+    let b = max(c.r, max(c.g, c.b));
+
+    let contrib = max(0, b - bm_cfg.threshold) / max(bm_cfg.knee, 0.00001);
+
+    return c * contrib;
+}
+
+//#endregion bloom
+
+//#region blur
+
+fn sampleBox(uv: vec2<f32>) -> vec3<f32> {
+    let a = uv.xyxy + br_uniforms.pixelSize.xyxy * vec2(1.0, -1.0).xxyy;
+
+    return (
+        textureSample(br_input, br_smp, a.xy).rgb +
+        textureSample(br_input, br_smp, a.zy).rgb +
+        textureSample(br_input, br_smp, a.xw).rgb +
+        textureSample(br_input, br_smp, a.zw).rgb
+    ) * 0.25;
+}
+
+@vertex
+fn br_vertex(@builtin(vertex_index) index: u32) -> VOPosUv {
+    let pos = BIG_TRI[index];
+
+    return VOPosUv(
+        vec4f(pos, 0, 1), 
+        vec2f(pos.x * 0.5 + 0.5, pos.y * -0.5 + 0.5)
+    );
+}
+
+@fragment
+fn br_fragment(v: VOPosUv) -> @location(0) vec4f {
+    let c = sampleBox(v.uv);
+    return vec4f(c, 1.0);
+}
+
+
+//#endregion blur
+
 //#region post
 
 const LINEAR_REC2020_TO_LINEAR_SRGB = mat3x3f(1.6605, - 0.1246, - 0.0182, - 0.5876, 1.1329, - 0.1006, - 0.0728, - 0.0083, 1.1187);
@@ -364,23 +421,23 @@ fn agx_default_contrast(x: vec3<f32>) -> vec3<f32> {
 }
 
 fn agx_look_punchy(c: vec3<f32>) -> vec3<f32> {
-    let lw = vec3<f32>(0.2126, 0.7152, 0.0722);
+    const lw = vec3<f32>(0.2126, 0.7152, 0.0722);
     let luma = dot(c, lw);
-    let slope = vec3<f32>(1.0);
-    let power = vec3<f32>(1.35);
-    let sat = 1.4;
+    const slope = vec3<f32>(1.0);
+    const power = vec3<f32>(1.35);
+    const sat = 1.4;
     let col = pow(c * slope, power);
     return luma + sat * (col - luma);
 }
 
-fn agx_tonemap_punchy(c: vec3<f32>, exposure: f32) -> vec3<f32> {
-    let in_mat = mat3x3f(0.85662717, 0.13731897, 0.11189821, 0.09512124, 0.76124197, 0.07679942, 0.04825161, 0.10143904, 0.81130236);
-    let out_mat = mat3x3f(1.1271006, - 0.14132977, - 0.14132977, - 0.11060664, 1.1578237, - 0.11060664, - 0.01649394, - 0.01649394, 1.2519364);
+fn agx_tonemap_punchy(c: vec3<f32>) -> vec3<f32> {
+    const in_mat = mat3x3f(0.85662717, 0.13731897, 0.11189821, 0.09512124, 0.76124197, 0.07679942, 0.04825161, 0.10143904, 0.81130236);
+    const out_mat = mat3x3f(1.1271006, - 0.14132977, - 0.14132977, - 0.11060664, 1.1578237, - 0.11060664, - 0.01649394, - 0.01649394, 1.2519364);
 
-    let min_ev = - 12.47393;
-    let max_ev = 4.026069;
+    const min_ev = - 12.47393;
+    const max_ev = 4.026069;
 
-    var col = exposure * c;
+    var col = c;
     col = LINEAR_SRGB_TO_LINEAR_REC2020 * col;
     col = in_mat * col;
     col = log2(max(col, vec3<f32>(1e-10)));
@@ -394,33 +451,65 @@ fn agx_tonemap_punchy(c: vec3<f32>, exposure: f32) -> vec3<f32> {
     return clamp(col, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
+fn saturation(c: vec3f, s: f32) -> vec3f {
+    let luma = dot(c, vec3f(0.2126, 0.7152, 0.0722));
+    return mix(vec3f(luma), c, s);
+}
+
+fn noise(uv: vec2f, t: f32) -> f32 {
+    let seed = dot(uv, vec2f(12.9898, 78.233)) + t;
+    return fract(sin(seed) * 43758.5453);
+}
+
 @vertex
-fn p_vertex(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
-    return vec4f(BIG_TRI[index], 0, 1);
+fn p_vertex(@builtin(vertex_index) index: u32) -> VOPosUv {
+    let pos = BIG_TRI[index];
+
+    return VOPosUv(
+        vec4f(pos, 0, 1), 
+        vec2f(pos.x * 0.5 + 0.5, pos.y * -0.5 + 0.5)
+    );
 }
 
 @fragment
-fn pr_fragment(@builtin(position) in: vec4f) -> @location(0) vec4f {
-    let s = (textureLoad(pm_shaded, vec2u(in.xy), 0).xyz + textureLoad(pm_shaded, vec2u(in.xy), 1).xyz + textureLoad(pm_shaded, vec2u(in.xy), 2).xyz + textureLoad(pm_shaded, vec2u(in.xy), 3).xyz) * 0.25;
+fn p_fragment(in: VOPosUv) -> @location(0) vec4f {
+    let l = vec2u(in.pos.xy);
 
-    const exposure = 1;
-    const gamma = 2.2;
+    let dist = distance(in.uv, vec2f(0.5));
 
-    let col = agx_tonemap_punchy(s.rgb, exposure);
+    var c: vec3f;
+    
+    if p_cfg.chromaticAberration == 0 {
+        c = textureLoad(p_shaded, l, 0).rgb;
+    } else {
+        let caOffset = p_cfg.chromaticAberration * dist * 0.01;
+        c = vec3f(
+            textureSample(p_shaded, p_sampler, in.uv + vec2f(caOffset, 0.0)).r,
+            textureSample(p_shaded, p_sampler, in.uv).g,
+            textureSample(p_shaded, p_sampler, in.uv + vec2f(caOffset, 0.0)).b
+        );
+    }
+    c += textureLoad(p_bloom, l, 0).rgb * p_cfg.bloomPower;
 
-    return vec4f(pow(col, vec3f(1.0 / gamma)), 1.0);
-}
+    // color multiply
+    c *= p_cfg.colorMul;
+    // exposure and tonemapping
+    c = agx_tonemap_punchy(c * p_cfg.exposure);
+    // saturation
+    c = saturation(c, p_cfg.saturation);
+    // gamma correction
+    c = pow(c, vec3f(1.0 / p_cfg.gamma));
+    // color add
+    c += p_cfg.colorAdd;
+    // vignette
+    let vign = smoothstep(0.8, 0.2, dist * p_cfg.vignette);
+    c *= vign;
+    // grain
+    if p_cfg.grain > 0 {
+        c += (noise(in.uv, p_cfg.time) - 0.5) * p_cfg.grain;
+    }
 
-@fragment
-fn p_fragment(@builtin(position) in: vec4f) -> @location(0) vec4f {
-    let s = textureLoad(p_shaded, vec2u(in.xy), 0).xyz;
-
-    const exposure = 0.5;
-    const gamma = 1.8;
-
-    let col = agx_tonemap_punchy(s.rgb, exposure);
-
-    return vec4f(pow(col, vec3f(1.0 / gamma)), 1.0);
+    return vec4f(c, 1.0);
 }
 
 //#endregion post

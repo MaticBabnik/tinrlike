@@ -14,6 +14,10 @@ import {
     SoundSys,
     DebugSrv,
     DebugService,
+    VisualService,
+    VisualSrv,
+    AssetSrv,
+    AssetService,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
@@ -21,12 +25,12 @@ import { $ } from "./honda/util";
 import { FizSys, FizSystem } from "./honda/systems/fiz";
 import { WGpu } from "./honda/backends/wg/gpu";
 import { GltfBinary } from "./honda/util/gltf";
-import { AssetSrv, AssetService } from "./honda/services/asset.service";
 import { createScene } from "./scenes/game.scene";
 import { UIManager } from "./honda/ui/ui";
 import { GameStorage } from "./storage";
 import { DEFAULT_SETTINGS } from "./honda/backends/wg";
 import { createToonRP } from "./toonf.rp";
+import { createMainMenuScene } from "./scenes/mainMenu.scene";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
 
@@ -56,8 +60,8 @@ async function frame() {
     performance.mark("cpu-done");
 
     Game.perf.measure("frame");
-    Game.gpu2.startFrame();
-    Game.gpu2.render();
+    Game.gpu.startFrame();
+    Game.gpu.render();
     Game.perf.measureEnd();
     Game.input.endFrame();
 
@@ -65,9 +69,9 @@ async function frame() {
 
     Game.perf.measure("frameEnd");
 
-    await Game.gpu2.frameEnd();
+    Game.gpu.frameEnd();
 
-    const perf = (Game.gpu2 as Partial<WGpu>).perf;
+    const perf = (Game.gpu as Partial<WGpu>).perf;
     if (perf) {
         Game.perf.sumbitGpuTimestamps(perf.labels, perf.times, perf.n);
     }
@@ -139,7 +143,7 @@ async function gameEntry() {
         turret_search: "/sound/turret_search.opus",
     });
 
-    // Game.sceneManager.queueScene(createMainMenuScene.bind(null, ));
+    // Game.sceneManager.queueScene(createMainMenuScene.bind(null, createScene));
     Game.sceneManager.queueScene(createScene);
 }
 
@@ -161,6 +165,7 @@ async function mount() {
 
     Game.ecs.registerService(AssetSrv, new AssetService());
     Game.ecs.registerService(DebugSrv, new DebugService());
+    Game.ecs.registerService(VisualSrv, new VisualService());
 
     /**
      * Initalize GPU backend & create rendering pipeline
@@ -173,15 +178,13 @@ async function mount() {
         canvas,
     );
 
-    // createGpuPipeline(gpu, Game.ecs);
     createToonRP(gpu, Game.ecs);
     gpu.printRenderPath();
     gpu.onError = (err) => setError(err.toString());
-    Game.gpu2 = gpu;
-
+    Game.gpu = gpu;
     setPlatformInfo(gpu);
-
     setStatus("init");
+
     await gameEntry();
     setStatus(undefined);
     Game.time = 0;
