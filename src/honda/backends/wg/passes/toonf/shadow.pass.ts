@@ -5,7 +5,7 @@ import { getDepthPipeline } from "../../pipelines/toonf/depth.pipeline";
 import type { ShadowMapTexture } from "../../texture";
 import type { UniformData } from "../def1";
 import type { IPass } from "../pass.interface";
-import type { MeshDraws } from "./gather.pass";
+import type { MeshDraws2 } from "./gather.pass";
 import type { WGBuf, WGMat } from "../../resources";
 import { align } from "../../utils";
 
@@ -20,7 +20,7 @@ export class ShadowPass implements IPass {
         private g: WGpu,
 
         private uniforms: UniformData,
-        private meshDraws: MeshDraws,
+        private meshDraws: MeshDraws2,
         private meshInstanceBuffer: StructArrayBuffer,
 
         private shadowMaps: ShadowMapTexture,
@@ -79,7 +79,7 @@ export class ShadowPass implements IPass {
             rp.setPipeline(this.depthAlphaClipPipeline);
             rp.setBindGroup(0, this.meshBindGroup, [i * this.matrixAlign]);
 
-            for (const c of this.meshDraws.opaque) {
+            for (const c of this.meshDraws.shadows[i].opaque) {
                 if (!c.shadow || !c.mat.renderShadow) continue;
                 rp.setVertexBuffer(0, (c.mesh.position as WGBuf).buffer);
                 rp.setVertexBuffer(1, (c.mesh.texCoord as WGBuf).buffer);

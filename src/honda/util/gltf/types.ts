@@ -23,6 +23,8 @@ export interface GltfAccessor<
     normalized: false | undefined;
     type: TElement;
     count: number;
+    min?: number[];
+    max?: number[];
 }
 
 export interface GltfBufView {

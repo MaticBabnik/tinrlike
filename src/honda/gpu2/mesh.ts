@@ -1,4 +1,5 @@
 import { getNewResourceId } from "../util/resource";
+import type { Three } from "../util/types";
 import type { IGPUBuf } from "./interface";
 
 export const enum MeshIndexType {
@@ -9,6 +10,7 @@ export const enum MeshIndexType {
 
 export class MeshV2 {
     public readonly id: number;
+    public readonly radius: number;
 
     constructor(
         public readonly position: IGPUBuf,
@@ -24,8 +26,15 @@ export class MeshV2 {
         public readonly indexType: MeshIndexType,
 
         public readonly drawCount: number,
+        public readonly halfExtents: Three<number>,
     ) {
         this.id = getNewResourceId();
+        // very mediocre radius value :wilted_rose: 
+        this.radius = Math.sqrt(
+            halfExtents[0] * halfExtents[0] +
+                halfExtents[1] * halfExtents[1] +
+                halfExtents[2] * halfExtents[2],
+        );
 
         this.position.rcUse();
         this.normal.rcUse();

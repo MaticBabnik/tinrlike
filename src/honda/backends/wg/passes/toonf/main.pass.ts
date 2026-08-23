@@ -8,7 +8,7 @@ import type {
 } from "../../texture";
 import type { UniformData } from "../def1";
 import type { IPass } from "../pass.interface";
-import type { MeshDraws } from "./gather.pass";
+import type { MeshDraws2 } from "./gather.pass";
 import type { WGBuf, WGMat } from "../../resources";
 import { getMainPipeline } from "../../pipelines/toonf/main.pipeline";
 import type { Mat4 } from "wgpu-matrix";
@@ -29,7 +29,7 @@ export class MainPass implements IPass {
     public constructor(
         private g: WGpu,
         private uniforms: UniformData,
-        private meshDraws: MeshDraws,
+        private meshDraws: MeshDraws2,
         meshInstanceBuffer: StructArrayBuffer,
         lightBuffer: StructArrayBuffer,
 
@@ -126,8 +126,8 @@ export class MainPass implements IPass {
         rp.setBindGroup(0, this.meshBindGroup);
         rp.setPipeline(this.mainAlphaClipPipeline);
 
-        for (let i = 0; i < this.meshDraws.opaque.length; i++) {
-            const draw = this.meshDraws.opaque[i];
+        for (let i = 0; i < this.meshDraws.main.opaque.length; i++) {
+            const draw = this.meshDraws.main.opaque[i];
             if (!draw.mat.renderMain) continue;
 
             rp.setVertexBuffer(0, (draw.mesh.position as WGBuf).buffer);
@@ -164,8 +164,8 @@ export class MainPass implements IPass {
 
         rp.setPipeline(this.mainAlphaBlendPipeline);
 
-        for (let i = 0; i < this.meshDraws.blend.length; i++) {
-            const draw = this.meshDraws.blend[i];
+        for (let i = 0; i < this.meshDraws.main.blend!.length; i++) {
+            const draw = this.meshDraws.main.blend![i];
             
             if (!draw.mat.renderMain) continue;
 

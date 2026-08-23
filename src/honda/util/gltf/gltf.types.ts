@@ -30,6 +30,9 @@ export interface IAccessor {
     count: number;
     type: TAccessorType;
     sparse?: object;
+
+    min?: number[];
+    max?: number[];
 }
 //#endregion Accessor
 

@@ -1,17 +1,18 @@
 import type { IPass } from "../pass.interface";
-import { mat4, vec4, type Mat4, type Vec3 } from "wgpu-matrix";
+import { mat4, vec3, vec4, type Mat4, type Vec3, type Vec4 } from "wgpu-matrix";
 import type { Buffer, StructArrayBuffer, StructBuffer } from "../../buffer";
 import type {
     CameraSystem,
     ISpotLight,
     LightSystem,
+    MeshComponent,
     MeshSystem,
     THondaLight,
 } from "@/honda/systems";
 import { GPUMatAlpha, type IGPUMat, type MeshV2 } from "@/honda/gpu2";
 import type { WGpu } from "../../gpu";
 import type { WGMat } from "../../resources/mat";
-import type { PostCfg, Three, VisualService } from "@/honda";
+import type { PostCfg, SceneNode, Three, VisualService } from "@/honda";
 
 export type ToonMeshInstance = {
     transform: Mat4;
@@ -65,6 +66,7 @@ export type UniformData = {
     nLights: number;
     nShadowmaps: number;
     maxShadowmaps: number;
+    shadowmapVPs: Mat4[];
 };
 
 const TYPE_MAP: Record<THondaLight["type"], number> = {
@@ -86,9 +88,14 @@ export interface ToonDrawCall {
     distance: number;
 }
 
-export interface MeshDraws {
+export interface PassDraws {
     opaque: ToonDrawCall[];
-    blend: ToonDrawCall[];
+    blend?: ToonDrawCall[];
+}
+
+export interface MeshDraws2 {
+    main: PassDraws;
+    shadows: PassDraws[];
 }
 
 export interface GPUPostCfg extends PostCfg {
@@ -108,10 +115,8 @@ export class GatherDataPass implements IPass {
         private lightSystem: LightSystem,
         private visualService: VisualService,
 
-        private meshDrawCalls: MeshDraws,
+        private meshDrawCalls: MeshDraws2,
         private meshInstanceBuffer: StructArrayBuffer<ToonMeshInstance>,
-        // private skinMeshInstances: Instance[],
-        // private skinMeshInstanceBuffer: StructArrayBuffer<SkinMeshInstance>,
         private lightInstanceBuffer: StructArrayBuffer<LightInstance>,
         private lightVPBuffer: Buffer,
         private uniformData: UniformData,
@@ -122,13 +127,19 @@ export class GatherDataPass implements IPass {
         // this *should* be good enough
         this.matrixAlign = Math.max(MATRIX_SIZE, minOffsetAlign);
         this.maxNShadowmaps = Math.floor(lightVPBuffer.size / this.matrixAlign);
+
+        this.meshDrawCalls.shadows = new Array(this.maxNShadowmaps)
+            .fill(0)
+            .map(() => ({ opaque: [] }));
     }
 
     apply(): void {
         this.gatherCameraData();
-        this.gatherMeshData();
-        this.gatherSkinData();
         this.gatherLightData();
+
+        this.gatherMeshData();
+        // this.gatherSkinData(); //TODO: reimplement skinning
+
         this.gatherPostConfig();
     }
 
@@ -173,8 +184,10 @@ export class GatherDataPass implements IPass {
         }
     }
 
-    private gatherMeshData(): void {
-        const sortedMeshes = this.meshSystem.$meshes
+    private _sortedMeshes: [MeshComponent, SceneNode][] = [];
+
+    private gatherMeshes() {
+        this._sortedMeshes = this.meshSystem.$meshes
             .toArray()
             .sort(([a], [b]) => {
                 // sort by alpha mode (opaque, clip, blend)
@@ -182,100 +195,233 @@ export class GatherDataPass implements IPass {
                 if (alphaModeA !== 0) return alphaModeA;
 
                 // sort by material (to reduce bind group changes)
-                const dmt = (a.material as WGMat).id - (a.material as WGMat).id;
+                const dmt = (a.material as WGMat).id - (b.material as WGMat).id;
                 if (dmt !== 0) return dmt;
 
                 // sort by mesh (instancing)
                 return a.primitive.id - b.primitive.id;
             });
+    }
 
-        this.meshDrawCalls.opaque.length = 0;
-        this.meshDrawCalls.blend.length = 0;
+    private $frustumPlanes = new Array(6).fill(0).map(() => vec4.create());
 
-        if (sortedMeshes.length === 0) return;
+    private static frustumPlane(
+        m: Mat4,
+        s0: number,
+        r0: number,
+        s1: number,
+        r1: number,
+        dst: Vec4,
+    ) {
+        dst[0] = s0 * m[r0] + s1 * m[r1];
+        dst[1] = s0 * m[4 + r0] + s1 * m[4 + r1];
+        dst[2] = s0 * m[8 + r0] + s1 * m[8 + r1];
+        dst[3] = s0 * m[12 + r0] + s1 * m[12 + r1];
 
-        let i = 0;
+        const len = 1 / Math.hypot(dst[0], dst[1], dst[2]);
+
+        dst[0] *= len;
+        dst[1] *= len;
+        dst[2] *= len;
+        dst[3] *= len;
+    }
+
+    private putFrustumPlanes(vp: Mat4) {
+        GatherDataPass.frustumPlane(vp, 1, 3, 1, 0, this.$frustumPlanes[0]); // Left
+        GatherDataPass.frustumPlane(vp, 1, 3, -1, 0, this.$frustumPlanes[1]); // Right
+        GatherDataPass.frustumPlane(vp, 1, 3, 1, 1, this.$frustumPlanes[2]); // Bottom
+        GatherDataPass.frustumPlane(vp, 1, 3, -1, 1, this.$frustumPlanes[3]); // Top
+        GatherDataPass.frustumPlane(vp, 1, 3, 1, 2, this.$frustumPlanes[4]); // Near
+        GatherDataPass.frustumPlane(vp, 1, 3, -1, 2, this.$frustumPlanes[5]); // Far
+    }
+
+    private $ccenter = vec3.create();
+    private $cx = vec3.create();
+    private $cy = vec3.create();
+    private $cz = vec3.create();
+
+    private cullMesh(wrld: Mat4, he: Three<number>): boolean {        
+        mat4.getTranslation(wrld, this.$ccenter);
+        mat4.getAxis(wrld, 0, this.$cx);
+        mat4.getAxis(wrld, 1, this.$cy);
+        mat4.getAxis(wrld, 2, this.$cz);
+
+        for (let i = 0; i <6; i++) {
+            const p = this.$frustumPlanes[i];
+            const d = p[3];
+
+            const r =
+                Math.abs(vec3.dot(p, this.$cx)) * he[0] +
+                Math.abs(vec3.dot(p, this.$cy)) * he[1] +
+                Math.abs(vec3.dot(p, this.$cz)) * he[2];
+
+            const dist = vec3.dot(p, this.$ccenter) + d;
+
+            if (dist < -r) return false;
+        }
+        return true;
+    }
+
+    private gatherDrawsCulled(
+        vp: Mat4,
+        isShadowPass: boolean,
+        dst: PassDraws,
+        instance: number,
+    ): number {
+        dst.opaque.length = 0;
+
+        if (this._sortedMeshes.length === 0) return instance;
+
+        // activate the frustum planes for culling
+        this.putFrustumPlanes(vp);
+
+        let meshIdx = 0;
         let previousDrawCall: ToonDrawCall | undefined;
 
-        for (const [m, n] of sortedMeshes) {
-            if (m.material.alphaMode === GPUMatAlpha.BLEND) {
-                break;
-            }
+        for (; meshIdx < this._sortedMeshes.length; meshIdx++) {
+            const md = this._sortedMeshes[meshIdx];
 
-            this.meshInstanceBuffer.set(i, {
-                transform: n.transform.$glbMtx,
-                invTransform: n.transform.$glbInvMtx,
+            // only process non-blended meshes in the common case
+            if (md[0].material.alphaMode === GPUMatAlpha.BLEND) break;
+
+            // if shadow skip non-casters
+            if (isShadowPass && md[0].castShadow === false) continue;
+            // if main skip non-rendered
+            if (
+                !isShadowPass &&
+                !md[0].material.renderMain &&
+                !md[0].material.renderPrepass
+            )
+                continue;
+
+            if (
+                !this.cullMesh(
+                    md[1].transform.$glbMtx,
+                    md[0].primitive.halfExtents,
+                )
+            )
+                continue;
+
+            // at this point we know the mesh is visible and should be rendered
+            // give it a transform slot
+            this.meshInstanceBuffer.set(instance, {
+                transform: md[1].transform.$glbMtx,
+                invTransform: md[1].transform.$glbInvMtx,
             });
 
             if (
                 !previousDrawCall ||
-                previousDrawCall.mat !== m.material ||
-                previousDrawCall.mesh !== m.primitive
+                previousDrawCall.mat !== md[0].material ||
+                previousDrawCall.mesh !== md[0].primitive
             ) {
-                const drawCall: ToonDrawCall = {
-                    firstInstance: i,
+                previousDrawCall = {
+                    firstInstance: instance,
                     nInstances: 1,
-                    mat: m.material,
-                    mesh: m.primitive,
-                    shadow: m.castShadow,
+                    mat: md[0].material,
+                    mesh: md[0].primitive,
+                    shadow: md[0].castShadow,
                     distance: 0,
                 };
-                this.meshDrawCalls.opaque.push(drawCall);
-                previousDrawCall = drawCall;
+                dst.opaque.push(previousDrawCall);
             } else {
                 previousDrawCall.nInstances++;
             }
-
-            i++;
+            instance++;
         }
 
-        for (; i < sortedMeshes.length; i++) {
-            const [m, n] = sortedMeshes[i];
+        if (!isShadowPass && dst.blend) {
+            dst.blend.length = 0;
+            for (; meshIdx < this._sortedMeshes.length; meshIdx++) {
+                const md = this._sortedMeshes[meshIdx];
 
-            this.meshInstanceBuffer.set(i, {
-                transform: n.transform.$glbMtx,
-                invTransform: n.transform.$glbInvMtx,
-            });
+                if (!md[0].material.renderMain) continue;
 
-            const drawCall: ToonDrawCall = {
-                firstInstance: i,
-                nInstances: 1,
-                mat: m.material,
-                mesh: m.primitive,
-                shadow: false,
-                distance: this.toCameraDistance(n.transform.$glbMtx),
-            };
+                if (
+                    !this.cullMesh(
+                        md[1].transform.$glbMtx,
+                        md[0].primitive.halfExtents,
+                    )
+                )
+                    continue;
 
-            this.meshDrawCalls.blend.push(drawCall);
+                this.meshInstanceBuffer.set(instance, {
+                    transform: md[1].transform.$glbMtx,
+                    invTransform: md[1].transform.$glbInvMtx,
+                });
+
+                // we don't merge blended draws, since they are Z-sorted
+                const drawCall: ToonDrawCall = {
+                    firstInstance: instance,
+                    nInstances: 1,
+                    mat: md[0].material,
+                    mesh: md[0].primitive,
+                    shadow: false,
+                    distance: this.toCameraDistance(md[1].transform.$glbMtx),
+                };
+                dst.blend.push(drawCall);
+                instance++;
+            }
+
+            dst.blend.sort((a, b) => b.distance - a.distance);
         }
 
-        // sort translucent meshes back to front
-        this.meshDrawCalls.blend.sort((a, b) => b.distance - a.distance);
-
-        // send instance data to GPU
-        this.meshInstanceBuffer.push();
+        return instance;
     }
 
-    private gatherSkinData(): void {
-        // let idx = 0;
-        // this.skinMeshInstances.length = 0;
-        // for (const [c, n] of this.meshSystem.$skinnedMeshes) {
-        //     if (idx >= this.skinMeshInstanceBuffer.count) {
-        //         console.warn("Skin buffer overflow");
-        //         break;
-        //     }
-        //     this.skinMeshInstances.push({
-        //         mat: c.material,
-        //         mesh: c.primitive,
-        //         shadow: c.castShadow,
-        //     });
-        //     this.skinMeshInstanceBuffer.set(idx++, {
-        //         transform: n.transform.$glbMtx,
-        //         invTransform: n.transform.$glbInvMtx,
-        //         joints: c.boneMatrices,
-        //     });
-        // }
-        // this.skinMeshInstanceBuffer.push();
+    private gatherMeshData(): void {
+        this.gatherMeshes();
+
+        let i = 0;
+
+        i = this.gatherDrawsCulled(
+            this.cameraSystem.viewProjMtx,
+            false,
+            this.meshDrawCalls.main,
+            i,
+        );
+
+        for (let j = 0; j < this.uniformData.nShadowmaps; j++) {
+            i = this.gatherDrawsCulled(
+                this.uniformData.shadowmapVPs[j],
+                true,
+                this.meshDrawCalls.shadows[j],
+                i,
+            );
+        }
+
+        // send instance data to GPU
+        this.meshInstanceBuffer.push(
+            0,
+            i * this.meshInstanceBuffer.elementSize,
+        );
+
+        // this.$debugPrintDraws();
+    }
+
+    private $debugPrintDraws() {
+        const totalMeshes = this._sortedMeshes.length;
+
+        const mainDrawCalls =
+            this.meshDrawCalls.main.opaque.length +
+            (this.meshDrawCalls.main.blend?.length ?? 0);
+
+        const instancingEfficiency = totalMeshes / mainDrawCalls;
+
+        const drawnInstances =
+            this.meshDrawCalls.main.opaque.reduce(
+                (acc, dc) => acc + dc.nInstances,
+                0,
+            ) +
+            (this.meshDrawCalls.main.blend?.reduce(
+                (acc, dc) => acc + dc.nInstances,
+                0,
+            ) ?? 0);
+
+        const culled = (1 - drawnInstances / totalMeshes) * 100;
+
+        console.log(
+            `Main pass - Total meshes: ${totalMeshes}, Draw calls: ${mainDrawCalls}, Instancing efficiency: ${instancingEfficiency.toFixed(2)}, Culled: ${culled.toFixed(0)}%`,
+        );
     }
 
     private gatherLightData(): void {
@@ -336,8 +482,9 @@ export class GatherDataPass implements IPass {
                 }
 
                 if (vp) {
-                    shadowIdx++;
+                    this.uniformData.shadowmapVPs[shadowIdx] = vp;
                     mat4.mul(proj, t.$glbInvMtx, vp);
+                    shadowIdx++;
                 }
             }
 

@@ -121,11 +121,6 @@ async function gameEntry() {
     // Game.sceneManager.queueScene(createMainMenuScene.bind(null, createScene));
     Game.sceneManager.queueScene(createScene);
 
-    setTimeout(() => {
-        Game.sceneManager.queueScene(
-            createMainMenuScene.bind(null, () => new Scene()),
-        );
-    }, 100);
 }
 
 // TODO(mbabnik): Add ability to pause the game loop (but keep some level of code running)

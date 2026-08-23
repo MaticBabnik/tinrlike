@@ -5,7 +5,7 @@ import { getDepthPipeline } from "../../pipelines/toonf/depth.pipeline";
 import type { IMultiSamplable, ITViewable } from "../../texture";
 import type { UniformData } from "../def1";
 import type { IPass } from "../pass.interface";
-import type { MeshDraws } from "./gather.pass";
+import type { MeshDraws2 } from "./gather.pass";
 import type { WGBuf, WGMat } from "../../resources";
 
 export class DepthPass implements IPass {
@@ -17,7 +17,7 @@ export class DepthPass implements IPass {
     public constructor(
         private g: WGpu,
         private uniforms: UniformData,
-        private meshDraws: MeshDraws,
+        private meshDraws: MeshDraws2,
         private meshInstanceBuffer: StructArrayBuffer,
 
         private depth: ITViewable & IMultiSamplable,
@@ -88,8 +88,8 @@ export class DepthPass implements IPass {
 
         let i: number;
 
-        for (i = 0; i < this.meshDraws.opaque.length; i++) {
-            const draw = this.meshDraws.opaque[i];
+        for (i = 0; i < this.meshDraws.main.opaque.length; i++) {
+            const draw = this.meshDraws.main.opaque[i];
             // console.log('prepass draw', draw.mesh.id, draw.mat.label)
 
             if (!draw.mat.renderPrepass) continue;
@@ -125,12 +125,12 @@ export class DepthPass implements IPass {
             }
         }
 
-        if (i < this.meshDraws.opaque.length) {
+        if (i < this.meshDraws.main.opaque.length) {
             rp.setPipeline(this.depthAlphaClipPipeline);
         }
 
-        for (; i < this.meshDraws.opaque.length; i++) {
-            const draw = this.meshDraws.opaque[i];
+        for (; i < this.meshDraws.main.opaque.length; i++) {
+            const draw = this.meshDraws.main.opaque[i];
             // console.log('prepass draw', draw.mesh.id, draw.mat.label)
             if (!draw.mat.renderPrepass) continue;
 

@@ -180,6 +180,37 @@ export class GltfLoader {
         });
     }
 
+    /**
+     * Gets the half extents of a 3D AABB containg all of the positions in an 
+     * accessor. Tries to utilize glTF's min/max but falls back to iterating
+     * @param bufIdx 
+     */
+    private getHalfExtents(bufIdx: number): Three<number> {
+        const accessor = this.assertTypedAccessor(bufIdx, "VEC3", Float32Array);
+
+        if (accessor.min?.length === 3 && accessor.max?.length === 3) {
+            return [
+                Math.max(Math.abs(accessor.min[0]), Math.abs(accessor.max[0])),
+                Math.max(Math.abs(accessor.min[1]), Math.abs(accessor.max[1])),
+                Math.max(Math.abs(accessor.min[2]), Math.abs(accessor.max[2])),
+            ];
+        }
+
+        let mhxX = 0, mhxY = 0, mhxZ = 0;
+
+        for (let i = 0; i < accessor.count; i++) {
+            const x = accessor.accessor[i * 3 + 0];
+            const y = accessor.accessor[i * 3 + 1];
+            const z = accessor.accessor[i * 3 + 2];
+
+            mhxX = Math.max(mhxX, Math.abs(x));
+            mhxY = Math.max(mhxY, Math.abs(y));
+            mhxZ = Math.max(mhxZ, Math.abs(z));
+        }
+
+        return [mhxX, mhxY, mhxZ];
+    }
+
     private createMeshPrimitiveV2(mesh: number, primitive: number): MeshV2 {
         const gMesh = nn(this.file.json.meshes?.[mesh]);
         const gPrimitive = nn(gMesh.primitives[primitive]);
@@ -193,6 +224,8 @@ export class GltfLoader {
             wghId = gPrimitive.attributes.WEIGHTS_0,
             jntId = gPrimitive.attributes.JOINTS_0,
             indId = gPrimitive.indices;
+
+        const halfExtents = this.getHalfExtents(posId);
 
         const posBuf = this.createF32Buf(posId, "VEC3", `${name}:position`),
             norBuf = this.createF32Buf(norId, "VEC3", `${name}:normal`),
@@ -237,6 +270,7 @@ export class GltfLoader {
             indBuf,
             indexType,
             drawCount,
+            halfExtents
         );
     }
 
@@ -358,7 +392,8 @@ export class GltfLoader {
         ];
 
         const extEmissiveStrength =
-            gMaterial.extensions?.KHR_materials_emissive_strength?.emissiveStrength
+            gMaterial.extensions?.KHR_materials_emissive_strength
+                ?.emissiveStrength;
 
         if (extEmissiveStrength !== undefined) {
             emissionFactor.forEach((v, i, a) => {

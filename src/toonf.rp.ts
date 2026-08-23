@@ -1,3 +1,4 @@
+import type { Mat4 } from "wgpu-matrix";
 import {
     CameraSys,
     LightSys,
@@ -21,7 +22,7 @@ import { DepthPass } from "./honda/backends/wg/passes/toonf/depth.pass";
 import {
     GatherDataPass,
     type ToonMeshInstance,
-    type MeshDraws,
+    type MeshDraws2,
     type UniformData,
     type GPUPostCfg,
 } from "./honda/backends/wg/passes/toonf/gather.pass";
@@ -94,13 +95,17 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
 
     shadowmaps.alloc(gpu.device);
 
-    const meshDraws: MeshDraws = {
-        blend: [],
-        opaque: [],
+    const meshDraws: MeshDraws2 = {
+        main: {
+            blend: [],
+            opaque: [],
+        },
+        shadows: [],
     };
 
     const uniformData = {
         maxShadowmaps: shadowmaps.nLights,
+        shadowmapVPs: [] as Mat4[],
     } as UniformData;
 
     const shadowBuffer = new Buffer(
