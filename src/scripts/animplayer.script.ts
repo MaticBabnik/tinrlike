@@ -1,5 +1,5 @@
 import { Game, Script } from "@/honda";
-import type { HAnimation } from "@/honda/util/gltf/animation";
+import type { HAnimation } from "@/honda/animation/animation";
 
 export class AnimationPlayerScript extends Script {
     public constructor(public animation: HAnimation) {

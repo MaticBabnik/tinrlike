@@ -20,8 +20,12 @@ export interface IGPUMatDesc {
 }
 
 export interface IGPUMat
-    extends IRefCnt,
-        Required<Omit<IGPUMatDesc, `${string}Texture`>> {
+    extends IRefCnt, Required<Omit<IGPUMatDesc, `${string}Texture`>> {
+        
+    renderMain: boolean;
+    renderShadow: boolean;
+    renderPrepass: boolean;
+
     get baseTexture(): IGPUTex | undefined;
     get metRhgTexture(): IGPUTex | undefined;
     get normalTexture(): IGPUTex | undefined;

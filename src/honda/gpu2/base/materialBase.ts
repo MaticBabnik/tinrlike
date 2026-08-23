@@ -19,9 +19,13 @@ export abstract class MaterialBase extends RefCntBase implements IGPUMat {
     public emissionFactor: Three<number> = [0, 0, 0];
     public metallicFactor = 0;
     public roughnessFactor = 1;
-    public alphaCutoff = 0.5;
     public normalScale = 1;
+    
+    public alphaCutoff = 0.5;
     public alphaMode: GPUMatAlpha = GPUMatAlpha.MASK;
+    public renderMain = true;
+    public renderShadow = true;
+    public renderPrepass = true;
 
     public constructor(d: IGPUMatDesc) {
         super();

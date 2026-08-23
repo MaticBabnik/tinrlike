@@ -45,7 +45,11 @@ export class ShadowPass implements IPass {
             entries: [
                 {
                     binding: 0,
-                    resource: { buffer: this.lightVPBuffer },
+                    resource: {
+                        buffer: this.lightVPBuffer,
+                        offset: 0,
+                        size: 4 * 4 * 4, // one 4x4 matrix per dynamic offset
+                    },
                 },
                 {
                     binding: 1,
@@ -76,7 +80,7 @@ export class ShadowPass implements IPass {
             rp.setBindGroup(0, this.meshBindGroup, [i * this.matrixAlign]);
 
             for (const c of this.meshDraws.opaque) {
-                if (!c.shadow) continue;
+                if (!c.shadow || !c.mat.renderShadow) continue;
                 rp.setVertexBuffer(0, (c.mesh.position as WGBuf).buffer);
                 rp.setVertexBuffer(1, (c.mesh.texCoord as WGBuf).buffer);
 

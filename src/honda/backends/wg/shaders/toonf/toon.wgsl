@@ -9,6 +9,12 @@ struct Instance {
     invTransform: mat4x4<f32>,
 }
 
+struct SkinInstance {
+    transform: mat4x4<f32>,
+    invTransform: mat4x4<f32>,
+    joints: array<mat4x4f, 128>,
+}
+
 struct Material {
     baseFactor: vec4f,
     emissionFactor: vec3f,
@@ -41,8 +47,7 @@ struct BloomCfg {
 
 struct BlurUniforms {
     pixelSize: vec2<f32>
-};
-
+}
 
 struct PostCfg {
     colorAdd: vec3f,
@@ -55,6 +60,15 @@ struct PostCfg {
     grain: f32,
     chromaticAberration: f32,
     time: f32,
+    framen: u32
+}
+
+struct GlitchConf {
+    tileSize: vec2f,
+    nbx: u32,
+    buf: u32,
+    offset: u32,
+    probability: f32
 }
 
 struct VInIdxPosUv {
@@ -68,6 +82,15 @@ struct VInIdxPosUvNorm {
     @location(0) position: vec3f,
     @location(1) uv: vec2f,
     @location(2) normal: vec3f,
+}
+
+struct VInIdxPosUvNormJoints {
+    @builtin(instance_index) instanceIndex: u32,
+    @location(0) position: vec3f,
+    @location(1) uv: vec2f,
+    @location(2) normal: vec3f,
+    @location(3) jointIds: vec4<u32>,
+    @location(4) jointWeights: vec4f,
 }
 
 struct VOPosUv {
@@ -121,13 +144,16 @@ var<uniform> m_uni: MainUniforms;
 @group(0) @binding(1)
 var<storage, read> instances: array<Instance>;
 
+@group(0) @binding(1)
+var<storage, read> sk_instances: array<SkinInstance>;
+
 // Main shaders get lights
 @group(0) @binding(2)
 var<uniform> m_lights: array<Light, 128>;
 
 @group(0) @binding(3)
 var m_shadowMaps: texture_depth_2d_array;
-@group(0) @binding(4) 
+@group(0) @binding(4)
 var m_shadowSampler: sampler_comparison;
 
 // Materials are always the same
@@ -167,8 +193,24 @@ var p_bloom: texture_2d<f32>;
 @group(0) @binding(3)
 var p_sampler: sampler;
 
+@group(0) @binding(0)
+var<uniform> pg_cfg: GlitchConf;
+@group(0) @binding(1)
+var<storage, read> pg_buf: array<f32>; 
+@group(0) @binding(2)
+var pg_sampler: sampler;
+@group(0) @binding(3)
+var pg_input: texture_2d<f32>;
 
 //#endregion common bindgroups
+
+//#region skin helpers
+
+fn skin_mat(inst: SkinInstance, jids: vec4u, jw: vec4f) -> mat4x4f {
+    return inst.joints[jids.x] * jw.x + inst.joints[jids.y] * jw.y + inst.joints[jids.z] * jw.z + inst.joints[jids.w] * jw.w;
+}
+
+//#endregion skin helpers
 
 //#region depth alpha clip
 
@@ -193,6 +235,16 @@ fn dac_fragment(input: DACVertexOut) {
     }
 }
 
+@vertex
+fn dac_sk_vertex(input: VInIdxPosUvNormJoints) -> DACVertexOut {
+    let instance = sk_instances[input.instanceIndex];
+
+    // Compute skin matrix
+    let sm = skin_mat(instance, input.jointIds, input.jointWeights);
+    let pos = d_viewProjection * instance.transform * sm * vec4f(input.position, 1.0);
+    return DACVertexOut(pos, input.uv);
+}
+
 //#endregion depth alpha clip
 
 //#region depth opaque
@@ -204,6 +256,13 @@ fn do_vertex(input: VInIdxPosUv) -> @builtin(position) vec4f {
 
 @fragment
 fn do_fragment() { }
+
+@vertex
+fn do_sk_vertex(input: VInIdxPosUvNormJoints) -> @builtin(position) vec4f {
+    let instance = sk_instances[input.instanceIndex];
+    let sm = skin_mat(instance, input.jointIds, input.jointWeights);
+    return d_viewProjection * instance.transform * sm * vec4f(input.position, 1.0);
+}
 
 //#endregion depth opaque
 
@@ -222,6 +281,19 @@ fn m_vertex(input: VInIdxPosUvNorm) -> VOPosWposUvNorm {
     return VOPosWposUvNorm(pos, wpos, input.uv, normal);
 }
 
+@vertex
+fn m_sk_vertex(input: VInIdxPosUvNormJoints) -> VOPosWposUvNorm {
+    let instance = sk_instances[input.instanceIndex];
+    let sm = skin_mat(instance, input.jointIds, input.jointWeights);
+    let pos = m_uni.vp * instance.transform * sm * vec4f(input.position, 1.0);
+    let wpos = (instance.transform * sm * vec4f(input.position, 1.0)).xyz;
+
+    let normalMatrix = transpose(mat3x3(instance.invTransform[0].xyz, instance.invTransform[1].xyz, instance.invTransform[2].xyz));
+    let normal = normalize(normalMatrix * input.normal);
+
+    return VOPosWposUvNorm(pos, wpos, input.uv, normal);
+}
+
 fn getViewVector(w: vec3f) -> vec3f {
     if m_camera_is_ortho {
         return - m_uni.vInv[2].xyz;
@@ -231,7 +303,7 @@ fn getViewVector(w: vec3f) -> vec3f {
     }
 }
 
-fn evalToon(n: vec3f, v: vec3f, wpos: vec3f, baseColor: vec4f, roughness: f32, metallic: f32, emission: vec3f) -> vec3f {
+fn evalToon(n: vec3f, v: vec3f, wpos: vec3f, baseColor: vec3f, roughness: f32, metallic: f32, emission: vec3f) -> vec3f {
     var lit = vec3f(0.0);
 
     for (var i = 0u; i < m_uni.nLights; i++) {
@@ -261,15 +333,9 @@ fn evalToon(n: vec3f, v: vec3f, wpos: vec3f, baseColor: vec4f, roughness: f32, m
         if light.shadowMap >= 0 {
             let projected = light.VP * vec4(wpos, 1.0);
             let ndc = projected.xyz / projected.w;
-            let texCoords = vec2f(0.5, -0.5) * ndc.xy + 0.5;
-            
-            atten *= textureSampleCompare(
-                m_shadowMaps,
-                m_shadowSampler,
-                texCoords,
-                light.shadowMap,
-                ndc.z
-            );
+            let texCoords = vec2f(0.5, - 0.5) * ndc.xy + 0.5;
+
+            atten *= textureSampleCompare(m_shadowMaps, m_shadowSampler, texCoords, light.shadowMap, ndc.z);
         }
 
         let h = normalize(l + v);
@@ -291,8 +357,8 @@ fn evalToon(n: vec3f, v: vec3f, wpos: vec3f, baseColor: vec4f, roughness: f32, m
         let toonSpecular = step(specThreshold, specular);
 
         // final round of light stuff
-        let f0 = mix(vec3(0.04), baseColor.rgb, metallic);
-        let diffuseColor = baseColor.rgb * (1.0 - metallic);
+        let f0 = mix(vec3(0.04), baseColor, metallic);
+        let diffuseColor = baseColor * (1.0 - metallic);
         let lightColor = light.color * light.intensity;
 
         lit += (diffuseColor * toonDiffuse + f0 * toonSpecular) * lightColor * atten;
@@ -302,7 +368,7 @@ fn evalToon(n: vec3f, v: vec3f, wpos: vec3f, baseColor: vec4f, roughness: f32, m
     const p = 0.3;
     const ambient = 0.3;
     let fresnel = saturate(1 - pow(dot(v, n), p));
-    lit += baseColor.rgb * (ambient + fresnel) + emission;
+    lit += baseColor * (ambient + fresnel) + emission;
 
     return lit;
 }
@@ -318,7 +384,7 @@ fn mo_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let v = getViewVector(input.wpos);
     let n = input.normal;
 
-    return vec4f(evalToon(n, v, input.wpos, baseColor, roughness, metallic, emission), baseColor.a);
+    return vec4f(evalToon(n, v, input.wpos, baseColor.rgb, roughness, metallic, emission), baseColor.a);
 }
 
 @fragment
@@ -338,7 +404,7 @@ fn mac_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let v = getViewVector(input.wpos);
     let n = input.normal;
 
-    return vec4f(evalToon(n, v, input.wpos, baseColor, roughness, metallic, emission), baseColor.a);
+    return vec4f(evalToon(n, v, input.wpos, baseColor.rgb, roughness, metallic, emission), baseColor.a);
 }
 
 @fragment
@@ -352,7 +418,7 @@ fn mab_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let v = getViewVector(input.wpos);
     let n = input.normal;
 
-    return vec4f(evalToon(n, v, input.wpos, baseColor, roughness, metallic, emission), baseColor.a);
+    return vec4f(evalToon(n, v, input.wpos, baseColor.rgb, roughness, metallic, emission), baseColor.a);
 }
 
 //#endregion main
@@ -379,24 +445,16 @@ fn bm_fragment(@builtin(position) pos: vec4<f32>) -> @location(0) vec4f {
 //#region blur
 
 fn sampleBox(uv: vec2<f32>) -> vec3<f32> {
-    let a = uv.xyxy + br_uniforms.pixelSize.xyxy * vec2(1.0, -1.0).xxyy;
+    let a = uv.xyxy + br_uniforms.pixelSize.xyxy * vec2(1.0, - 1.0).xxyy;
 
-    return (
-        textureSample(br_input, br_smp, a.xy).rgb +
-        textureSample(br_input, br_smp, a.zy).rgb +
-        textureSample(br_input, br_smp, a.xw).rgb +
-        textureSample(br_input, br_smp, a.zw).rgb
-    ) * 0.25;
+    return (textureSample(br_input, br_smp, a.xy).rgb + textureSample(br_input, br_smp, a.zy).rgb + textureSample(br_input, br_smp, a.xw).rgb + textureSample(br_input, br_smp, a.zw).rgb) * 0.25;
 }
 
 @vertex
 fn br_vertex(@builtin(vertex_index) index: u32) -> VOPosUv {
     let pos = BIG_TRI[index];
 
-    return VOPosUv(
-        vec4f(pos, 0, 1), 
-        vec2f(pos.x * 0.5 + 0.5, pos.y * -0.5 + 0.5)
-    );
+    return VOPosUv(vec4f(pos, 0, 1), vec2f(pos.x * 0.5 + 0.5, pos.y * - 0.5 + 0.5));
 }
 
 @fragment
@@ -404,7 +462,6 @@ fn br_fragment(v: VOPosUv) -> @location(0) vec4f {
     let c = sampleBox(v.uv);
     return vec4f(c, 1.0);
 }
-
 
 //#endregion blur
 
@@ -461,14 +518,19 @@ fn noise(uv: vec2f, t: f32) -> f32 {
     return fract(sin(seed) * 43758.5453);
 }
 
+fn inoise(uv: vec2u, framen: u32) -> f32 {
+    var v = uv.x * 1664525u + uv.y * 1013904223u + framen * 2654435761u;
+    v ^= v >> 16u;
+    v *= 0x45d9f3bu;
+    v ^= v >> 16u;
+    return f32(v) / 4294967295.0;
+}
+
 @vertex
 fn p_vertex(@builtin(vertex_index) index: u32) -> VOPosUv {
     let pos = BIG_TRI[index];
 
-    return VOPosUv(
-        vec4f(pos, 0, 1), 
-        vec2f(pos.x * 0.5 + 0.5, pos.y * -0.5 + 0.5)
-    );
+    return VOPosUv(vec4f(pos, 0, 1), vec2f(pos.x * 0.5 + 0.5, pos.y * - 0.5 + 0.5));
 }
 
 @fragment
@@ -478,16 +540,13 @@ fn p_fragment(in: VOPosUv) -> @location(0) vec4f {
     let dist = distance(in.uv, vec2f(0.5));
 
     var c: vec3f;
-    
+
     if p_cfg.chromaticAberration == 0 {
         c = textureLoad(p_shaded, l, 0).rgb;
-    } else {
+    }
+    else {
         let caOffset = p_cfg.chromaticAberration * dist * 0.01;
-        c = vec3f(
-            textureSample(p_shaded, p_sampler, in.uv + vec2f(caOffset, 0.0)).r,
-            textureSample(p_shaded, p_sampler, in.uv).g,
-            textureSample(p_shaded, p_sampler, in.uv + vec2f(caOffset, 0.0)).b
-        );
+        c = vec3f(textureSample(p_shaded, p_sampler, in.uv + vec2f(caOffset, 0.0)).r, textureSample(p_shaded, p_sampler, in.uv).g, textureSample(p_shaded, p_sampler, in.uv + vec2f(caOffset, 0.0)).b);
     }
     c += textureLoad(p_bloom, l, 0).rgb * p_cfg.bloomPower;
 
@@ -506,10 +565,44 @@ fn p_fragment(in: VOPosUv) -> @location(0) vec4f {
     c *= vign;
     // grain
     if p_cfg.grain > 0 {
-        c += (noise(in.uv, p_cfg.time) - 0.5) * p_cfg.grain;
+        // c += (noise(in.uv, p_cfg.time) - 0.5) * p_cfg.grain;
+        c += (inoise(l, p_cfg.framen) - 0.5) * p_cfg.grain;
     }
 
     return vec4f(c, 1.0);
 }
 
 //#endregion post
+
+//#region glitch
+
+const PG_TRIQUAD = array(vec2f(0,0), vec2f(1,0), vec2f(0,1), vec2f(1,1));
+const PG_DIR = array(vec2f(-1,0), vec2f(0,-1), vec2f(1,0), vec2f(0,1));
+
+@vertex
+fn pg_vertex(@builtin(instance_index) bidx: u32, @builtin(vertex_index) vidx: u32) -> VOPosUv {
+    let gy = bidx / pg_cfg.nbx;
+    let gx = bidx - gy * pg_cfg.nbx;
+
+    let uvTopleft = vec2f(f32(gx) * pg_cfg.tileSize.x, f32(gy) * pg_cfg.tileSize.y);
+    let uvBase = uvTopleft + PG_TRIQUAD[vidx] * pg_cfg.tileSize;
+    let pos = vec2f(uvBase.x * 2.0 - 1.0, uvBase.y * - 2.0 + 1.0);
+
+    var uv = uvBase;
+
+    let rand = pg_buf[(bidx + pg_cfg.offset) % pg_cfg.buf];
+
+    if (rand < pg_cfg.probability) {
+        let dir = PG_DIR[bidx + u32(rand * 11) % 4];
+        uv += dir * pg_cfg.tileSize;
+    }
+
+    return VOPosUv(vec4f(pos, 0, 1), uv);
+}
+
+@fragment
+fn pg_fragment(int: VOPosUv) -> @location(0) vec4f {
+    return textureSample(pg_input, pg_sampler, int.uv);
+}
+
+//#endregion glitch

@@ -7,8 +7,12 @@ export function createDepthPipeline(
     format: GPUTextureFormat,
     multisample: number,
     shadow: boolean,
+    skin: boolean = false,
 ): GPURenderPipeline {
     const module = g.getShaderModule("toonf/toon");
+
+    const prefix = kind === "depthOpaque" ? "do" : "dac";
+    const vertexPrefix = skin ? `${prefix}_sk` : prefix;
 
     return g.device.createRenderPipeline({
         label: `${kind}:${format}:${multisample}x:${shadow ? "shadow" : "main"}`,
@@ -21,15 +25,17 @@ export function createDepthPipeline(
                           g.bindGroupLayouts["toonf/mat-alpha-clip"],
                       ],
         }),
-        primitive: TRI_LIST_CULLED,
+        primitive: shadow
+            ? { topology: "triangle-list", cullMode: "none" }
+            : TRI_LIST_CULLED,
         vertex: {
             module,
-            entryPoint: kind === "depthOpaque" ? "do_vertex" : "dac_vertex",
+            entryPoint: `${vertexPrefix}_vertex`,
             buffers: VERTEX_POS_UV,
         },
         fragment: {
             module,
-            entryPoint: kind === "depthOpaque" ? "do_fragment" : "dac_fragment",
+            entryPoint: `${prefix}_fragment`,
             targets: [],
         },
         depthStencil: {
@@ -55,10 +61,18 @@ export function getDepthPipeline(
     format: GPUTextureFormat,
     multisample: number,
     shadow = false,
+    skin: boolean = false,
 ): GPURenderPipeline {
-    const key = `${kind}:${format}:${multisample}x:${shadow ? "shadow" : "main"}`;
+    const key = `${kind}:${format}:${multisample}x:${shadow ? "shadow" : "main"}:${skin}`;
     if (!_cache[key]) {
-        _cache[key] = createDepthPipeline(g, kind, format, multisample, shadow);
+        _cache[key] = createDepthPipeline(
+            g,
+            kind,
+            format,
+            multisample,
+            shadow,
+            skin,
+        );
     }
     return _cache[key];
 }

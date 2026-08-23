@@ -30,6 +30,8 @@ import { UIManager } from "./honda/ui/ui";
 import { GameStorage } from "./storage";
 import { DEFAULT_SETTINGS } from "./honda/backends/wg";
 import { createToonRP } from "./toonf.rp";
+import { createMainMenuScene } from "./scenes/mainMenu.scene";
+import { importGltf } from "./assets";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
 
@@ -104,34 +106,7 @@ function setPlatformInfo(gpu: WGpu) {
 }
 
 async function gameEntry() {
-    const as = Game.ecs.getService(AssetSrv);
-
-    const level = new GltfLoader(await GltfBinary.fromUrl("./next.glb"));
-    const tc = new GltfLoader(await GltfBinary.fromUrl("./testchr.glb"));
-    const sc = new GltfLoader(
-        await GltfBinary.fromUrl("./SummoningCircle.glb"),
-    );
-    const eg = new GltfLoader(await GltfBinary.fromUrl("./EnemyGeneric.glb"));
-
-    as.registerAsset("level", level);
-    as.registerAsset("testchr", tc);
-    as.registerAsset("summoningcircle", sc);
-    as.registerAsset("enemyGeneric", eg);
-
-    as.registerAsset(
-        "alphatest",
-        new GltfLoader(await GltfBinary.fromUrl("./smile.glb")),
-    );
-
-    as.registerAsset(
-        "spheres",
-        new GltfLoader(await GltfBinary.fromUrl("./spheres2.glb")),
-    );
-
-    as.registerAsset(
-        "hatsunefuckingmiku",
-        new GltfLoader(await GltfBinary.fromUrl("./hatsunefuckingmiku.glb")),
-    );
+    await importGltf(Game.ecs.getService(AssetSrv));
 
     await Game.ecs.getSystem(SoundSys).loadAudioFiles({
         step1: "/sound/step1.opus",
@@ -146,7 +121,6 @@ async function gameEntry() {
     Game.sceneManager.queueScene(createScene);
 }
 
-// TODO(mbabnik): Proper UI layer (vue?)
 // TODO(mbabnik): Add ability to pause the game loop (but keep some level of code running)
 
 async function mount() {
@@ -166,16 +140,11 @@ async function mount() {
     Game.ecs.registerService(DebugSrv, new DebugService());
     Game.ecs.registerService(VisualSrv, new VisualService());
 
-    /**
-     * Initalize GPU backend & create rendering pipeline
-     */
-    const gpu = await WGpu.obtainForCanvas(
-        GameStorage.getKeyOrDefault("settings", {
-            version: 2,
-            ...DEFAULT_SETTINGS,
-        }),
-        canvas,
-    );
+    const wgSettings = GameStorage.getKeyOrDefault("settings", {
+        version: 2,
+        ...DEFAULT_SETTINGS,
+    });
+    const gpu = await WGpu.obtainForCanvas(wgSettings, canvas);
 
     createToonRP(gpu, Game.ecs);
     gpu.printRenderPath();

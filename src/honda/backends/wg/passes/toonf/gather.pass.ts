@@ -93,6 +93,7 @@ export interface MeshDraws {
 
 export interface GPUPostCfg extends PostCfg {
     time: number;
+    framen: number;
 }
 
 export class GatherDataPass implements IPass {
@@ -370,7 +371,10 @@ export class GatherDataPass implements IPass {
     private gatherPostConfig(): void {
         const c = this.visualService.postConfig;
         this.postConfigBuffer.set(c);
-        this.postConfigBuffer.set({ time: performance.now() });
+        this.postConfigBuffer.set({
+            time: performance.now() / 1000,
+            framen: this.g.frameNo % (1 << 30),
+        });
         this.postConfigBuffer.push();
     }
 }

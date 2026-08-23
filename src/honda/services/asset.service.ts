@@ -17,7 +17,7 @@ export class AssetService implements IService {
     }
 
     public getAsset(name: string): GltfLoader {
-        return nn(this._assets.get(name));
+        return nn(this._assets.get(name), `Asset not found: ${name}`);
     }
 }
 

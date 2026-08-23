@@ -15,9 +15,14 @@ import {
     V4Sampler,
     SSampler,
     V3Sampler,
-} from "./animationsampler";
-import { HAnimation } from "./animation";
-import { MeshComponent, SkinInfo, SkinnedMeshComponent } from "@/honda/";
+} from "../../animation/animationsampler";
+import { HAnimation } from "../../animation/animation";
+import {
+    MeshComponent,
+    SkinInfo,
+    SkinnedMeshComponent,
+    type Three,
+} from "@/honda/";
 import {
     GPUBufHint,
     GPUBufUsage,
@@ -42,6 +47,7 @@ import {
 } from "./constants";
 import { SmartWeakCache, TrivialCache, TrivialWeakCache } from "../cache";
 import { MeshIndexType, MeshV2 } from "@/honda/gpu2/mesh";
+import { AnimationLayerDef } from "../../animation/animlayer";
 
 type GltfCache = {
     buffers: SmartWeakCache<number, IGPUBuf>;
@@ -347,7 +353,20 @@ export class GltfLoader {
         if (texEms !== undefined) emsTex = this.getTextureV2(texEms);
         if (texNor !== undefined) norTex = this.getTextureV2(texNor);
 
-        return Game.gpu.createMaterial({
+        const emissionFactor: Three<number> = gMaterial.emissiveFactor ?? [
+            0, 0, 0,
+        ];
+
+        const extEmissiveStrength =
+            gMaterial.extensions?.KHR_materials_emissive_strength?.emissiveStrength
+
+        if (extEmissiveStrength !== undefined) {
+            emissionFactor.forEach((v, i, a) => {
+                a[i] = v * extEmissiveStrength;
+            });
+        }
+
+        const mat = Game.gpu.createMaterial({
             label: name,
 
             baseTexture: baseTex,
@@ -355,19 +374,25 @@ export class GltfLoader {
             emissionTexture: emsTex,
             normalTexture: norTex,
 
-            // found out about the 1.0 defaults the hard way :(
             colorFactor: gMaterial.pbrMetallicRoughness?.baseColorFactor ?? [
                 1, 1, 1, 1,
             ],
             metallicFactor: gMaterial.pbrMetallicRoughness?.metallicFactor ?? 1,
             roughnessFactor:
                 gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
-            emissionFactor: gMaterial.emissiveFactor,
+            emissionFactor: emissionFactor,
             normalScale: gMaterial.normalTexture?.scale,
 
             alphaCutoff: gMaterial.alphaCutoff,
             alphaMode: ALPHA_MODE_MAP[gMaterial.alphaMode as TG.TAlphaMode],
         });
+
+        if (gMaterial.name === "__holdout__") {
+            mat.renderMain = false;
+            mat.renderShadow = false;
+        }
+
+        return mat;
     }
 
     public getMaterialV2(idx: number): IGPUMat {
@@ -538,7 +563,7 @@ export class GltfLoader {
 
     //#region Nodes & Scene Handling
 
-    public nodeConvert(index: number): SceneNode | undefined {
+    public nodeConvert(index: number): SceneNode {
         const gNode = nn(this.file.json.nodes?.[index]);
         const node = new SceneNode();
         node.meta.gltfId = this.file.id;
@@ -624,6 +649,13 @@ export class GltfLoader {
         return node;
     }
 
+    public getNodeByName(name: string): SceneNode {
+        const idx =
+            this.file.json.nodes?.findIndex((x) => x.name === name) ?? -1;
+
+        return this.nodeConvert(idx);
+    }
+
     //#endregion Nodes & Scene Handling
 
     //#region Animations
@@ -699,6 +731,75 @@ export class GltfLoader {
             (x) => x.name === name,
         );
         return this.getAnimation(index);
+    }
+
+    public getSkinAnimationLayerDef(rootNodeId: number): AnimationLayerDef {
+        const rootNode = nn(
+            this.file.json.nodes?.[rootNodeId],
+            "Root node OOB",
+        );
+
+        const skin = nn(rootNode.skin, "Root node has no skin");
+
+        const joints = nn(
+            this.file.json.skins?.[skin].joints,
+            "Skin has no joints",
+        );
+
+        // TODO: cache this
+        const def = new AnimationLayerDef(
+            this.file.id,
+            rootNodeId,
+            joints,
+            joints.map((j) => this.file.json.nodes?.[j].name),
+        );
+
+        return def;
+    }
+
+    private _collectNodesWithFilter(
+        aid: number[],
+        anm: string[],
+        currentNodeId: number,
+        nodeFilter?: (node: TG.INodeWithTRS) => boolean,
+    ) {
+        const node = nn(this.file.json.nodes?.[currentNodeId], "Node OOB");
+
+        const hasTrs = !!node.translation && !!node.rotation && !!node.scale;
+        const result = hasTrs && (nodeFilter?.(node) ?? true);
+
+        if (!result) return;
+
+        aid.push(currentNodeId);
+        anm.push(node.name ?? `node.${currentNodeId}`);
+
+        for (const childId of node.children ?? []) {
+            this._collectNodesWithFilter(aid, anm, childId, nodeFilter);
+        }
+    }
+
+    /**
+     * Creates an artifical layer def
+     */
+    public artificalLayerDef(
+        rootNodeId: number,
+        nodeFilter?: (node: TG.INodeWithTRS) => boolean,
+    ): AnimationLayerDef {
+        const joints: number[] = [];
+        const names: string[] = [];
+        this._collectNodesWithFilter(joints, names, rootNodeId, nodeFilter);
+
+        assert(joints.length > 0, "Artificial layer has no nodes!");
+        assert(names.length === joints.length, "Node and name count mismatch!");
+
+        const def = new AnimationLayerDef(
+            this.file.id,
+            rootNodeId,
+            joints,
+            names,
+        );
+
+        return def;
     }
 
     //#endregion Animations

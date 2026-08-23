@@ -60,7 +60,6 @@ export class DepthPass implements IPass {
 
     public apply(): void {
         //FIXME: ???
-        void this.depthAlphaClipPipeline;
         void this.meshInstanceBuffer;
 
         // push new VP
@@ -91,6 +90,9 @@ export class DepthPass implements IPass {
 
         for (i = 0; i < this.meshDraws.opaque.length; i++) {
             const draw = this.meshDraws.opaque[i];
+            // console.log('prepass draw', draw.mesh.id, draw.mat.label)
+
+            if (!draw.mat.renderPrepass) continue;
 
             if (draw.mat.alphaMode !== GPUMatAlpha.OPAQUE) {
                 break;
@@ -123,8 +125,14 @@ export class DepthPass implements IPass {
             }
         }
 
+        if (i < this.meshDraws.opaque.length) {
+            rp.setPipeline(this.depthAlphaClipPipeline);
+        }
+
         for (; i < this.meshDraws.opaque.length; i++) {
             const draw = this.meshDraws.opaque[i];
+            // console.log('prepass draw', draw.mesh.id, draw.mat.label)
+            if (!draw.mat.renderPrepass) continue;
 
             rp.setVertexBuffer(0, (draw.mesh.position as WGBuf).buffer);
             rp.setVertexBuffer(1, (draw.mesh.texCoord as WGBuf).buffer);
@@ -155,5 +163,7 @@ export class DepthPass implements IPass {
         }
 
         rp.end();
+
+        // throw "?";
     }
 }

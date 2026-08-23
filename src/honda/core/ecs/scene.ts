@@ -1,3 +1,4 @@
+import { mat4 } from "wgpu-matrix";
 import { SceneNode } from "./node";
 
 function updateTransforms(n: SceneNode) {
@@ -11,6 +12,9 @@ export class Scene extends SceneNode {
     constructor() {
         super();
         this.name = "Scene";
+
+        mat4.identity(this.transform.$glbMtx);
+        mat4.identity(this.transform.$glbInvMtx);
     }
 
     public computeTransforms() {

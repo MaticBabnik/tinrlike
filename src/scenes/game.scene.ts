@@ -6,29 +6,25 @@ import {
     Script,
     LightComponent,
     type DebugService,
-    AABBShape,
     CircleShape,
     CopyTransformMode,
     DynamicPhysicsObject,
     FizComponent,
     FizMaterial,
-    StaticPhysicsObject,
     FIZ_LAYER_PHYS,
-    MeshComponent,
     Scene,
     DebugSrv,
     AssetSrv,
+    VisualSrv,
+    type VisualService,
+    PI_2,
 } from "@/honda";
 import { quat } from "wgpu-matrix";
-import { AnimationPlayerScript } from "@/scripts/animplayer.script";
 import {
-    TL_LAYER_ENEMY,
     TL_LAYER_PLAYER,
-    TL_LAYER_PLAYER_PROJECTILE,
 } from "../constants";
 import { PlayerScript } from "../scripts/player.script";
 import { LerpCameraScript } from "../scripts/lerpCamera.script";
-import { BasicStateMachine } from "../scripts/ai/basicStateMachine";
 import GameHud from "@/ui/GameHud.vue";
 
 class UIScript extends Script {
@@ -47,11 +43,25 @@ class UIScript extends Script {
     }
 }
 
+class FanScript extends Script {
+    public override update(): void {
+        quat.fromEuler(PI_2, Game.time, 0, "xyz", this.node.transform.rotation);
+        this.node.transform.update();
+    }
+}
+
+
+class PropellerScript extends Script {
+    public override update(): void {
+        quat.fromEuler(0, Game.time, 0, "xyz", this.node.transform.rotation);
+        this.node.transform.update();
+    }
+}
+
+
 export function createScene() {
     const as = Game.ecs.getService(AssetSrv);
-    const level = as.getAsset("level");
-    const sc = as.getAsset("summoningcircle");
-    const alpha = as.getAsset("alphatest");
+    const level = as.getAsset("l1");
 
     const scene = new Scene();
     scene.name = "GameScene";
@@ -59,98 +69,27 @@ export function createScene() {
 
     scene.addChild(level.sceneAsNode());
 
-    // create coliders
-    {
-        const a = new SceneNode();
-        a.name = "StaticColliders";
+    scene.forEachChild((x) => {
+        if (x.name.startsWith("Fan.Blade")) {
+            x.addComponent(new ScriptComponent(new FanScript()));
+        }
 
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(7, 7), [-12, 12]),
-                "FrontWall",
-                CopyTransformMode.None,
-            ),
-        );
+        if (x.name.startsWith("Spot")) {
+            const l = x.assertComponent(LightComponent);
+            l.lightInfo.color = [0, 0.7, 1];
+            l.lightInfo.intensity = 25;
+        }
+    });
 
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(7, 7), [12, -12]),
-                "BackWall",
-                CopyTransformMode.None,
-            ),
-        );
+    const maybeLight = scene
+        .findChild((x) => x.name === "Sun")
+        ?.assertComponent(LightComponent);
+    const maybeSun =
+        maybeLight?.lightInfo.type === "directional"
+            ? maybeLight.lightInfo
+            : undefined;
 
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(2, 2), [-8, -8]),
-                "BoxesLeft",
-                CopyTransformMode.None,
-            ),
-        );
-
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(2, 2), [8, 8]),
-                "BoxesRight",
-                CopyTransformMode.None,
-            ),
-        );
-
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(22, 2), [0, -19]),
-                "WallLeftBack",
-                CopyTransformMode.None,
-            ),
-        );
-
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(22, 2), [0, 19]),
-                "WallRightFront",
-                CopyTransformMode.None,
-            ),
-        );
-
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(2, 18), [-19, 0]),
-                "WallLeftFront",
-                CopyTransformMode.None,
-            ),
-        );
-
-        a.addComponent(
-            new FizComponent(
-                new StaticPhysicsObject(new AABBShape(2, 18), [19, 0]),
-                "WallRightBack",
-                CopyTransformMode.None,
-            ),
-        );
-
-        scene.addChild(a);
-    }
-
-    // hurt thingy
-    {
-        // const spikeNode = nn(
-        //     scene.findChild((x) => x.name === "floor_tile_big_spikes"),
-        // );
-        // spikeNode.addComponent(
-        //     new FizComponent(
-        //         new StaticPhysicsObject(
-        //             new AABBShape(1.4, 1.4),
-        //             [0, 0],
-        //             0,
-        //             0,
-        //             TL_LAYER_PLAYER,
-        //         ),
-        //         "HurtZone",
-        //         CopyTransformMode.PositionXZ,
-        //     ),
-        // );
-        // spikeNode.addComponent(new ScriptComponent(new SpikeScript()));
-    }
+    maybeSun!.maxRange = 10;
 
     const DEG = Math.PI / 180;
     {
@@ -175,45 +114,25 @@ export function createScene() {
         );
         player.addComponent(new ScriptComponent(new PlayerScript()));
 
-        const hatsunefuckingmiku = as
-            .getAsset("hatsunefuckingmiku")
+        const miku = as
+            .getAsset("miku")
             .sceneAsNode();
 
-        hatsunefuckingmiku.transform.scale.fill(0.2);
+        miku.transform.scale.fill(0.1);
         quat.fromEuler(
             0,
             (-1 * Math.PI) / 4,
             0,
             "xyz",
-            hatsunefuckingmiku.transform.rotation,
+            miku.transform.rotation,
         );
-        hatsunefuckingmiku.transform.update();
+        miku.transform.update();
 
-        player.addChild(hatsunefuckingmiku);
-
-        {
-            const n = new SceneNode();
-            n.name = "testLight";
-            n.transform.translation.set([0, 1, 0]);
-            n.transform.update();
-
-            n.addComponent(
-                new LightComponent({
-                    type: "point",
-                    color: [1, 0, 1],
-                    intensity: 5,
-                    maxRange: 10,
-                    castShadows: false,
-                }),
-            );
-
-            player.addChild(n);
-        }
+        player.addChild(miku);
 
         scene.addChild(player);
 
         const cameraHolder = new SceneNode();
-
         const camera = new SceneNode();
         camera.name = "Camera";
         camera.transform.translation.set([0, 0, 50]);
@@ -232,26 +151,6 @@ export function createScene() {
         cameraHolder.addChild(camera);
         cameraHolder.addComponent(new ScriptComponent(new LerpCameraScript()));
         scene.addChild(cameraHolder);
-    }
-
-    {
-        const sun = new SceneNode();
-
-        sun.name = "sun";
-        sun.addComponent(
-            new LightComponent({
-                castShadows: true,
-                color: [1, 0.953, 0.871],
-                intensity: 2,
-                type: "directional",
-                maxRange: 20,
-            }),
-        );
-
-        sun.transform.rotation = quat.fromEuler(-65, -45, 0, "xyz");
-        sun.transform.update();
-
-        scene.addChild(sun);
     }
 
     scene.addComponent(
@@ -274,114 +173,73 @@ export function createScene() {
     );
 
     {
-        const scn = sc.sceneAsNode();
-        const scMesh = scn.assertChildComponent(MeshComponent);
-        scMesh.castShadow = false;
-        scMesh.material.emissionFactor = [4, 0, 0];
-        scMesh.material.push();
+        const drone = as.getAsset("drone").getNodeByName("Drone");
 
-        scn.transform.translation.set([0, 0.1, 0]);
-        scn.transform.update();
+        drone.children.forEach((node) => {
+            if (node.name.startsWith("Propeller")) {
+                node.addComponent(new ScriptComponent(new PropellerScript()));
+            }
+        });
 
-        const anim = sc.getAnimation(0);
-        anim.attach(scn);
-        const ap = new AnimationPlayerScript(anim);
-        scn.addComponent(new ScriptComponent(ap));
+        drone.transform.translation.set([0, 1.5, 0]);
+        drone.transform.scale.fill(0.1);
+        quat.fromEuler(0, PI_2 * 1.5, 0, "xyz", drone.transform.rotation);
+        drone.transform.update();
 
-        // scene.addChild(scn);
+        scene.addChild(drone);
     }
 
-    {
-        const enemy1 = new SceneNode();
-        enemy1.name = "Enemy1";
-        enemy1.transform.translation.set([-5, 0, -5]);
-        enemy1.transform.update();
+    scene.addComponent(
+        new ScriptComponent(
+            new (class extends Script {
+                public glitchMinTime = 0.2;
+                public glitchMaxTime = 0.4;
+                public offsetTime = 0.2;
 
-        const eg = as.getAsset("enemyGeneric");
-        const egNode = eg.sceneAsNode();
+                private nextGlitch = 0;
+                private nextOffset = 0;
 
-        enemy1.addChild(egNode);
+                private vis!: VisualService;
 
-        enemy1.addComponent(
-            new FizComponent(
-                new DynamicPhysicsObject(
-                    new CircleShape(0.5),
-                    [-5, -5],
-                    0,
-                    0.1,
-                    FIZ_LAYER_PHYS | TL_LAYER_ENEMY,
-                    TL_LAYER_PLAYER_PROJECTILE,
-                    new FizMaterial(0.1, 0.6),
-                ),
-                "Enemy1",
-                CopyTransformMode.PositionXZ,
-            ),
-        );
+                public onAttach(): void {
+                    this.vis = Game.ecs.getService(VisualSrv);
+                    this.vis.glitchConfig.blockSize = 256;
+                    this.vis.glitchConfig.probability = 0.3;
+                }
 
-        enemy1.addComponent(new ScriptComponent(new BasicStateMachine()));
+                private frame = 0;
 
-        scene.addChild(enemy1);
-    }
+                public update(): void {
+                    const glen = Game.input.btnMap.KeyG ?? false;
+                    this.vis.glitchConfig.enabled = glen;
+                    this.vis.postConfig.grain = glen ? 1 : 0.05;
+                    this.vis.postConfig.saturation = glen ? 3 : 1;
+                    this.vis.bloomConfig.threshold = glen ? 5 : 10;
+                    this.vis.postConfig.bloomPower = glen ? 10 : 0.5;
+                    this.vis.postConfig.chromaticAberration = glen ? 1 : 0.05;
 
-    for (let i = 0; i < 3; i++) {
-        const an = alpha.sceneAsNode();
-
-        an.name = `Alpha ${i}`;
-        an.transform.translation[0] = i * 2;
-        an.transform.translation[1] = 1;
-        an.transform.scale.set([0.5, 0.5, 0.5]);
-        an.transform.update();
-
-        an.addComponent(
-            new ScriptComponent(
-                new (class extends Script {
-                    public update(): void {
-                        quat.fromAxisAngle(
-                            [0, 1, 0],
-                            Game.time * 0.5,
-                            this.node.transform.rotation,
+                    if (Game.time >= this.nextOffset) {
+                        this.vis.glitchConfig.offset = Math.floor(
+                            Math.random() * 3,
                         );
-                        this.node.transform.update();
+                        this.nextOffset = Game.time + this.offsetTime;
                     }
-                })(),
-            ),
-        );
 
-        scene.addChild(an);
-    }
+                    if (Game.time >= this.nextGlitch) {
+                        this.vis.glitchConfig.reroll = true;
+                        this.nextGlitch =
+                            Game.time +
+                            Math.random() *
+                                (this.glitchMaxTime - this.glitchMinTime) +
+                            this.glitchMinTime;
+                    }
 
-    {
-        const spheres = as.getAsset("spheres").sceneAsNode();
-        spheres.transform.scale.fill(0.5);
-        quat.fromEuler(
-            0,
-            (-3 * Math.PI) / 4,
-            0,
-            "xyz",
-            spheres.transform.rotation,
-        );
-        spheres.transform.update();
-
-        scene.addChild(spheres);
-    }
-
-    {
-        const hatsunefuckingmiku = as
-            .getAsset("hatsunefuckingmiku")
-            .sceneAsNode();
-
-        hatsunefuckingmiku.transform.scale.fill(0.3);
-        quat.fromEuler(
-            0,
-            (-1 * Math.PI) / 4,
-            0,
-            "xyz",
-            hatsunefuckingmiku.transform.rotation,
-        );
-        hatsunefuckingmiku.transform.update();
-
-        scene.addChild(hatsunefuckingmiku);
-    }
+                    this.frame++;
+                }
+            })(),
+            "glitchToggle",
+        ),
+    );
 
     console.groupCollapsed("scene");
     console.log(scene.tree());

@@ -110,13 +110,13 @@ export class MainPass implements IPass {
                     view: this.color.view,
                     loadOp: "clear",
                     storeOp: "store",
+                    clearValue: { r: 5, g: 5, b: 5, a: 1 },
                 },
             ],
             depthStencilAttachment: {
                 view: this.depth.view,
-                depthLoadOp: "clear",
+                depthLoadOp: "load",
                 depthStoreOp: "store",
-                depthClearValue: 0,
             },
             timestampWrites: this.g.timestamp("main"),
         });
@@ -128,6 +128,7 @@ export class MainPass implements IPass {
 
         for (let i = 0; i < this.meshDraws.opaque.length; i++) {
             const draw = this.meshDraws.opaque[i];
+            if (!draw.mat.renderMain) continue;
 
             rp.setVertexBuffer(0, (draw.mesh.position as WGBuf).buffer);
             rp.setVertexBuffer(1, (draw.mesh.texCoord as WGBuf).buffer);
@@ -165,6 +166,8 @@ export class MainPass implements IPass {
 
         for (let i = 0; i < this.meshDraws.blend.length; i++) {
             const draw = this.meshDraws.blend[i];
+            
+            if (!draw.mat.renderMain) continue;
 
             rp.setVertexBuffer(0, (draw.mesh.position as WGBuf).buffer);
             rp.setVertexBuffer(1, (draw.mesh.texCoord as WGBuf).buffer);

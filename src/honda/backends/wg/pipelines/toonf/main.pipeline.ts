@@ -14,6 +14,7 @@ export function createMainPipeline(
     colorFormat: GPUTextureFormat,
     depthFormat: GPUTextureFormat,
     multisample: number,
+    skin: boolean = false,
 ): GPURenderPipeline {
     const module = g.getShaderModule("toonf/toon");
 
@@ -28,7 +29,7 @@ export function createMainPipeline(
         primitive: TRI_LIST_CULLED,
         vertex: {
             module,
-            entryPoint: `m_vertex`,
+            entryPoint: skin ? `m_sk_vertex` : `m_vertex`,
             buffers: VERTEX_POS_UV_NORM,
         },
         fragment: {
@@ -75,8 +76,9 @@ export function getMainPipeline(
     colorFormat: GPUTextureFormat,
     depthFormat: GPUTextureFormat,
     multisample: number,
+    skin: boolean = false,
 ): GPURenderPipeline {
-    const key = `${kind}:${colorFormat}:${depthFormat}:${multisample}x`;
+    const key = `${kind}:${colorFormat}:${depthFormat}:${multisample}x:${skin}`;
     if (!_cache[key]) {
         _cache[key] = createMainPipeline(
             g,
@@ -84,6 +86,7 @@ export function getMainPipeline(
             colorFormat,
             depthFormat,
             multisample,
+            skin,
         );
     }
     return _cache[key];

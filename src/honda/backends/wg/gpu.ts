@@ -158,6 +158,7 @@ export class WGpu implements IGPUImplementation {
         wg.configure({
             device,
             format: navigator.gpu.getPreferredCanvasFormat(),
+            alphaMode: 'opaque'
         });
 
         return new WGpu(settings, adapter, device, canvas, wg);
@@ -475,7 +476,9 @@ export class WGpu implements IGPUImplementation {
             .map((t) => t.label ?? `<${t.format} ${t.width}x${t.height}>`)
             .join(", ");
 
-        const passes = this._passes.map((p) => p.constructor.name).join(", ");
+        const passes = this._passes
+            .map((p) => p.describe?.() ?? p.constructor.name)
+            .join(", ");
 
         console.log(
             `%cRender Path: ${this.$rpId}

@@ -122,6 +122,12 @@ const layouts = [
         .binding(1, "f", "texture")
         .binding(2, "f", "texture")
         .binding(3, "f", "sampler"),
+
+    bindGroupLayout("toonf/glitch")
+        .binding(0, "vf", "buffer", { type: "uniform" })
+        .binding(1, "v", "buffer", { type: "read-only-storage" })
+        .binding(2, "f", "sampler")
+        .binding(3, "f", "texture"),
 ] as const;
 
 export function createBindGroupLayouts(g: WGpu) {

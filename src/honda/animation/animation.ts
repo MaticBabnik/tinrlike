@@ -1,9 +1,8 @@
 import type { SceneNode } from "@/honda/core/ecs";
-import { nn } from "..";
+import { nn } from "../util";
 import { type ASampler, V3Sampler, V4Sampler } from "./animationsampler";
-import type { IAnimtionChannel } from "./gltf.types";
+import type { IAnimtionChannel } from "../util/gltf/gltf.types";
 
-// TODO: move to honda/animation
 
 interface IHAnimationChannel {
     node: SceneNode;
@@ -11,7 +10,6 @@ interface IHAnimationChannel {
     sampler: ASampler;
 }
 
-// TODO: this is fucking terrible; also the name is abit sus
 export class HAnimation {
     public length: number;
     private channels: IHAnimationChannel[] = [];

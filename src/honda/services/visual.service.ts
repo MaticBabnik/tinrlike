@@ -21,6 +21,15 @@ export interface BloomCfg {
     maxPasses: number;
 }
 
+export interface GlitchCfg {
+    enabled: boolean;
+    offset: number;
+    probability: number;
+    reroll: boolean;
+    rotate: boolean;
+    blockSize: number;
+}
+
 /**
  * A singleton that gets read by the RP
  */
@@ -28,21 +37,30 @@ export class VisualService implements IService {
     public readonly name = "VisualService";
 
     public readonly bloomConfig: BloomCfg = {
-        threshold: 1,
-        knee: 0.5,
-        maxPasses: 5,
+        threshold: 10,
+        knee: 0.6,
+        maxPasses: 10,
     };
 
     public readonly postConfig: PostCfg = {
-        gamma: 1.8,
-        exposure: 1,
-        bloomPower: 1,
+        gamma: 1.4,
+        exposure: 5,
+        bloomPower: 0.5,
         saturation: 1,
-        vignette: 1,
-        grain: 0,
+        vignette: .5,
+        grain: 0.05,
         chromaticAberration: 0.05,
         colorAdd: [0, 0, 0],
         colorMul: [1, 1, 1],
+    };
+
+    public readonly glitchConfig: GlitchCfg = {
+        enabled: false,
+        offset: 0,
+        probability: 0.3,
+        reroll: false,
+        rotate: false,
+        blockSize: 32,
     };
 }
 

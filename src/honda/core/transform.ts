@@ -15,22 +15,43 @@ export interface ITransform extends ITransformData {
     $updateGlobal(parent: Transform): void;
 }
 
+const MTX_SIZE = 4 * 4 * 4; // 4x4 matrix of float32
+const VEC_SIZE = 4 * 4; // vec4 (or aligned vec3) of float32
+const TRANSFORM_SIZE = 4 * MTX_SIZE + 3 * VEC_SIZE;
+
+const _scratch = mat4.create();
+
 export class Transform implements ITransform {
-    private _locMtx: Mat4;
-    private _locInvMtx: Mat4;
-    public $glbMtx: Mat4;
-    public $glbInvMtx: Mat4;
+    public $mem: ArrayBuffer;
+
+    public readonly $glbMtx: Mat4;
+    public readonly $glbInvMtx: Mat4;
+    private readonly _locMtx: Mat4;
+    private readonly _locInvMtx: Mat4;
+
+    public readonly translation: Vec3;
+    public readonly rotation: Quat;
+    public readonly scale: Vec3;
+
     public dirty = false;
 
-    constructor(
-        public translation = vec3.create(),
-        public rotation = quat.identity(),
-        public scale = vec3.create(1, 1, 1),
-    ) {
-        this._locMtx = mat4.identity();
-        this._locInvMtx = mat4.identity();
-        this.$glbMtx = mat4.identity();
-        this.$glbInvMtx = mat4.identity();
+    constructor() {
+        const mem = new ArrayBuffer(TRANSFORM_SIZE);
+        this.$mem = mem;
+        this.$glbMtx = new Float32Array(mem, 0, 16);
+        this.$glbInvMtx = new Float32Array(mem, MTX_SIZE, 16);
+        this._locMtx = new Float32Array(mem, 2 * MTX_SIZE, 16);
+        this._locInvMtx = new Float32Array(mem, 3 * MTX_SIZE, 16);
+
+        this.translation = new Float32Array(mem, 4 * MTX_SIZE, 3);
+        this.rotation = new Float32Array(mem, 4 * MTX_SIZE + VEC_SIZE, 4);
+        this.scale = new Float32Array(mem, 4 * MTX_SIZE + 2 * VEC_SIZE, 3);
+
+        this.translation.fill(0);
+        this.scale.fill(1);
+        this.rotation[0] = this.rotation[1] = this.rotation[2] = 0;
+        this.rotation[3] = 1;
+
         this.updateLocal();
     }
 
@@ -45,13 +66,12 @@ export class Transform implements ITransform {
         if (this.dirty) this.updateLocal();
     }
 
-    private _scratch = mat4.create();
     private updateLocal() {
         mat4.identity(this._locMtx);
         mat4.translate(this._locMtx, this.translation, this._locMtx);
         mat4.multiply(
             this._locMtx,
-            mat4.fromQuat(this.rotation, this._scratch),
+            mat4.fromQuat(this.rotation, _scratch),
             this._locMtx,
         );
         mat4.scale(this._locMtx, this.scale, this._locMtx);

@@ -7,7 +7,7 @@ import {
     type Vec4,
     vec4,
 } from "wgpu-matrix";
-import type { GltfAccessor } from "./types";
+import type { GltfAccessor } from "../util/gltf/types";
 
 export enum AnimInterp {
     STEP = "STEP",
@@ -48,6 +48,8 @@ function spline(
 }
 
 export class SSampler {
+    public readonly N = 1;
+
     constructor(
         public readonly interp: AnimInterp,
         public readonly inAcc: GltfAccessor<
@@ -110,6 +112,8 @@ export class SSampler {
 }
 
 export class V3Sampler {
+    public readonly N = 3;
+
     constructor(
         public readonly interp: AnimInterp,
         public readonly inAcc: GltfAccessor<
@@ -123,7 +127,7 @@ export class V3Sampler {
         return this.sampleInto(t, vec3.create());
     }
 
-    public sampleInto(t: number, v: Vec3): Vec3 {
+    public sampleInto(t: number, v: Vec3, _: boolean = false): Vec3 {
         const l = this.inAcc.count - 1;
         const o = this.interp === AnimInterp.CUBICSPLINE ? 1 : 0;
 
@@ -217,6 +221,8 @@ export class V3Sampler {
 }
 
 export class V4Sampler {
+    public readonly N = 4;
+
     constructor(
         public readonly interp: AnimInterp,
         public readonly inAcc: GltfAccessor<

@@ -1,4 +1,10 @@
-import { CameraSys, LightSys, MeshSys, VisualSrv, type ECS } from "./honda";
+import {
+    CameraSys,
+    LightSys,
+    MeshSys,
+    VisualSrv,
+    type ECS,
+} from "./honda";
 import {
     Buffer,
     ShadowMapTexture,
@@ -8,6 +14,8 @@ import {
     ViewportTexture,
     type WGpu,
 } from "./honda/backends/wg";
+import { FunctionPass } from "./honda/backends/wg/passes/function.pass";
+import { SwitchPass } from "./honda/backends/wg/passes/switch.pass";
 import { BloomPass } from "./honda/backends/wg/passes/toonf/bloom.pass";
 import { DepthPass } from "./honda/backends/wg/passes/toonf/depth.pass";
 import {
@@ -17,12 +25,19 @@ import {
     type UniformData,
     type GPUPostCfg,
 } from "./honda/backends/wg/passes/toonf/gather.pass";
+import { GlitchPass } from "./honda/backends/wg/passes/toonf/glitch.pass";
 import { MainPass } from "./honda/backends/wg/passes/toonf/main.pass";
 import { PostPass } from "./honda/backends/wg/passes/toonf/post.pass";
 import { ResolvePass } from "./honda/backends/wg/passes/toonf/resolve.pass";
 import { ShadowPass } from "./honda/backends/wg/passes/toonf/shadow.pass";
+import { SwitchbleTView } from "./honda/backends/wg/texture/switch";
 
 export async function createToonRP(gpu: WGpu, ecs: ECS) {
+    if (document.location.hash === "#debug") {
+        // FIXME: WebGPU devtools blow up when doing multisampling
+        gpu.settings.multisample = 1;
+    }
+
     const { multisample, renderScale, shadowMapSize } = gpu.settings;
 
     console.log(gpu.settings);
@@ -70,6 +85,13 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
         "shadowmaps",
     );
 
+    const postTmp = new ViewportTexture(
+        gpu.pFormat,
+        renderScale,
+        "postTmp",
+        false,
+    );
+
     shadowmaps.alloc(gpu.device);
 
     const meshDraws: MeshDraws = {
@@ -115,15 +137,35 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
     gpu.addViewport(shadedRenderTarget);
     gpu.addViewport(depth);
     gpu.addViewport(bloom);
+    gpu.addViewport(postTmp);
+
+    const post2target = new SwitchbleTView(
+        "post2target",
+        gpu.canvasTexture,
+        postTmp,
+    );
+
+    const visualService = ecs.getService(VisualSrv);
+
+    gpu.addPass(
+        new FunctionPass(() => {
+            post2target.resetSwitched();
+
+            // when enabled it activates the 2nd post2target,
+            // which allows for glitching the final image before it gets drawn to the canvas
+            post2target.activate(visualService.glitchConfig.enabled);
+        }),
+    );
 
     // 0. gather data
+    // TODO(mbabnik): fetch skeleton data
     gpu.addPass(
         new GatherDataPass(
             gpu,
             ecs.getSystem(CameraSys),
             ecs.getSystem(MeshSys),
             ecs.getSystem(LightSys),
-            ecs.getService(VisualSrv),
+            visualService,
             meshDraws,
             meshBuf,
             lightBuf,
@@ -134,9 +176,11 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
     );
 
     // 1. depth opaque
+    // TODO(mbabnik): maybe draw skinned meshes? (they are bad occluders so maybe don't)
     gpu.addPass(new DepthPass(gpu, uniformData, meshDraws, meshBuf, depth));
 
     // 2. shadowmaps
+    // TODO(mbabnik): draw skinned meshes. (they need shadows lol)
     gpu.addPass(
         new ShadowPass(
             gpu,
@@ -149,6 +193,7 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
     );
 
     // 3. render all
+    // TODO(mbabnik): draw skinned meshes!
     gpu.addPass(
         new MainPass(
             gpu,
@@ -169,17 +214,27 @@ export async function createToonRP(gpu: WGpu, ecs: ECS) {
 
     // 4. bloom
     gpu.addPass(
-        new BloomPass(
-            gpu,
-            ecs.getService(VisualSrv).bloomConfig,
-            shadedRead,
-            bloom,
+        new SwitchPass(
+            new BloomPass(gpu, visualService.bloomConfig, shadedRead, bloom),
+            () => visualService.postConfig.bloomPower > 0,
         ),
     );
 
-    // 5. postprocess
-
+    // 5. postprocess; render either as final or to a temp texture
     gpu.addPass(
-        new PostPass(gpu, postBuf.gpuBuf, shadedRead, bloom, gpu.canvasTexture),
+        new PostPass(gpu, postBuf.gpuBuf, shadedRead, bloom, post2target),
+    );
+
+    // 6. glitch pass; only runs if enabled, and renders to the canvas
+    gpu.addPass(
+        new SwitchPass(
+            new GlitchPass(
+                gpu,
+                visualService.glitchConfig,
+                post2target,
+                gpu.canvasTexture,
+            ),
+            () => visualService.glitchConfig.enabled,
+        ),
     );
 }
