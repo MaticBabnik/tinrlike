@@ -18,13 +18,13 @@ import {
     VisualSrv,
     AssetSrv,
     AssetService,
+    Scene,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
 import { $ } from "./honda/util";
 import { FizSys, FizSystem } from "./honda/systems/fiz";
 import { WGpu } from "./honda/backends/wg/gpu";
-import { GltfBinary } from "./honda/util/gltf";
 import { createScene } from "./scenes/game.scene";
 import { UIManager } from "./honda/ui/ui";
 import { GameStorage } from "./storage";
@@ -32,6 +32,7 @@ import { DEFAULT_SETTINGS } from "./honda/backends/wg";
 import { createToonRP } from "./toonf.rp";
 import { createMainMenuScene } from "./scenes/mainMenu.scene";
 import { importGltf } from "./assets";
+import { RefCntBase } from "./honda/gpu2/base/refCountBase";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
 
@@ -119,12 +120,21 @@ async function gameEntry() {
 
     // Game.sceneManager.queueScene(createMainMenuScene.bind(null, createScene));
     Game.sceneManager.queueScene(createScene);
+
+    setTimeout(() => {
+        Game.sceneManager.queueScene(
+            createMainMenuScene.bind(null, () => new Scene()),
+        );
+    }, 100);
 }
 
 // TODO(mbabnik): Add ability to pause the game loop (but keep some level of code running)
 
 async function mount() {
     const canvas = $<HTMLCanvasElement>("canvas");
+
+    // Debug-ish feature.
+    RefCntBase.trackLeaks();
 
     Game.ui = new UIManager($("#vue-app"));
     Game.input = new Input(canvas);

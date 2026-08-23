@@ -28,7 +28,7 @@ export abstract class MaterialBase extends RefCntBase implements IGPUMat {
     public renderPrepass = true;
 
     public constructor(d: IGPUMatDesc) {
-        super();
+        super(d.label);
         this.baseTexture = d.baseTexture;
         this.metRhgTexture = d.metRhgTexture;
         this.normalTexture = d.normalTexture;

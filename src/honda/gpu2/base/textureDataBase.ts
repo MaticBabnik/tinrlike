@@ -63,7 +63,7 @@ export abstract class GPUTexDataBase extends RefCntBase implements IGPUTexData {
     public readonly mip: number;
 
     constructor(d: IGPUTexDataDesc) {
-        super();
+        super(d.label);
         // first validate shape and size
         validateShapeAndSize(d.shape, d.size);
 

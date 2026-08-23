@@ -22,7 +22,7 @@ export abstract class GPUTexBase extends RefCntBase implements IGPUTex {
         d: IGPUTexDesc,
         public readonly data: IGPUTexData,
     ) {
-        super();
+        super(d.label ?? `tex(${data.label})`);
         data.rcUse();
 
         this.label = d.label ?? `tex(${data.label})`;

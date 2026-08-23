@@ -21,7 +21,7 @@ export abstract class GPUBufBase extends RefCntBase implements IGPUBuf {
     public readonly usage: GPUBufUsage;
 
     constructor(d: IGPUBufDesc) {
-        super();
+        super(d.label);
         this.size = validateSize(d.size);
         this.usage = d.usage;
         this.hint = d.hint ?? GPUBufHint.None;
