@@ -1,11 +1,11 @@
-import type { WGpu } from "../gpu";
+import type { WGpuComposite } from "../gpu/gpu";
 
 export class Buffer {
     public cpuBuf: ArrayBuffer;
     public gpuBuf: GPUBuffer;
 
     constructor(
-        private gpu: WGpu,
+        private gpu: WGpuComposite,
         public readonly size: number,
         public usage: GPUBufferUsageFlags,
         public name: string = "unnamedBuffer",

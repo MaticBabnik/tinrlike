@@ -5,7 +5,7 @@ import {
     type IGPUTex,
 } from "../interface";
 import type { Three, Four } from "@/honda";
-import { RefCntBase } from "./refCountBase";
+import { RefCntBase } from "../../util/refCountBase";
 
 export abstract class MaterialBase extends RefCntBase implements IGPUMat {
     public label: string;
@@ -20,7 +20,7 @@ export abstract class MaterialBase extends RefCntBase implements IGPUMat {
     public metallicFactor = 0;
     public roughnessFactor = 1;
     public normalScale = 1;
-    
+
     public alphaCutoff = 0.5;
     public alphaMode: GPUMatAlpha = GPUMatAlpha.MASK;
     public renderMain = true;

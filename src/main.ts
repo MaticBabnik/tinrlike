@@ -5,7 +5,6 @@ import {
     MeshSystem,
     CameraSystem,
     LightSystem,
-    GltfLoader,
     createSoundSystem,
     ScriptSys,
     MeshSys,
@@ -18,21 +17,20 @@ import {
     VisualSrv,
     AssetSrv,
     AssetService,
-    Scene,
 } from "@/honda";
 import { perfRenderer } from "@/honda/util/perf";
 import { setError, setStatus } from "@/honda/util/status";
 import { $ } from "./honda/util";
 import { FizSys, FizSystem } from "./honda/systems/fiz";
-import { WGpu } from "./honda/backends/wg/gpu";
+import { WGpuComposite } from "./honda/backends/wg";
 import { createScene } from "./scenes/game.scene";
 import { UIManager } from "./honda/ui/ui";
 import { GameStorage } from "./storage";
 import { DEFAULT_SETTINGS } from "./honda/backends/wg";
 import { createToonRP } from "./toonf.rp";
-import { createMainMenuScene } from "./scenes/mainMenu.scene";
+// import { createMainMenuScene } from "./scenes/mainMenu.scene";
 import { importGltf } from "./assets";
-import { RefCntBase } from "./honda/gpu2/base/refCountBase";
+import { RefCntBase } from "./honda/util/refCountBase";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
 
@@ -59,28 +57,16 @@ async function frame() {
     Game.perf.measure("lateUpdate");
     Game.ecs.lateUpdate();
 
-    performance.mark("cpu-done");
-
-    Game.perf.measure("frame");
-    Game.gpu.startFrame();
-    Game.gpu.render();
-    Game.perf.measureEnd();
+    Game.perf.measure("gpu");
+    Game.gpu.frame();
+    Game.perf.measureEnd()
     Game.input.endFrame();
 
-    performance.mark("render-done");
-
-    Game.perf.measure("frameEnd");
-
-    Game.gpu.frameEnd();
-
-    const perf = (Game.gpu as Partial<WGpu>).perf;
+    const perf = (Game.gpu as Partial<WGpuComposite>).perf;
     if (perf) {
         Game.perf.sumbitGpuTimestamps(perf.labels, perf.times, perf.n);
     }
-
     Game.perf.stopFrame();
-    Game.perf.measureEnd();
-    performance.mark("frame-done");
 
     requestAnimationFrame(frame);
 }
@@ -96,14 +82,13 @@ setInterval(
     500,
 );
 
-function setPlatformInfo(gpu: WGpu) {
+function setPlatformInfo(gpu: WGpuComposite) {
     const cpuInfo = navigator.platform;
     const gpuInfo = gpu.adapterString;
 
     $<HTMLSpanElement>("#cpuinfo").innerText = cpuInfo;
     $<HTMLSpanElement>("#gpuinfo").innerText = gpuInfo;
-    $<HTMLSpanElement>("#pipelineinfo").innerText =
-        `${gpu.$rpId} ${gpu.settings.multisample ? "4xMSAA" : "no MSAA"}`;
+    $<HTMLSpanElement>("#pipelineinfo").innerText = gpu.rp.id;
 }
 
 async function gameEntry() {
@@ -120,7 +105,6 @@ async function gameEntry() {
 
     // Game.sceneManager.queueScene(createMainMenuScene.bind(null, createScene));
     Game.sceneManager.queueScene(createScene);
-
 }
 
 // TODO(mbabnik): Add ability to pause the game loop (but keep some level of code running)
@@ -145,14 +129,19 @@ async function mount() {
     Game.ecs.registerService(DebugSrv, new DebugService());
     Game.ecs.registerService(VisualSrv, new VisualService());
 
-    const wgSettings = GameStorage.getKeyOrDefault("settings", {
-        version: 2,
-        ...DEFAULT_SETTINGS,
-    });
-    const gpu = await WGpu.obtainForCanvas(wgSettings, canvas);
+    // const wgSettings = GameStorage.getKeyOrDefault("settings", {
+    //     version: 2,
+    //     ...DEFAULT_SETTINGS,
+    // });
 
-    createToonRP(gpu, Game.ecs);
-    gpu.printRenderPath();
+    const gpu = await WGpuComposite.obtain({
+        canvas,
+        anisotropy: 4,
+        featuresOptional: [],
+        featuresRequired: [],
+    });
+    // TODO: setup RP
+
     gpu.onError = (err) => setError(err.toString());
     Game.gpu = gpu;
     setPlatformInfo(gpu);

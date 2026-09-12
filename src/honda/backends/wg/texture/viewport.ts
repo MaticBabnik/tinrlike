@@ -56,4 +56,9 @@ export class ViewportTexture<
 
         this.resized = true;
     }
+
+    public destroy() {
+        this.tex?.destroy();
+        this.tex = undefined!;
+    }
 }

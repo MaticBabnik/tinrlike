@@ -3,10 +3,8 @@ export interface IBase<TExtesions = object, TExtras = object> {
     extras?: Record<string, unknown> & Partial<TExtras>;
 }
 
-export interface INamed<TExtesions = object, TExtras = object> extends IBase<
-    TExtesions,
-    TExtras
-> {
+export interface INamed<TExtesions = object, TExtras = object>
+    extends IBase<TExtesions, TExtras> {
     name?: string;
 }
 
@@ -124,7 +122,8 @@ export interface IMaterial_EXT_KHRMaterialsEmissiveStrength {
     };
 }
 
-export interface IMaterial extends INamed<IMaterial_EXT_KHRMaterialsEmissiveStrength> {
+export interface IMaterial
+    extends INamed<IMaterial_EXT_KHRMaterialsEmissiveStrength> {
     pbrMetallicRoughness?: IMaterialPBRMetallicRoughness;
     normalTexture?: IMaterialNormalTextureInfo;
     occlusionTexture?: IMaterialOcclusionTextureInfo;
@@ -170,11 +169,12 @@ export interface IMeshPrimitive extends IBase {
 //#endregion MeshPrimitive
 
 //#region Node
-export interface INodeBase extends INamed<{
-    KHR_lights_punctual: {
-        light: number;
-    };
-}> {
+export interface INodeBase
+    extends INamed<{
+        KHR_lights_punctual: {
+            light: number;
+        };
+    }> {
     camera?: number;
     children?: number[];
     name?: string;
@@ -254,11 +254,12 @@ export interface IKhrLight extends INamed {
     spot?: IKhrLightSpot;
 }
 
-export interface IGltfRoot extends IBase<{
-    KHR_lights_punctual: {
-        lights: IKhrLight[];
-    };
-}> {
+export interface IGltfRoot
+    extends IBase<{
+        KHR_lights_punctual: {
+            lights: IKhrLight[];
+        };
+    }> {
     extensionsUsed?: string[];
     extensionsRequired?: string[];
 

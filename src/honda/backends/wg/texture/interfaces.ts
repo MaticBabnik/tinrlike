@@ -1,4 +1,6 @@
-export interface ITextureBase {
+import type { IDestroyable } from "@/honda/util/managedResource";
+
+export interface ITextureBase extends IDestroyable {
     label?: string;
 
     get format(): GPUTextureFormat;

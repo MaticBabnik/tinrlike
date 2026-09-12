@@ -1,58 +1,26 @@
 import { GPUTexBase } from "../../../gpu2/base/textureBase";
-import {
-    GPUTexAddr,
-    GPUTexFilter,
-    type IGPUTex,
-    type IGPUTexData,
-    type IGPUTexDesc,
+import type {
+    IGPUTex,
+    IGPUTexData,
+    IGPUTexDesc,
 } from "../../../gpu2/interface";
-import type { WGpu } from "../gpu";
-
-const ADDRESS_MAP: Record<GPUTexAddr, GPUAddressMode> = {
-    [GPUTexAddr.Clamp]: "clamp-to-edge",
-    [GPUTexAddr.Repeat]: "repeat",
-    [GPUTexAddr.Mirror]: "mirror-repeat",
-};
-
-const FILTER_MAP: Record<GPUTexFilter, GPUFilterMode> = {
-    [GPUTexFilter.Nearest]: "nearest",
-    [GPUTexFilter.Linear]: "linear",
-};
+import type { IWGResourceContainer } from "../gpu/resources";
+import type { WGSampler } from "./sampler";
 
 export class WGTex extends GPUTexBase implements IGPUTex {
-    public sampler: GPUSampler;
+    protected $sampler: WGSampler;
 
     public constructor(
-        protected gpu: WGpu,
+        protected gpu: IWGResourceContainer,
         d: IGPUTexDesc,
         data: IGPUTexData,
     ) {
         super(d, data);
 
-        const minFilter = FILTER_MAP[this.filterMin],
-            magFilter = FILTER_MAP[this.filterMag],
-            mipmapFilter = FILTER_MAP[this.filterMip];
+        this.$sampler = gpu.getSampler(d);
+    }
 
-        let maxAnisotropy = gpu.settings.anisotropy;
-
-        if (
-            minFilter === "nearest" ||
-            magFilter === "nearest" ||
-            mipmapFilter === "nearest"
-        ) {
-            maxAnisotropy = 1;
-        }
-
-        this.sampler = gpu.device.createSampler({
-            addressModeU: ADDRESS_MAP[this.address[0]],
-            addressModeV: ADDRESS_MAP[this.address[1]],
-            addressModeW: ADDRESS_MAP[this.address[2]],
-
-            minFilter,
-            magFilter,
-            mipmapFilter,
-
-            maxAnisotropy,
-        });
+    public get sampler(): GPUSampler {
+        return this.$sampler.sampler;
     }
 }

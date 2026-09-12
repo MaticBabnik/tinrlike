@@ -177,10 +177,7 @@ export class SceneNode {
         return undefined;
     }
 
-    public forEachChild(
-        cond: (child: SceneNode) => void,
-        maxDepth = 127,
-    ) {
+    public forEachChild(cond: (child: SceneNode) => void, maxDepth = 127) {
         this.children.forEach((x) => {
             cond(x);
             if (maxDepth > 1) x.forEachChild(cond, maxDepth - 1);

@@ -8,3 +8,13 @@ export type Four<T> = [T, T, T, T];
 export type Defined<T> = {
     [K in keyof T as undefined extends T[K] ? never : K]: T[K];
 };
+
+export type UnionToIntersection<U> = (
+    U extends unknown ? (k: U) => void : never
+) extends (k: infer I) => void
+    ? I
+    : never;
+
+export type PartialUnion<T> = UnionToIntersection<
+    T extends unknown ? Partial<T> : never
+>;

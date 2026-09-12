@@ -20,9 +20,7 @@ import {
     PI_2,
 } from "@/honda";
 import { quat } from "wgpu-matrix";
-import {
-    TL_LAYER_PLAYER,
-} from "../constants";
+import { TL_LAYER_PLAYER } from "../constants";
 import { PlayerScript } from "../scripts/player.script";
 import { LerpCameraScript } from "../scripts/lerpCamera.script";
 import GameHud from "@/ui/GameHud.vue";
@@ -50,14 +48,12 @@ class FanScript extends Script {
     }
 }
 
-
 class PropellerScript extends Script {
     public override update(): void {
         quat.fromEuler(0, Game.time, 0, "xyz", this.node.transform.rotation);
         this.node.transform.update();
     }
 }
-
 
 export function createScene() {
     const as = Game.ecs.getService(AssetSrv);
@@ -114,9 +110,7 @@ export function createScene() {
         );
         player.addComponent(new ScriptComponent(new PlayerScript()));
 
-        const miku = as
-            .getAsset("miku")
-            .sceneAsNode();
+        const miku = as.getAsset("miku").sceneAsNode();
 
         miku.transform.scale.fill(0.1);
         quat.fromEuler(

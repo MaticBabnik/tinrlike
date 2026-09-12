@@ -16,3 +16,5 @@ export function minAlign(...specs: number[]): number {
 export function align(n: number, to: number): number {
     return Math.ceil(n / to) * to;
 }
+
+export type WGFeature = GPUFeatureName | string & {};

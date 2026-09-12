@@ -47,7 +47,7 @@ export class VisualService implements IService {
         exposure: 5,
         bloomPower: 0.5,
         saturation: 1,
-        vignette: .5,
+        vignette: 0.5,
         grain: 0.05,
         chromaticAberration: 0.05,
         colorAdd: [0, 0, 0],

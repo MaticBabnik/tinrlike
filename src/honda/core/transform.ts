@@ -1,4 +1,4 @@
-import { type Mat4, vec3, quat, mat4, type Vec3, type Quat } from "wgpu-matrix";
+import { type Mat4, mat4, type Vec3, type Quat } from "wgpu-matrix";
 
 interface ITransformData {
     translation: Vec3;

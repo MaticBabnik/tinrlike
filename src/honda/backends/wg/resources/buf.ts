@@ -1,6 +1,6 @@
 import { GPUBufBase } from "@/honda/gpu2/base/bufferBase";
 import { GPUBufUsage, type IGPUBuf } from "@/honda/gpu2/interface";
-import type { WGpu } from "../gpu";
+import type { IWGResourceContainer } from "../gpu/resources";
 
 export function toWgBufferUsage(usage: GPUBufUsage): number {
     let wgUsage = 0;
@@ -48,7 +48,7 @@ export class WGBuf extends GPUBufBase implements IGPUBuf {
     public readonly buffer: GPUBuffer;
 
     constructor(
-        protected gpu: WGpu,
+        protected gpu: IWGResourceContainer,
         d: GPUBufferDescriptor,
     ) {
         d.size = Math.ceil(d.size / 4) * 4;

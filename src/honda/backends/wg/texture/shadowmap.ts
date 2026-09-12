@@ -1,6 +1,9 @@
+import type { IDestroyable } from "@/honda/util/managedResource";
 import type { DepthFormats } from "./types";
 
-export class ShadowMapTexture<Tformat extends DepthFormats = DepthFormats> {
+export class ShadowMapTexture<
+    Tformat extends DepthFormats = DepthFormats,
+> implements IDestroyable {
     public tex!: GPUTexture;
     public view!: GPUTextureView;
     public views: GPUTextureView[] = [];
@@ -37,5 +40,10 @@ export class ShadowMapTexture<Tformat extends DepthFormats = DepthFormats> {
                 arrayLayerCount: 1,
             });
         }
+    }
+
+    public destroy() {
+        this.tex?.destroy();
+        this.tex = undefined!;
     }
 }

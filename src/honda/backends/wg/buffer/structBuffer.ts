@@ -1,10 +1,10 @@
 import { setTypedValues, type TypeDefinition } from "webgpu-utils";
 import { Buffer } from "./buffer";
-import type { WGpu } from "../gpu";
+import type { WGpuComposite } from "../gpu/gpu";
 
 export class StructBuffer<T = unknown> extends Buffer {
     constructor(
-        gpu: WGpu,
+        gpu: WGpuComposite,
         public readonly type: TypeDefinition,
         usage: GPUBufferUsageFlags,
         name: string = "unnamedStructBuffer",

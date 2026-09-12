@@ -181,9 +181,9 @@ export class GltfLoader {
     }
 
     /**
-     * Gets the half extents of a 3D AABB containg all of the positions in an 
+     * Gets the half extents of a 3D AABB containg all of the positions in an
      * accessor. Tries to utilize glTF's min/max but falls back to iterating
-     * @param bufIdx 
+     * @param bufIdx
      */
     private getHalfExtents(bufIdx: number): Three<number> {
         const accessor = this.assertTypedAccessor(bufIdx, "VEC3", Float32Array);
@@ -196,7 +196,9 @@ export class GltfLoader {
             ];
         }
 
-        let mhxX = 0, mhxY = 0, mhxZ = 0;
+        let mhxX = 0,
+            mhxY = 0,
+            mhxZ = 0;
 
         for (let i = 0; i < accessor.count; i++) {
             const x = accessor.accessor[i * 3 + 0];
@@ -270,7 +272,7 @@ export class GltfLoader {
             indBuf,
             indexType,
             drawCount,
-            halfExtents
+            halfExtents,
         );
     }
 

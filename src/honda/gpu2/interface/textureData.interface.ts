@@ -1,5 +1,5 @@
 import type { GPUTexFormat, GPUTexShape, GPUTexUsage } from "./enums";
-import type { IRefCnt } from "./rc.interface";
+import type { IRefCnt } from "../../util/managedResource";
 import type { Three } from "@/honda";
 
 export interface IGPUTexDataDesc {

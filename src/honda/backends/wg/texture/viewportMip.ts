@@ -3,7 +3,8 @@ import type { IResizable, IMipViewable } from "./interfaces";
 
 export class ViewportMipTexture<
     Tformat extends GPUTextureFormat = GPUTextureFormat,
-> implements IResizable, IMipViewable
+>
+    implements IResizable, IMipViewable
 {
     public tex!: GPUTexture;
     public view!: GPUTextureView;
@@ -63,5 +64,10 @@ export class ViewportMipTexture<
         }
 
         this.resized = true;
+    }
+
+    public destroy() {
+        this.tex?.destroy();
+        this.tex = undefined!;
     }
 }

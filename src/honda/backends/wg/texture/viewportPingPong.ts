@@ -2,7 +2,8 @@ import type { IPingPongable, IResizable } from "./interfaces";
 
 export class ViewportPingPongTexture<
     Tformat extends GPUTextureFormat = GPUTextureFormat,
-> implements IResizable, IPingPongable
+>
+    implements IResizable, IPingPongable
 {
     public tex!: GPUTexture;
     public views!: [GPUTextureView, GPUTextureView];
@@ -66,5 +67,10 @@ export class ViewportPingPongTexture<
         ];
 
         this.resized = true;
+    }
+
+    public destroy() {
+        this.tex?.destroy();
+        this.tex = undefined!;
     }
 }

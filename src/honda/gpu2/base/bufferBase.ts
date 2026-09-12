@@ -4,7 +4,7 @@ import {
     type IGPUBuf,
     type IGPUBufDesc,
 } from "../interface";
-import { RefCntBase } from "./refCountBase";
+import { RefCntBase } from "../../util/refCountBase";
 
 function validateSize(size: number): number | never {
     if (size <= 0 || size !== ~~size) {

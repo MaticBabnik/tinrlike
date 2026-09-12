@@ -1,4 +1,4 @@
-import type { IRefCnt } from "@/honda/gpu2/interface/rc.interface";
+import type { IRefCnt } from "@/honda/util/managedResource";
 import type {
     IGPUBufDesc,
     IGPUImplementation,
@@ -12,6 +12,7 @@ import { NoOpBuf } from "./noOpBuf";
 import { NoOpMat } from "./noOpMaterial";
 import { NoOpTex } from "./noOpTex";
 import { NoOpTexData } from "./noOpTexData";
+import type { Material as MV2, AnyMatType } from "@/honda/gpu2/material";
 
 /**
  * A no-operation GPU implementation that serves as a placeholder.
@@ -60,6 +61,14 @@ export class NoOpGpu implements IGPUImplementation {
         return r;
     }
 
+    public $allocMaterial<T extends AnyMatType>(mv2: MV2<T>): void {
+        this.rcResources.add(mv2);
+    }
+
+    public $freeMaterial<T extends AnyMatType>(mv2: MV2<T>): void {
+        this.rcResources.delete(mv2);
+    }
+
     public printRcStats(): void {
         console.table(
             Array.from(this.rcResources).map((r) => ({
@@ -70,11 +79,5 @@ export class NoOpGpu implements IGPUImplementation {
         );
     }
 
-    public startFrame(): void {}
-
-    public render(): void {}
-
-    public async frameEnd(): Promise<void> {
-        return;
-    }
+    public frame(): void {}
 }

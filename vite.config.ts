@@ -22,5 +22,6 @@ export default defineConfig({
             "Cross-Origin-Opener-Policy": "same-origin",
             "Cross-Origin-Embedder-Policy": "require-corp",
         },
+        allowedHosts: ["5173.home.sync.si"],
     },
 });

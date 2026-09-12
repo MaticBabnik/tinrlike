@@ -1,5 +1,5 @@
 import type { GPUTexAddr, GPUTexFilter } from "./enums";
-import type { IRefCnt } from "./rc.interface";
+import type { IRefCnt } from "../../util/managedResource";
 import type { IGPUTexData } from "./textureData.interface";
 import type { Three } from "@/honda";
 

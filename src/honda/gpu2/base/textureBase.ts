@@ -6,10 +6,10 @@ import {
     type IGPUTex,
     type IGPUTexDesc,
 } from "../interface";
-import { RefCntBase } from "./refCountBase";
+import { RefCntBase } from "../../util/refCountBase";
 
-const DEFAULT_FILTER = GPUTexFilter.Linear;
-const DEFAULT_ADDRESS = GPUTexAddr.Clamp;
+export const DEFAULT_FILTER = GPUTexFilter.Linear;
+export const DEFAULT_ADDRESS = GPUTexAddr.Clamp;
 
 export abstract class GPUTexBase extends RefCntBase implements IGPUTex {
     public readonly label: string;

@@ -11,12 +11,12 @@ const GLB_FILES = Object.keys(
 
 export async function importGltf(assetSrv: AssetService) {
     await Promise.all(
-        GLB_FILES.map(async path => {
+        GLB_FILES.map(async (path) => {
             const key = path.replace("./3d/", "").replace(".glb", "");
 
             const file = await GltfBinary.fromUrl(path);
 
             assetSrv.registerAsset(key, new GltfLoader(file));
-        })
+        }),
     );
 }

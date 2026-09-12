@@ -5,7 +5,7 @@ import type {
     IGPUTexData,
     IGPUTexDataDesc,
 } from "../interface/textureData.interface";
-import { RefCntBase } from "./refCountBase";
+import { RefCntBase } from "../../util/refCountBase";
 
 function validateShapeAndSize(shape: GPUTexShape, size: Three<number>): void {
     if (

@@ -29,7 +29,7 @@ export class MeshV2 {
         public readonly halfExtents: Three<number>,
     ) {
         this.id = getNewResourceId();
-        // very mediocre radius value :wilted_rose: 
+        // very mediocre radius value :wilted_rose:
         this.radius = Math.sqrt(
             halfExtents[0] * halfExtents[0] +
                 halfExtents[1] * halfExtents[1] +

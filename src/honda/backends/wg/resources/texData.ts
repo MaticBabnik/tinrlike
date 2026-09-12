@@ -7,7 +7,7 @@ import {
     type IGPUTexData,
     type IGPUTexDataDesc,
 } from "../../../gpu2/interface";
-import type { WGpu } from "../gpu";
+import type { IWGResourceContainer } from "../gpu/resources";
 
 const FORMAT_MAP: Record<GPUTexFormat, GPUTextureFormat> = {
     [GPUTexFormat.R8UNORM]: "r8unorm",
@@ -157,7 +157,7 @@ export class WGTexData extends GPUTexDataBase implements IGPUTexData {
     public views: Partial<Record<GPUTextureFormat, GPUTextureView>> = {};
 
     public constructor(
-        protected gpu: WGpu,
+        protected gpu: IWGResourceContainer,
         d: IGPUTexDataDesc,
     ) {
         super(d);

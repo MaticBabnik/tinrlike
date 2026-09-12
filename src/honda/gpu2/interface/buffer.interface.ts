@@ -1,5 +1,5 @@
 import type { GPUBufHint, GPUBufUsage } from "./enums";
-import type { IRefCnt } from "./rc.interface";
+import type { IRefCnt } from "../../util/managedResource";
 
 export interface IGPUBufDesc {
     label?: string;

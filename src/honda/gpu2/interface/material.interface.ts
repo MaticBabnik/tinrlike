@@ -1,6 +1,6 @@
 import type { IGPUTex } from "./texture.interface";
 import type { Four, Three } from "@/honda";
-import type { IRefCnt } from "./rc.interface";
+import type { IRefCnt } from "../../util/managedResource";
 import type { GPUMatAlpha } from "./enums";
 
 export interface IGPUMatDesc {
@@ -20,8 +20,8 @@ export interface IGPUMatDesc {
 }
 
 export interface IGPUMat
-    extends IRefCnt, Required<Omit<IGPUMatDesc, `${string}Texture`>> {
-        
+    extends IRefCnt,
+        Required<Omit<IGPUMatDesc, `${string}Texture`>> {
     renderMain: boolean;
     renderShadow: boolean;
     renderPrepass: boolean;

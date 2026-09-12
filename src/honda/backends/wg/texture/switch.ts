@@ -54,4 +54,8 @@ export class SwitchbleTView implements ITViewable {
         this._switched = false;
     }
 
+    public destroy() {
+        this.textures[0].destroy();
+        this.textures[1].destroy();
+    }
 }

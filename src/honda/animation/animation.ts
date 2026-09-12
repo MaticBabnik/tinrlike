@@ -3,7 +3,6 @@ import { nn } from "../util";
 import { type ASampler, V3Sampler, V4Sampler } from "./animationsampler";
 import type { IAnimtionChannel } from "../util/gltf/gltf.types";
 
-
 interface IHAnimationChannel {
     node: SceneNode;
     type: "translation" | "rotation" | "scale";
