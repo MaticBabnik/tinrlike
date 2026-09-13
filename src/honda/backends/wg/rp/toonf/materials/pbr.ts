@@ -156,7 +156,7 @@ export class ToonPbrImpl implements IToonMatImpl<typeof PbrMaterial, PbrSlot> {
 
         const [base, baseSmp] = this.texture(p.baseTexture, "rgba8unorm-srgb");
         const [mr, mrSmp] = this.texture(p.metRghTexture, "rgba8unorm");
-        const [ems, emsSmp] = this.texture(p.emissionTexture, "rgba8unorm");
+        const [ems, emsSmp] = this.texture(p.emissionTexture, "rgba8unorm-srgb");
 
         s.bindGroup = this.ctx.device.createBindGroup({
             label: m.label,

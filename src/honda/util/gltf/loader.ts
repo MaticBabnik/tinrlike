@@ -471,11 +471,7 @@ export class GltfLoader {
             name,
         );
 
-        // missing alphaMode keeps the type default (alpha clip), like the old path did
-        if (gMaterial.alphaMode !== undefined) {
-            mat.render.alphaMode =
-                ALPHA_MODE_MAP[gMaterial.alphaMode as TG.TAlphaMode];
-        }
+        mat.render.alphaMode = ALPHA_MODE_MAP[gMaterial.alphaMode ?? "OPAQUE"];
         if (gMaterial.alphaCutoff !== undefined) {
             mat.render.alphaClip = gMaterial.alphaCutoff;
         }
