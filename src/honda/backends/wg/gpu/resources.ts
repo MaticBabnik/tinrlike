@@ -1,11 +1,7 @@
 import {
     type IGPUBufDesc,
-    type IGPUBuf,
-    type IGPUMatDesc,
-    type IGPUMat,
     type IGPUTexDesc,
     type IGPUTexData,
-    type IGPUTex,
     type IGPUTexDataDesc,
     GPUTexFormat,
     GPUTexShape,
@@ -13,8 +9,7 @@ import {
     GPUTexAddr,
     GPUTexFilter,
 } from "@/honda/gpu2";
-import type { AnyMatType, Material } from "@/honda/gpu2/material";
-import { WGBuf, WGMat, type WGSampler, WGTex, WGTexData } from "../resources";
+import { WGBuf, type WGSampler, WGTex, WGTexData } from "../resources";
 import { WGSamplerCache } from "./samplerCache";
 
 export interface IWGResourceContainer {
@@ -111,10 +106,6 @@ export class WGCResources implements IWGResourceContainer {
         return new WGBuf(this, d);
     }
 
-    public createMaterial(d: IGPUMatDesc): WGMat {
-        return new WGMat(this, d);
-    }
-
     public createTexture(d: IGPUTexDesc, data: IGPUTexData): WGTex {
         return new WGTex(this, d, data);
     }
@@ -126,10 +117,6 @@ export class WGCResources implements IWGResourceContainer {
     public getSampler(d: IGPUTexDesc): WGSampler {
         return this.samplerCache.get(d);
     }
-
-    $allocMaterial<T extends AnyMatType>(_mv2: Material<T>): void {}
-
-    $freeMaterial<T extends AnyMatType>(_mv2: Material<T>): void {}
 
     public get defaultTexture(): WGTex {
         return this._dtex;

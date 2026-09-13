@@ -44,10 +44,10 @@ export class Buffer {
     }
 
     /**
-     * Don't call while used in GPU operations
+     * Deferred to the end of the frame when called mid-frame
      */
     public destroy() {
-        this.gpuBuf.destroy();
+        this.gpu.resources.safeDestroy(this.gpuBuf);
         this.cpuBuf = null!;
         this.gpuBuf = null!;
 

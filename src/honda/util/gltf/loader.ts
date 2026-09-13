@@ -32,10 +32,12 @@ import {
     GPUTexShape,
     GPUTexUsage,
     type IGPUBuf,
-    type IGPUMat,
     type IGPUTex,
     type IGPUTexData,
     type IGPUTexDesc,
+    Material,
+    Pass,
+    PbrMaterial,
 } from "@/honda/gpu2";
 import type { IGltfFile } from "./file";
 import type { GltfAccessor, TTypedArrayCtor, TypedArrays } from "./types";
@@ -54,7 +56,7 @@ type GltfCache = {
     textureData: SmartWeakCache<number, IGPUTexData>;
     textures: SmartWeakCache<number, IGPUTex>;
     meshes: TrivialWeakCache<number, MeshV2>;
-    materials: SmartWeakCache<number, IGPUMat>;
+    materials: SmartWeakCache<number, Material<typeof PbrMaterial>>;
 };
 
 function convertSamplerFilter(n: TG.TFilterMag | TG.TFilterMin): GPUTexFilter {
@@ -78,7 +80,9 @@ export class GltfLoader {
             ),
             textures: new SmartWeakCache<number, IGPUTex>((v) => v.valid),
             meshes: new TrivialWeakCache<number, MeshV2>(), //TODO refcount mesh components
-            materials: new SmartWeakCache<number, IGPUMat>((v) => v.valid),
+            materials: new SmartWeakCache<number, Material<typeof PbrMaterial>>(
+                (v) => v.valid,
+            ),
         }));
     }
 
@@ -146,7 +150,12 @@ export class GltfLoader {
                 type,
                 Float32Array<ArrayBuffer>,
             );
-            return this.createGpuBuffer(accessor, GPUBufUsage.Vertex, name);
+            // storage: shaders may pull vertices themselves (wireframe)
+            return this.createGpuBuffer(
+                accessor,
+                GPUBufUsage.Vertex | GPUBufUsage.Storage,
+                name,
+            );
         });
     }
 
@@ -174,7 +183,9 @@ export class GltfLoader {
             const accessor = this.file.getAccessor(bufIdx);
             return this.createGpuBuffer(
                 accessor,
-                GPUBufUsage.Index | GPUBufUsage.CopyDestination,
+                GPUBufUsage.Index |
+                    GPUBufUsage.Storage |
+                    GPUBufUsage.CopyDestination,
                 name,
             );
         });
@@ -368,7 +379,7 @@ export class GltfLoader {
         );
     }
 
-    private createMaterialV2(idx: number): IGPUMat {
+    private createMaterialV2(idx: number): Material<typeof PbrMaterial> {
         const gMaterial = nn(this.file.json.materials?.[idx]);
 
         const name = `${this.file.name}.${gMaterial.name ?? idx}`;
@@ -403,36 +414,45 @@ export class GltfLoader {
             });
         }
 
-        const mat = Game.gpu.createMaterial({
-            label: name,
+        const mat = new Material(
+            PbrMaterial,
+            {
+                baseTexture: baseTex,
+                metRghTexture: mrTex,
+                emissionTexture: emsTex,
+                normalTexture: norTex,
 
-            baseTexture: baseTex,
-            metRhgTexture: mrTex,
-            emissionTexture: emsTex,
-            normalTexture: norTex,
+                colorFactor: gMaterial.pbrMetallicRoughness
+                    ?.baseColorFactor ?? [1, 1, 1, 1],
+                metallicFactor:
+                    gMaterial.pbrMetallicRoughness?.metallicFactor ?? 1,
+                roughnessFactor:
+                    gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
+                emissionFactor: emissionFactor,
+                // an explicit undefined would shadow the type default
+                normalScale: gMaterial.normalTexture?.scale ?? 1,
+            },
+            name,
+        );
 
-            colorFactor: gMaterial.pbrMetallicRoughness?.baseColorFactor ?? [
-                1, 1, 1, 1,
-            ],
-            metallicFactor: gMaterial.pbrMetallicRoughness?.metallicFactor ?? 1,
-            roughnessFactor:
-                gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
-            emissionFactor: emissionFactor,
-            normalScale: gMaterial.normalTexture?.scale,
+        // missing alphaMode keeps the type default (alpha clip), like the old path did
+        if (gMaterial.alphaMode !== undefined) {
+            mat.render.alphaMode =
+                ALPHA_MODE_MAP[gMaterial.alphaMode as TG.TAlphaMode];
+        }
+        if (gMaterial.alphaCutoff !== undefined) {
+            mat.render.alphaClip = gMaterial.alphaCutoff;
+        }
 
-            alphaCutoff: gMaterial.alphaCutoff,
-            alphaMode: ALPHA_MODE_MAP[gMaterial.alphaMode as TG.TAlphaMode],
-        });
-
+        // holdouts only occlude: depth prepass, no color or shadows
         if (gMaterial.name === "__holdout__") {
-            mat.renderMain = false;
-            mat.renderShadow = false;
+            mat.render.passes = Pass.Depth;
         }
 
         return mat;
     }
 
-    public getMaterialV2(idx: number): IGPUMat {
+    public getMaterialV2(idx: number): Material<typeof PbrMaterial> {
         return this.cache.materials.getOrCreate(idx, () => {
             const m = this.createMaterialV2(idx);
             return m;

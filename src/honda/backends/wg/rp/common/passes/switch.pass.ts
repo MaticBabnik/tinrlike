@@ -12,6 +12,10 @@ export class SwitchPass implements IPass {
         }
     }
 
+    public destroy(): void {
+        this.pass.destroy?.();
+    }
+
     public describe(): string {
         return `conditional(${this.pass.describe?.() ?? this.pass.constructor.name})`;
     }

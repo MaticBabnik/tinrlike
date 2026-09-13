@@ -1,6 +1,6 @@
 import type * as TG from "./gltf.types";
 import type { TTypedArrayCtor, TypedArrays } from "./types";
-import { GPUMatAlpha, GPUTexAddr } from "@/honda/gpu2";
+import { AlphaMode, GPUTexAddr } from "@/honda/gpu2";
 
 export const CTYPE_TO_CTOR = {
     5120: Int8Array,
@@ -35,8 +35,8 @@ export const SAMPLER_TO_GPU: Record<TG.TWrap, GPUTexAddr> = {
     10497: GPUTexAddr.Repeat,
 };
 
-export const ALPHA_MODE_MAP: Record<TG.TAlphaMode, GPUMatAlpha> = {
-    BLEND: GPUMatAlpha.BLEND,
-    MASK: GPUMatAlpha.MASK,
-    OPAQUE: GPUMatAlpha.OPAQUE,
+export const ALPHA_MODE_MAP: Record<TG.TAlphaMode, AlphaMode> = {
+    BLEND: AlphaMode.AlphaBlend,
+    MASK: AlphaMode.AlphaClip,
+    OPAQUE: AlphaMode.Opaque,
 };

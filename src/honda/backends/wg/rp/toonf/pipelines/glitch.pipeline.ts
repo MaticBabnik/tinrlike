@@ -1,42 +1,24 @@
-import type { WGpu } from "../../../gpu";
+import type { ToonContext } from "../context";
 
-export function createGlitchPipeline(
-    g: WGpu,
-    targetFormat: GPUTextureFormat,
-): GPURenderPipeline {
-    const module = g.getShaderModule(`toonf/toon`);
+export function getGlitchPipeline(ctx: ToonContext, targetFormat: GPUTextureFormat): GPURenderPipeline {
+    return ctx.pipeline(`glitch:${targetFormat}`, () => {
+        const module = ctx.module;
 
-    return g.device.createRenderPipeline({
-        label: `glitch:${targetFormat}`,
-        layout: g.device.createPipelineLayout({
-            bindGroupLayouts: [g.bindGroupLayouts["toonf/glitch"]],
-        }),
-        primitive: {
-            cullMode: "none",
-            topology: "triangle-strip",
-        },
-        vertex: { module, entryPoint: "pg_vertex" },
-        fragment: {
-            module,
-            entryPoint: "pg_fragment",
-            targets: [
-                {
-                    format: targetFormat,
-                },
-            ],
-        },
+        return ctx.device.createRenderPipeline({
+            label: `glitch:${targetFormat}`,
+            layout: ctx.device.createPipelineLayout({
+                bindGroupLayouts: [ctx.layouts["toonf/glitch"]],
+            }),
+            primitive: {
+                cullMode: "none",
+                topology: "triangle-strip",
+            },
+            vertex: { module, entryPoint: "pg_vertex" },
+            fragment: {
+                module,
+                entryPoint: "pg_fragment",
+                targets: [{ format: targetFormat }],
+            },
+        });
     });
-}
-
-const _cache: Record<string, GPURenderPipeline> = {};
-
-export function getGlitchPipeline(
-    g: WGpu,
-    targetFormat: GPUTextureFormat,
-): GPURenderPipeline {
-    const key = `${targetFormat}`;
-    if (!_cache[key]) {
-        _cache[key] = createGlitchPipeline(g, targetFormat);
-    }
-    return _cache[key];
 }

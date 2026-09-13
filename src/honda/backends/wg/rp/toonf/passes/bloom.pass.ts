@@ -1,7 +1,7 @@
 import type { IMipViewable, ITViewable } from "../../../texture";
 import type { IPass } from "../../common/passes/pass.interface";
 import { StructArrayBuffer, StructBuffer } from "../../../buffer";
-import type { WGpu } from "../../../gpu";
+import type { ToonContext } from "../context";
 import { getBloomThresholdPipeline } from "../pipelines/bloom.pipeline";
 import { getBlurPipeline } from "../pipelines/blur.pipeline";
 import { align } from "../../../utils";
@@ -33,7 +33,7 @@ export class BloomPass implements IPass {
     private bindGroupThreshold: GPUBindGroup | null = null;
     private bindGroupBlur: GPUBindGroup[] = [];
     constructor(
-        public gpu: WGpu,
+        public ctx: ToonContext,
 
         public params: IBloomPassParams,
 
@@ -43,7 +43,7 @@ export class BloomPass implements IPass {
     ) {
         this.maxPasses = params.maxPasses;
 
-        this.sampler = gpu.device.createSampler({
+        this.sampler = ctx.device.createSampler({
             label: "bloomSampler",
             magFilter: "linear",
             minFilter: "linear",
@@ -51,21 +51,18 @@ export class BloomPass implements IPass {
             addressModeV: "clamp-to-edge",
         });
 
-        const blurUniStruct = gpu.getStruct("toonf/toon", "BlurUniforms");
-        this.blurUniAlign = align(
-            blurUniStruct.size,
-            gpu.device.limits.minUniformBufferOffsetAlignment,
-        );
+        const blurUniStruct = ctx.struct("BlurUniforms");
+        this.blurUniAlign = align(blurUniStruct.size, ctx.device.limits.minUniformBufferOffsetAlignment);
 
         this.uniformBufferThreshold = new StructBuffer(
-            gpu,
-            gpu.getStruct("toonf/toon", "BloomCfg"),
+            ctx.wg,
+            ctx.struct("BloomCfg"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "bloomThresholdUniforms",
         );
 
         this.uniformBufferBlur = new StructArrayBuffer(
-            gpu,
+            ctx.wg,
             blurUniStruct,
             this.maxPasses * 2,
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -73,15 +70,15 @@ export class BloomPass implements IPass {
             this.blurUniAlign,
         );
 
-        this.thresholdPipeline = getBloomThresholdPipeline(gpu, output.format);
-        this.blurPipeline = getBlurPipeline(gpu, output.format, false);
-        this.blurPipelineAdd = getBlurPipeline(gpu, output.format, true);
+        this.thresholdPipeline = getBloomThresholdPipeline(ctx, output.format);
+        this.blurPipeline = getBlurPipeline(ctx, output.format, false);
+        this.blurPipelineAdd = getBlurPipeline(ctx, output.format, true);
     }
 
     public createBindGroups() {
-        this.bindGroupThreshold = this.gpu.device.createBindGroup({
+        this.bindGroupThreshold = this.ctx.device.createBindGroup({
             label: "bloom1",
-            layout: this.gpu.bindGroupLayouts["toonf/bloom"],
+            layout: this.ctx.layouts["toonf/bloom"],
             entries: [
                 {
                     binding: 0,
@@ -101,15 +98,12 @@ export class BloomPass implements IPass {
 
         for (let i = 0; i < this.passes; i++) {
             this.uniformBufferBlur.set(i, {
-                pixelSize: [
-                    1 / getMipSize(this.output.width, i),
-                    1 / getMipSize(this.output.height, i),
-                ],
+                pixelSize: [1 / getMipSize(this.output.width, i), 1 / getMipSize(this.output.height, i)],
             });
 
-            this.bindGroupBlur[i] = this.gpu.device.createBindGroup({
+            this.bindGroupBlur[i] = this.ctx.device.createBindGroup({
                 label: `bloom-blur:${i}`,
-                layout: this.gpu.bindGroupLayouts["toonf/blur"],
+                layout: this.ctx.layouts["toonf/blur"],
                 entries: [
                     {
                         binding: 0,
@@ -134,15 +128,12 @@ export class BloomPass implements IPass {
             const idx = i + this.passes;
 
             this.uniformBufferBlur.set(idx, {
-                pixelSize: [
-                    1 / getMipSize(this.output.width, i),
-                    1 / getMipSize(this.output.height, i),
-                ],
+                pixelSize: [1 / getMipSize(this.output.width, i), 1 / getMipSize(this.output.height, i)],
             });
 
-            this.bindGroupBlur[idx] = this.gpu.device.createBindGroup({
+            this.bindGroupBlur[idx] = this.ctx.device.createBindGroup({
                 label: `bloom-blur:${i + this.passes}`,
-                layout: this.gpu.bindGroupLayouts["toonf/blur"],
+                layout: this.ctx.layouts["toonf/blur"],
                 entries: [
                     {
                         binding: 0,
@@ -173,7 +164,7 @@ export class BloomPass implements IPass {
         });
         this.uniformBufferThreshold.push();
 
-        const p = this.gpu.cmdEncoder.beginRenderPass({
+        const p = this.ctx.wg.encoder.beginRenderPass({
             label: "threshold",
             colorAttachments: [
                 {
@@ -182,7 +173,7 @@ export class BloomPass implements IPass {
                     view: this.output.views[0],
                 },
             ],
-            timestampWrites: this.gpu.timestamp("bloom"),
+            timestampWrites: this.ctx.wg.timestamp("bloom"),
         });
 
         p.setPipeline(this.thresholdPipeline);
@@ -192,7 +183,7 @@ export class BloomPass implements IPass {
     }
 
     private downsample(i: number) {
-        const p = this.gpu.cmdEncoder.beginRenderPass({
+        const p = this.ctx.wg.encoder.beginRenderPass({
             label: `downsample:${i}`,
             colorAttachments: [
                 {
@@ -201,7 +192,7 @@ export class BloomPass implements IPass {
                     view: this.output.views[i + 1],
                 },
             ],
-            timestampWrites: this.gpu.timestamp("bloom"),
+            timestampWrites: this.ctx.wg.timestamp("bloom"),
         });
         p.setPipeline(this.blurPipeline);
         p.setBindGroup(0, this.bindGroupBlur[i], [i * this.blurUniAlign]);
@@ -210,7 +201,7 @@ export class BloomPass implements IPass {
     }
 
     private upsample(i: number) {
-        const p = this.gpu.cmdEncoder.beginRenderPass({
+        const p = this.ctx.wg.encoder.beginRenderPass({
             label: `upsample:${i}`,
             colorAttachments: [
                 {
@@ -219,13 +210,11 @@ export class BloomPass implements IPass {
                     view: this.output.views[i],
                 },
             ],
-            timestampWrites: this.gpu.timestamp("bloom"),
+            timestampWrites: this.ctx.wg.timestamp("bloom"),
         });
 
         p.setPipeline(i ? this.blurPipelineAdd : this.blurPipeline);
-        p.setBindGroup(0, this.bindGroupBlur[i + this.passes], [
-            (i + this.passes) * this.blurUniAlign,
-        ]);
+        p.setBindGroup(0, this.bindGroupBlur[i + this.passes], [(i + this.passes) * this.blurUniAlign]);
         p.draw(3);
 
         p.end();
@@ -248,5 +237,10 @@ export class BloomPass implements IPass {
         for (let i = this.passes - 1; i >= 0; i--) {
             this.upsample(i);
         }
+    }
+
+    public destroy(): void {
+        this.uniformBufferThreshold.destroy();
+        this.uniformBufferBlur.destroy();
     }
 }

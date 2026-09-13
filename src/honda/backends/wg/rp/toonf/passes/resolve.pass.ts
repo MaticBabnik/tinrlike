@@ -1,4 +1,4 @@
-import type { WGpu } from "../../../gpu";
+import type { WGpuComposite } from "../../../gpu/gpu";
 import type { IMultiSamplable, ITViewable } from "../../../texture";
 import type { IPass } from "../../common/passes/pass.interface";
 
@@ -13,13 +13,13 @@ import type { IPass } from "../../common/passes/pass.interface";
  */
 export class ResolvePass implements IPass {
     public constructor(
-        private g: WGpu,
+        private g: WGpuComposite,
         private from: ITViewable & IMultiSamplable,
         private to: ITViewable,
     ) {}
 
     public apply(): void {
-        this.g.cmdEncoder
+        this.g.encoder
             .beginRenderPass({
                 label: "resolve",
                 colorAttachments: [

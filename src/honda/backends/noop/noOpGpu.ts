@@ -2,14 +2,11 @@ import type { IRefCnt } from "@/honda/util/managedResource";
 import type {
     IGPUBufDesc,
     IGPUImplementation,
-    IGPUMatDesc,
-    IGPUMat,
     IGPUTexData,
     IGPUTexDataDesc,
     IGPUTexDesc,
 } from "../../gpu2/interface";
 import { NoOpBuf } from "./noOpBuf";
-import { NoOpMat } from "./noOpMaterial";
 import { NoOpTex } from "./noOpTex";
 import { NoOpTexData } from "./noOpTexData";
 import type { Material as MV2, AnyMatType } from "@/honda/gpu2/material";
@@ -55,17 +52,14 @@ export class NoOpGpu implements IGPUImplementation {
         return r;
     }
 
-    public createMaterial(d: IGPUMatDesc): IGPUMat {
-        const r = new NoOpMat(d);
-        this.rcResources.add(r);
-        return r;
-    }
-
     public $allocMaterial<T extends AnyMatType>(mv2: MV2<T>): void {
+        // nothing to allocate, but track it so it shows up in printRcStats
+        mv2.$alloced = true;
         this.rcResources.add(mv2);
     }
 
     public $freeMaterial<T extends AnyMatType>(mv2: MV2<T>): void {
+        mv2.$alloced = false;
         this.rcResources.delete(mv2);
     }
 

@@ -14,12 +14,11 @@ import type { IResizable } from "../texture";
 import type {
     IGPUBufDesc,
     IGPUImplementation,
-    IGPUMatDesc,
     IGPUTexData,
     IGPUTexDataDesc,
     IGPUTexDesc,
 } from "@/honda/gpu2";
-import type { WGBuf, WGMat, WGTex, WGTexData } from "../resources";
+import type { WGBuf, WGTex, WGTexData } from "../resources";
 import type { AnyMatType, Material } from "@/honda/gpu2/material";
 
 export interface WGCObtain {
@@ -169,13 +168,7 @@ export class WGpuComposite implements IGPUImplementation {
             const rp = this._renderPipeline;
 
             console.log(
-                `Pipeline switched to: ${rp.id}\n\tPasses: ${rp.passes
-                    .map(passString)
-                    .join(", ")}\n\tViewports: ${rp.viewports
-                    .values()
-                    .map(vpstr)
-                    .toArray()
-                    .join("\n")}\n\n${rp.description}`,
+                `Pipeline switched to: ${rp.id}\n${rp.description}`
             );
         }
     }
@@ -267,11 +260,15 @@ export class WGpuComposite implements IGPUImplementation {
     public createBuffer(d: IGPUBufDesc): WGBuf {
         return this.resources.createBuffer(d);
     }
-    public createMaterial(d: IGPUMatDesc): WGMat {
-        return this.resources.createMaterial(d);
+
+    // material backend data belongs to the render pipeline
+    public $allocMaterial<T extends AnyMatType>(m: Material<T>): void {
+        this._renderPipeline.$allocMaterial?.(m);
     }
-    public $allocMaterial<T extends AnyMatType>(mv2: Material<T>): void {}
-    public $freeMaterial<T extends AnyMatType>(mv2: Material<T>): void {}
+
+    public $freeMaterial<T extends AnyMatType>(m: Material<T>): void {
+        this._renderPipeline.$freeMaterial?.(m);
+    }
 
     public static async obtain(opt: WGCObtain) {
         const adapter = nn(

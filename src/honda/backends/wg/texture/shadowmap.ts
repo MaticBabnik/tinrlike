@@ -32,7 +32,7 @@ export class ShadowMapTexture<
             arrayLayerCount: this.nLights,
         });
 
-        this.views.length = this.size;
+        this.views.length = this.nLights;
         for (let i = 0; i < this.nLights; i++) {
             this.views[i] = this.tex.createView({
                 label: `${this.label ?? "<shadow>"}:light-${i}`,

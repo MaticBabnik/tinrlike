@@ -1,40 +1,22 @@
-import type { WGpu } from "../../../gpu";
+import type { ToonContext } from "../context";
 import { TRI_LIST_CULLED } from "../../../pipelineConstants";
 
-export function createPostPipeline(
-    g: WGpu,
-    targetFormat: GPUTextureFormat,
-): GPURenderPipeline {
-    const module = g.getShaderModule(`toonf/toon`);
+export function getPostPipeline(ctx: ToonContext, targetFormat: GPUTextureFormat): GPURenderPipeline {
+    return ctx.pipeline(`post:${targetFormat}`, () => {
+        const module = ctx.module;
 
-    return g.device.createRenderPipeline({
-        label: `post:${targetFormat}`,
-        layout: g.device.createPipelineLayout({
-            bindGroupLayouts: [g.bindGroupLayouts["toonf/post"]],
-        }),
-        primitive: TRI_LIST_CULLED,
-        vertex: { module, entryPoint: "p_vertex" },
-        fragment: {
-            module,
-            entryPoint: "p_fragment",
-            targets: [
-                {
-                    format: targetFormat,
-                },
-            ],
-        },
+        return ctx.device.createRenderPipeline({
+            label: `post:${targetFormat}`,
+            layout: ctx.device.createPipelineLayout({
+                bindGroupLayouts: [ctx.layouts["toonf/post"]],
+            }),
+            primitive: TRI_LIST_CULLED,
+            vertex: { module, entryPoint: "p_vertex" },
+            fragment: {
+                module,
+                entryPoint: "p_fragment",
+                targets: [{ format: targetFormat }],
+            },
+        });
     });
-}
-
-const _cache: Record<string, GPURenderPipeline> = {};
-
-export function getPostPipeline(
-    g: WGpu,
-    targetFormat: GPUTextureFormat,
-): GPURenderPipeline {
-    const key = `${targetFormat}`;
-    if (!_cache[key]) {
-        _cache[key] = createPostPipeline(g, targetFormat);
-    }
-    return _cache[key];
 }

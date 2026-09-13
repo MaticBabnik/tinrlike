@@ -18,7 +18,9 @@ import {
     VisualSrv,
     type VisualService,
     PI_2,
+    MeshComponent,
 } from "@/honda";
+import { createSphereMesh, FresnelMaterial, Material, WireframeMaterial } from "@/honda/gpu2";
 import { quat } from "wgpu-matrix";
 import { TL_LAYER_PLAYER } from "../constants";
 import { PlayerScript } from "../scripts/player.script";
@@ -123,6 +125,34 @@ export function createScene() {
         miku.transform.update();
 
         player.addChild(miku);
+
+        // fresnel shell around the player
+        const shell = new SceneNode();
+        shell.name = "PlayerShell";
+        shell.transform.translation.set([0, 1.3, 0]);
+        shell.transform.update();
+        shell.addComponent(
+            new MeshComponent(
+                createSphereMesh(Game.gpu, { radius: 1.4, label: "playerShell", rings: 32, segments: 48 }),
+                new Material(FresnelMaterial, { color: [0.4, 2.5, 3], power: 3 }, "playerShell"),
+                "playerShell",
+            ),
+        );
+        player.addChild(shell);
+
+        // wireframe orb floating next to the player
+        const orb = new SceneNode();
+        orb.name = "PlayerOrb";
+        orb.transform.translation.set([1.6, 2, 1.6]);
+        orb.transform.update();
+        orb.addComponent(
+            new MeshComponent(
+                createSphereMesh(Game.gpu, { radius: 0.35, rings: 8, segments: 12, label: "playerOrb" }),
+                new Material(WireframeMaterial, { color: [2, 0.4, 2.5] }, "playerOrb"),
+                "playerOrb",
+            ),
+        );
+        player.addChild(orb);
 
         scene.addChild(player);
 
