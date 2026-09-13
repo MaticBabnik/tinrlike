@@ -25,6 +25,11 @@ struct Material {
     ignoreAlpha: u32
 }
 
+struct FresnelMaterial {
+    color: vec3f,
+    power: f32,
+}
+
 struct Light {
     position: vec3f,
     direction: vec3f,
@@ -172,6 +177,10 @@ var m_tEms: texture_2d<f32>;
 @group(1) @binding(6)
 var m_sEms: sampler;
 
+// Fresnel materials only have their uniforms
+@group(1) @binding(0)
+var<uniform> mf_material: FresnelMaterial;
+
 @group(0) @binding(0)
 var<uniform> bm_cfg: BloomCfg;
 @group(0) @binding(1)
@@ -294,9 +303,10 @@ fn m_sk_vertex(input: VInIdxPosUvNormJoints) -> VOPosWposUvNorm {
     return VOPosWposUvNorm(pos, wpos, input.uv, normal);
 }
 
+// points from the surface towards the camera
 fn getViewVector(w: vec3f) -> vec3f {
     if m_camera_is_ortho {
-        return - m_uni.vInv[2].xyz;
+        return m_uni.vInv[2].xyz;
     }
     else {
         return m_uni.vInv[3].xyz - w;
@@ -376,8 +386,8 @@ fn evalToon(n: vec3f, v: vec3f, wpos: vec3f, baseColor: vec3f, roughness: f32, m
 @fragment
 fn mo_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let baseColor = textureSample(m_tBase, m_sBase, input.uv) * m_material.baseFactor;
-    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv).rg;
-    let metallic = metrgh.r * m_material.metalFactor;
+    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv);
+    let metallic = metrgh.b * m_material.metalFactor;
     let roughness = metrgh.g * m_material.roughFactor;
     let emission = textureSample(m_tEms, m_sEms, input.uv).rgb * m_material.emissionFactor;
 
@@ -396,8 +406,8 @@ fn mac_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
         discard;
     }
 
-    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv).rg;
-    let metallic = metrgh.r * m_material.metalFactor;
+    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv);
+    let metallic = metrgh.b * m_material.metalFactor;
     let roughness = metrgh.g * m_material.roughFactor;
     let emission = textureSample(m_tEms, m_sEms, input.uv).rgb * m_material.emissionFactor;
 
@@ -410,8 +420,8 @@ fn mac_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
 @fragment
 fn mab_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let baseColor = textureSample(m_tBase, m_sBase, input.uv) * m_material.baseFactor;
-    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv).rg;
-    let metallic = metrgh.r * m_material.metalFactor;
+    let metrgh = textureSample(m_tMtlRgh, m_sMtlRgh, input.uv);
+    let metallic = metrgh.b * m_material.metalFactor;
     let roughness = metrgh.g * m_material.roughFactor;
     let emission = textureSample(m_tEms, m_sEms, input.uv).rgb * m_material.emissionFactor;
 
@@ -422,6 +432,20 @@ fn mab_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
 }
 
 //#endregion main
+
+//#region main fresnel
+
+@fragment
+fn mf_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
+    let v = normalize(getViewVector(input.wpos));
+    let n = normalize(input.normal);
+
+    let fresnel = pow(1.0 - saturate(dot(v, n)), mf_material.power);
+
+    return vec4f(mf_material.color * fresnel, 0.0);
+}
+
+//#endregion main fresnel
 
 //#region bloom
 

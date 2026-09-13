@@ -1,8 +1,4 @@
-import type { WGpuComposite } from "./gpu/gpu";
-import {
-    bindGroupLayout,
-    createBindGroupLayoutsFromArray,
-} from "./bindGroupBuilder";
+import { bindGroupLayout, createBindGroupLayoutsFromArray } from "../../bindGroupBuilder";
 
 const layouts = [
     bindGroupLayout("toonf/depth")
@@ -23,11 +19,6 @@ const layouts = [
         })
         .binding(4, "f", "sampler", { type: "comparison" }),
 
-    bindGroupLayout("toonf/mat-alpha-clip")
-        .binding(0, "f", "buffer", { type: "uniform" })
-        .binding(1, "f", "texture")
-        .binding(2, "f", "sampler"),
-
     bindGroupLayout("toonf/blur")
         .binding(0, "f", "buffer", {
             type: "uniform",
@@ -36,9 +27,7 @@ const layouts = [
         .binding(1, "f", "texture")
         .binding(2, "f", "sampler"),
 
-    bindGroupLayout("toonf/bloom")
-        .binding(0, "f", "buffer", { type: "uniform" })
-        .binding(1, "f", "texture"),
+    bindGroupLayout("toonf/bloom").binding(0, "f", "buffer", { type: "uniform" }).binding(1, "f", "texture"),
 
     bindGroupLayout("toonf/post")
         .binding(0, "f", "buffer", { type: "uniform" })
@@ -53,6 +42,8 @@ const layouts = [
         .binding(3, "f", "texture"),
 ] as const;
 
-export function createBindGroupLayouts(g: WGpuComposite) {
-    return createBindGroupLayoutsFromArray(g.device, layouts);
+export type ToonLayouts = ReturnType<typeof createToonLayouts>;
+
+export function createToonLayouts(device: GPUDevice) {
+    return createBindGroupLayoutsFromArray(device, layouts);
 }

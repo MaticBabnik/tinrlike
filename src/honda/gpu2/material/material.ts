@@ -17,6 +17,8 @@ export interface IMatHandle {
     $backendData: unknown;
 }
 
+export type AnyMaterial = Material<AnyMatType>;
+
 export class Material<
     T extends AnyMatType = UntypedMatType,
 > extends RefCntBase {

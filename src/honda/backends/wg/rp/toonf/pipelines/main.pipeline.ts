@@ -1,93 +1,74 @@
-import type { WGpu } from "../../../gpu";
+import type { ToonContext } from "../context";
 import { TRI_LIST_CULLED, VERTEX_POS_UV_NORM } from "../../../pipelineConstants";
 
-type TMainKind = "mainAlphaClip" | "mainAlphaBlend";
+export type TMainKind = "mainAlphaClip" | "mainAlphaBlend";
 
 const prefixMap: Record<TMainKind, string> = {
     mainAlphaClip: "mac",
     mainAlphaBlend: "mab",
 };
 
-export function createMainPipeline(
-    g: WGpu,
-    kind: TMainKind,
-    colorFormat: GPUTextureFormat,
-    depthFormat: GPUTextureFormat,
-    multisample: number,
-    skin: boolean = false,
-): GPURenderPipeline {
-    const module = g.getShaderModule("toonf/toon");
-
-    return g.device.createRenderPipeline({
-        label: `${kind}:${depthFormat}:${multisample}x`,
-        layout: g.device.createPipelineLayout({
-            bindGroupLayouts: [
-                g.bindGroupLayouts["toonf/main"],
-                g.bindGroupLayouts.material,
-            ],
-        }),
-        primitive: TRI_LIST_CULLED,
-        vertex: {
-            module,
-            entryPoint: skin ? `m_sk_vertex` : `m_vertex`,
-            buffers: VERTEX_POS_UV_NORM,
-        },
-        fragment: {
-            module,
-            entryPoint: `${prefixMap[kind]}_fragment`,
-            targets: [
-                {
-                    format: colorFormat,
-                    blend:
-                        kind === "mainAlphaBlend"
-                            ? {
-                                  color: {
-                                      srcFactor: "src-alpha",
-                                      dstFactor: "one-minus-src-alpha",
-                                      operation: "add",
-                                  },
-                                  alpha: {
-                                      srcFactor: "one",
-                                      dstFactor: "one",
-                                      operation: "max",
-                                  },
-                              }
-                            : undefined,
-                },
-            ],
-        },
-        depthStencil: {
-            format: depthFormat,
-            depthCompare: "greater-equal",
-            depthWriteEnabled: true,
-        },
-        multisample: {
-            alphaToCoverageEnabled: false,
-            count: multisample,
-        },
-    });
+export interface IMainPipelineDesc {
+    kind: TMainKind;
+    /** group(1) layout, owned by the material implementation */
+    material: GPUBindGroupLayout;
+    colorFormat: GPUTextureFormat;
+    depthFormat: GPUTextureFormat;
+    multisample: number;
+    skin?: boolean;
 }
 
-const _cache: Record<string, GPURenderPipeline> = {};
+export function getMainPipeline(ctx: ToonContext, d: IMainPipelineDesc): GPURenderPipeline {
+    const skin = d.skin ?? false;
+    const key = `${d.kind}:${d.material.label}:${d.colorFormat}:${d.depthFormat}:${d.multisample}x:${skin}`;
 
-export function getMainPipeline(
-    g: WGpu,
-    kind: TMainKind,
-    colorFormat: GPUTextureFormat,
-    depthFormat: GPUTextureFormat,
-    multisample: number,
-    skin: boolean = false,
-): GPURenderPipeline {
-    const key = `${kind}:${colorFormat}:${depthFormat}:${multisample}x:${skin}`;
-    if (!_cache[key]) {
-        _cache[key] = createMainPipeline(
-            g,
-            kind,
-            colorFormat,
-            depthFormat,
-            multisample,
-            skin,
-        );
-    }
-    return _cache[key];
+    return ctx.pipeline(key, () => {
+        const module = ctx.module;
+
+        return ctx.device.createRenderPipeline({
+            label: key,
+            layout: ctx.device.createPipelineLayout({
+                bindGroupLayouts: [ctx.layouts["toonf/main"], d.material],
+            }),
+            primitive: TRI_LIST_CULLED,
+            vertex: {
+                module,
+                entryPoint: skin ? `m_sk_vertex` : `m_vertex`,
+                buffers: VERTEX_POS_UV_NORM,
+            },
+            fragment: {
+                module,
+                entryPoint: `${prefixMap[d.kind]}_fragment`,
+                targets: [
+                    {
+                        format: d.colorFormat,
+                        blend:
+                            d.kind === "mainAlphaBlend"
+                                ? {
+                                      color: {
+                                          srcFactor: "src-alpha",
+                                          dstFactor: "one-minus-src-alpha",
+                                          operation: "add",
+                                      },
+                                      alpha: {
+                                          srcFactor: "one",
+                                          dstFactor: "one",
+                                          operation: "max",
+                                      },
+                                  }
+                                : undefined,
+                    },
+                ],
+            },
+            depthStencil: {
+                format: d.depthFormat,
+                depthCompare: "greater-equal",
+                depthWriteEnabled: true,
+            },
+            multisample: {
+                alphaToCoverageEnabled: false,
+                count: d.multisample,
+            },
+        });
+    });
 }

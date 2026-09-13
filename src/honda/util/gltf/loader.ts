@@ -32,10 +32,12 @@ import {
     GPUTexShape,
     GPUTexUsage,
     type IGPUBuf,
-    type IGPUMat,
     type IGPUTex,
     type IGPUTexData,
     type IGPUTexDesc,
+    type AnyMaterial,
+    Material,
+    PbrMaterial,
 } from "@/honda/gpu2";
 import type { IGltfFile } from "./file";
 import type { GltfAccessor, TTypedArrayCtor, TypedArrays } from "./types";
@@ -48,13 +50,14 @@ import {
 import { SmartWeakCache, TrivialCache, TrivialWeakCache } from "../cache";
 import { MeshIndexType, MeshV2 } from "@/honda/gpu2/mesh";
 import { AnimationLayerDef } from "../../animation/animlayer";
+import type { GltfMaterialHook, GltfMaterialHookCtx } from "./materialHooks";
 
 type GltfCache = {
     buffers: SmartWeakCache<number, IGPUBuf>;
     textureData: SmartWeakCache<number, IGPUTexData>;
     textures: SmartWeakCache<number, IGPUTex>;
     meshes: TrivialWeakCache<number, MeshV2>;
-    materials: SmartWeakCache<number, IGPUMat>;
+    materials: SmartWeakCache<number, AnyMaterial>;
 };
 
 function convertSamplerFilter(n: TG.TFilterMag | TG.TFilterMin): GPUTexFilter {
@@ -67,6 +70,7 @@ function convertSamplerMipMapFilter(n: TG.TFilterMin): GPUTexFilter {
 
 export class GltfLoader {
     protected static caches = new TrivialCache<number, GltfCache>();
+    protected static materialHooks: GltfMaterialHook[] = [];
     protected cache: GltfCache;
 
     constructor(public readonly file: IGltfFile) {
@@ -78,7 +82,9 @@ export class GltfLoader {
             ),
             textures: new SmartWeakCache<number, IGPUTex>((v) => v.valid),
             meshes: new TrivialWeakCache<number, MeshV2>(), //TODO refcount mesh components
-            materials: new SmartWeakCache<number, IGPUMat>((v) => v.valid),
+            materials: new SmartWeakCache<number, AnyMaterial>(
+                (v) => v.valid,
+            ),
         }));
     }
 
@@ -368,11 +374,52 @@ export class GltfLoader {
         );
     }
 
-    private createMaterialV2(idx: number): IGPUMat {
-        const gMaterial = nn(this.file.json.materials?.[idx]);
+    /**
+     * Hooks apply to materials created after they're added
+     * (materials are cached per file, across loaders).
+     */
+    public static addMaterialHook(hook: GltfMaterialHook): void {
+        GltfLoader.materialHooks.push(hook);
+    }
 
+    private createMaterialV2(idx: number): AnyMaterial {
+        const gMaterial = nn(this.file.json.materials?.[idx]);
         const name = `${this.file.name}.${gMaterial.name ?? idx}`;
 
+        let pbr: Material<typeof PbrMaterial> | undefined;
+        const ctx: GltfMaterialHookCtx = {
+            loader: this,
+            index: idx,
+            json: gMaterial,
+            extras: gMaterial.extras ?? {},
+            name,
+            texture: (info) => info && this.getTextureV2(info.index),
+            pbr: () => {
+                pbr ??= this.createPbrMaterial(gMaterial, name);
+                return pbr;
+            },
+        };
+
+        for (const hook of GltfLoader.materialHooks) {
+            const m = hook(ctx);
+            if (!m) continue;
+
+            // a hook built the default but replaced it; release its textures
+            if (pbr && pbr !== m) {
+                pbr.rcUse();
+                pbr.rcRelease();
+            }
+
+            return m;
+        }
+
+        return ctx.pbr();
+    }
+
+    private createPbrMaterial(
+        gMaterial: TG.IMaterial,
+        name: string,
+    ): Material<typeof PbrMaterial> {
         const texBase = gMaterial.pbrMetallicRoughness?.baseColorTexture?.index;
         const texMR =
             gMaterial.pbrMetallicRoughness?.metallicRoughnessTexture?.index;
@@ -403,40 +450,39 @@ export class GltfLoader {
             });
         }
 
-        const mat = Game.gpu.createMaterial({
-            label: name,
+        const mat = new Material(
+            PbrMaterial,
+            {
+                baseTexture: baseTex,
+                metRghTexture: mrTex,
+                emissionTexture: emsTex,
+                normalTexture: norTex,
 
-            baseTexture: baseTex,
-            metRhgTexture: mrTex,
-            emissionTexture: emsTex,
-            normalTexture: norTex,
+                colorFactor: gMaterial.pbrMetallicRoughness
+                    ?.baseColorFactor ?? [1, 1, 1, 1],
+                metallicFactor:
+                    gMaterial.pbrMetallicRoughness?.metallicFactor ?? 1,
+                roughnessFactor:
+                    gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
+                emissionFactor: emissionFactor,
+                // an explicit undefined would shadow the type default
+                normalScale: gMaterial.normalTexture?.scale ?? 1,
+            },
+            name,
+        );
 
-            colorFactor: gMaterial.pbrMetallicRoughness?.baseColorFactor ?? [
-                1, 1, 1, 1,
-            ],
-            metallicFactor: gMaterial.pbrMetallicRoughness?.metallicFactor ?? 1,
-            roughnessFactor:
-                gMaterial.pbrMetallicRoughness?.roughnessFactor ?? 1,
-            emissionFactor: emissionFactor,
-            normalScale: gMaterial.normalTexture?.scale,
-
-            alphaCutoff: gMaterial.alphaCutoff,
-            alphaMode: ALPHA_MODE_MAP[gMaterial.alphaMode as TG.TAlphaMode],
-        });
-
-        if (gMaterial.name === "__holdout__") {
-            mat.renderMain = false;
-            mat.renderShadow = false;
+        mat.render.alphaMode = ALPHA_MODE_MAP[gMaterial.alphaMode ?? "OPAQUE"];
+        if (gMaterial.alphaCutoff !== undefined) {
+            mat.render.alphaClip = gMaterial.alphaCutoff;
         }
 
         return mat;
     }
 
-    public getMaterialV2(idx: number): IGPUMat {
-        return this.cache.materials.getOrCreate(idx, () => {
-            const m = this.createMaterialV2(idx);
-            return m;
-        });
+    public getMaterialV2(idx: number): AnyMaterial {
+        return this.cache.materials.getOrCreate(idx, () =>
+            this.createMaterialV2(idx),
+        );
     }
 
     private createGpuBuffer(

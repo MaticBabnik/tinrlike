@@ -1,31 +1,20 @@
-import type { WGpu } from "../../../gpu";
+import type { ToonContext } from "../context";
 
-function createBloomThreshold(gpu: WGpu, fmt: GPUTextureFormat) {
-    const module = gpu.getShaderModule("toonf/toon");
+export function getBloomThresholdPipeline(ctx: ToonContext, fmt: GPUTextureFormat) {
+    return ctx.pipeline(`bloomThreshold:${fmt}`, () => {
+        const module = ctx.module;
 
-    return gpu.device.createRenderPipeline({
-        label: `bloomThreshold:${fmt}`,
-        layout: gpu.device.createPipelineLayout({
-            bindGroupLayouts: [gpu.bindGroupLayouts["toonf/bloom"]],
-        }),
-        vertex: { module, entryPoint: "bm_vertex" },
-        fragment: {
-            module,
-            entryPoint: "bm_fragment",
-            targets: [{ format: fmt }],
-        },
+        return ctx.device.createRenderPipeline({
+            label: `bloomThreshold:${fmt}`,
+            layout: ctx.device.createPipelineLayout({
+                bindGroupLayouts: [ctx.layouts["toonf/bloom"]],
+            }),
+            vertex: { module, entryPoint: "bm_vertex" },
+            fragment: {
+                module,
+                entryPoint: "bm_fragment",
+                targets: [{ format: fmt }],
+            },
+        });
     });
-}
-
-const cache = new Map<string, GPURenderPipeline>();
-
-export function getBloomThresholdPipeline(gpu: WGpu, fmt: GPUTextureFormat) {
-    const key = fmt;
-
-    if (!cache.has(key)) {
-        const pipeline = createBloomThreshold(gpu, fmt);
-        cache.set(key, pipeline);
-    }
-
-    return cache.get(key)!;
 }

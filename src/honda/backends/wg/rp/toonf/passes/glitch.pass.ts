@@ -1,6 +1,6 @@
 import type { GlitchCfg } from "@/honda/services";
 import { Buffer, StructBuffer } from "../../../buffer";
-import type { WGpu } from "../../../gpu";
+import type { ToonContext } from "../context";
 import { getGlitchPipeline } from "../pipelines/glitch.pipeline";
 import type { ITViewable } from "../../../texture";
 import type { IPass } from "../../common/passes/pass.interface";
@@ -26,7 +26,7 @@ export class GlitchPass implements IPass {
     private sampler: GPUSampler;
 
     public constructor(
-        private g: WGpu,
+        private ctx: ToonContext,
         private glitchCfg: GlitchCfg,
         private color: ITViewable,
         private output: ITViewable,
@@ -35,17 +35,17 @@ export class GlitchPass implements IPass {
     ) {
         this.effectCfg = { ...DEFAULTS, ...cfg };
 
-        this.pipeline = getGlitchPipeline(g, output.format);
+        this.pipeline = getGlitchPipeline(ctx, output.format);
 
         this.glitchBuffer = new Buffer(
-            g,
+            ctx.wg,
             4 * this.effectCfg.randomBufSize,
             GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
             "randomBuffer",
         );
         this.glitchView = new Float32Array(this.glitchBuffer.cpuBuf);
 
-        this.sampler = g.device.createSampler({
+        this.sampler = ctx.device.createSampler({
             label: "glitchSampler",
             magFilter: "nearest",
             minFilter: "nearest",
@@ -54,8 +54,8 @@ export class GlitchPass implements IPass {
         });
 
         this.glitchConf = new StructBuffer(
-            g,
-            g.getStruct("toonf/toon", "GlitchConf"),
+            ctx.wg,
+            ctx.struct("GlitchConf"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "glitchConf",
         );
@@ -73,9 +73,9 @@ export class GlitchPass implements IPass {
     }
 
     private createBindGroup() {
-        this.bindGroup = this.g.device.createBindGroup({
+        this.bindGroup = this.ctx.device.createBindGroup({
             label: "toonfGlitchBG",
-            layout: this.g.bindGroupLayouts["toonf/glitch"],
+            layout: this.ctx.layouts["toonf/glitch"],
             entries: [
                 {
                     binding: 0,
@@ -122,7 +122,7 @@ export class GlitchPass implements IPass {
         });
         this.glitchConf.push();
 
-        const pass = this.g.cmdEncoder.beginRenderPass({
+        const pass = this.ctx.wg.encoder.beginRenderPass({
             label: "toonfGlitchPass",
             colorAttachments: [
                 {
@@ -131,12 +131,17 @@ export class GlitchPass implements IPass {
                     storeOp: "store",
                 },
             ],
-            timestampWrites: this.g.timestamp("glitch"),
+            timestampWrites: this.ctx.wg.timestamp("glitch"),
         });
 
         pass.setPipeline(this.pipeline);
         pass.setBindGroup(0, this.bindGroup);
         pass.draw(4, nblocks, 0, 0);
         pass.end();
+    }
+
+    public destroy(): void {
+        this.glitchConf.destroy();
+        this.glitchBuffer.destroy();
     }
 }

@@ -43,11 +43,8 @@ export class Buffer {
         this.gpuBuf.unmap();
     }
 
-    /**
-     * Don't call while used in GPU operations
-     */
     public destroy() {
-        this.gpuBuf.destroy();
+        this.gpu.resources.safeDestroy(this.gpuBuf);
         this.cpuBuf = null!;
         this.gpuBuf = null!;
 

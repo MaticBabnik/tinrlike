@@ -1,18 +1,12 @@
 import type { IPass } from "../../common/passes/pass.interface";
 import { mat4, vec3, vec4, type Mat4, type Vec3, type Vec4 } from "wgpu-matrix";
 import type { Buffer, StructArrayBuffer, StructBuffer } from "../../../buffer";
-import type {
-    CameraSystem,
-    ISpotLight,
-    LightSystem,
-    MeshComponent,
-    MeshSystem,
-    THondaLight,
-} from "@/honda/systems";
-import { GPUMatAlpha, type IGPUMat, type MeshV2 } from "@/honda/gpu2";
-import type { WGpu } from "../../../gpu";
-import type { WGMat } from "../../../resources/mat";
+import type { CameraSystem, ISpotLight, LightSystem, MeshComponent, MeshSystem, THondaLight } from "@/honda/systems";
+import { AlphaMode, Pass, type AnyMaterial, type MeshV2 } from "@/honda/gpu2";
 import type { PostCfg, SceneNode, Three, VisualService } from "@/honda";
+import type { WGpuComposite } from "../../../gpu/gpu";
+import type { ToonMatSlot } from "../materials/material";
+import type { ToonMaterialRegistry } from "../materials/registry";
 
 export type ToonMeshInstance = {
     transform: Mat4;
@@ -36,20 +30,6 @@ type LightInstance = {
 
     shadowMap: number;
     VP: Mat4;
-};
-
-export type DrawCall = {
-    shadow: boolean;
-    mat: IGPUMat;
-    mesh: MeshV2;
-    firstInstance: number;
-    nInstances: number;
-};
-
-export type Instance = {
-    shadow: boolean;
-    mat: IGPUMat;
-    mesh: MeshV2;
 };
 
 export type UniformData = {
@@ -80,8 +60,10 @@ const MATRIX_SIZE = 4 * 4 * 4;
 const M4ID = mat4.identity();
 
 export interface ToonDrawCall {
-    shadow: boolean;
-    mat: IGPUMat;
+    mat: AnyMaterial;
+    slot: ToonMatSlot;
+    alpha: AlphaMode;
+    passes: Pass;
     mesh: MeshV2;
     firstInstance: number;
     nInstances: number;
@@ -103,12 +85,24 @@ export interface GPUPostCfg extends PostCfg {
     framen: number;
 }
 
+/** a visible-able mesh with its synced material */
+type DrawSource = {
+    comp: MeshComponent;
+    node: SceneNode;
+    slot: ToonMatSlot;
+    alpha: AlphaMode;
+    passes: Pass;
+};
+
+const isBlend = (a: AlphaMode) => a >= AlphaMode.AlphaBlend;
+
 export class GatherDataPass implements IPass {
     private matrixAlign: number;
     private maxNShadowmaps: number;
 
     constructor(
-        private g: WGpu,
+        private g: WGpuComposite,
+        private materials: ToonMaterialRegistry,
 
         private cameraSystem: CameraSystem,
         private meshSystem: MeshSystem,
@@ -122,15 +116,12 @@ export class GatherDataPass implements IPass {
         private uniformData: UniformData,
         private postConfigBuffer: StructBuffer<GPUPostCfg>,
     ) {
-        const minOffsetAlign =
-            this.g.device.limits.minUniformBufferOffsetAlignment;
+        const minOffsetAlign = this.g.device.limits.minUniformBufferOffsetAlignment;
         // this *should* be good enough
         this.matrixAlign = Math.max(MATRIX_SIZE, minOffsetAlign);
         this.maxNShadowmaps = Math.floor(lightVPBuffer.size / this.matrixAlign);
 
-        this.meshDrawCalls.shadows = new Array(this.maxNShadowmaps)
-            .fill(0)
-            .map(() => ({ opaque: [] }));
+        this.meshDrawCalls.shadows = new Array(this.maxNShadowmaps).fill(0).map(() => ({ opaque: [] }));
     }
 
     apply(): void {
@@ -184,35 +175,49 @@ export class GatherDataPass implements IPass {
         }
     }
 
-    private _sortedMeshes: [MeshComponent, SceneNode][] = [];
+    private _sortedMeshes: DrawSource[] = [];
 
     private gatherMeshes() {
-        this._sortedMeshes = this.meshSystem.$meshes
-            .toArray()
-            .sort(([a], [b]) => {
-                // sort by alpha mode (opaque, clip, blend)
-                const alphaModeA = a.material.alphaMode - b.material.alphaMode;
-                if (alphaModeA !== 0) return alphaModeA;
+        const out = this._sortedMeshes;
+        out.length = 0;
 
-                // sort by material (to reduce bind group changes)
-                const dmt = (a.material as WGMat).id - (b.material as WGMat).id;
-                if (dmt !== 0) return dmt;
+        for (const [comp, node] of this.meshSystem.$meshes) {
+            const mat = comp.material;
 
-                // sort by mesh (instancing)
-                return a.primitive.id - b.primitive.id;
+            // creates/updates the material's GPU data on first sight/change
+            const slot = this.materials.sync(mat);
+            if (!slot) continue;
+
+            out.push({
+                comp,
+                node,
+                slot,
+                alpha: mat.render.alphaMode,
+                passes: mat.render.passes,
             });
+        }
+
+        out.sort((a, b) => {
+            // sort by alpha mode (opaque, clip, blend)
+            const da = a.alpha - b.alpha;
+            if (da !== 0) return da;
+
+            // sort by material type (pipeline changes)
+            const dt = a.slot.impl.type.id - b.slot.impl.type.id;
+            if (dt !== 0) return dt;
+
+            // sort by material (to reduce bind group changes)
+            const dm = a.slot.id - b.slot.id;
+            if (dm !== 0) return dm;
+
+            // sort by mesh (instancing)
+            return a.comp.primitive.id - b.comp.primitive.id;
+        });
     }
 
     private $frustumPlanes = new Array(6).fill(0).map(() => vec4.create());
 
-    private static frustumPlane(
-        m: Mat4,
-        s0: number,
-        r0: number,
-        s1: number,
-        r1: number,
-        dst: Vec4,
-    ) {
+    private static frustumPlane(m: Mat4, s0: number, r0: number, s1: number, r1: number, dst: Vec4) {
         dst[0] = s0 * m[r0] + s1 * m[r1];
         dst[1] = s0 * m[4 + r0] + s1 * m[4 + r1];
         dst[2] = s0 * m[8 + r0] + s1 * m[8 + r1];
@@ -262,12 +267,7 @@ export class GatherDataPass implements IPass {
         return true;
     }
 
-    private gatherDrawsCulled(
-        vp: Mat4,
-        isShadowPass: boolean,
-        dst: PassDraws,
-        instance: number,
-    ): number {
+    private gatherDrawsCulled(vp: Mat4, isShadowPass: boolean, dst: PassDraws, instance: number): number {
         dst.opaque.length = 0;
 
         if (this._sortedMeshes.length === 0) return instance;
@@ -282,44 +282,35 @@ export class GatherDataPass implements IPass {
             const md = this._sortedMeshes[meshIdx];
 
             // only process non-blended meshes in the common case
-            if (md[0].material.alphaMode === GPUMatAlpha.BLEND) break;
+            if (isBlend(md.alpha)) break;
 
-            // if shadow skip non-casters
-            if (isShadowPass && md[0].castShadow === false) continue;
-            // if main skip non-rendered
-            if (
-                !isShadowPass &&
-                !md[0].material.renderMain &&
-                !md[0].material.renderPrepass
-            )
+            if (isShadowPass) {
+                // if shadow skip non-casters
+                if (!md.comp.castShadow || !(md.passes & Pass.Shadow)) continue;
+            } else if (!(md.passes & (Pass.Main | Pass.Depth))) {
+                // if main skip non-rendered
                 continue;
+            }
 
-            if (
-                !this.cullMesh(
-                    md[1].transform.$glbMtx,
-                    md[0].primitive.halfExtents,
-                )
-            )
-                continue;
+            const wrld = md.node.transform.$glbMtx;
+            if (!this.cullMesh(wrld, md.comp.primitive.halfExtents)) continue;
 
             // at this point we know the mesh is visible and should be rendered
             // give it a transform slot
             this.meshInstanceBuffer.set(instance, {
-                transform: md[1].transform.$glbMtx,
-                invTransform: md[1].transform.$glbInvMtx,
+                transform: wrld,
+                invTransform: md.node.transform.$glbInvMtx,
             });
 
-            if (
-                !previousDrawCall ||
-                previousDrawCall.mat !== md[0].material ||
-                previousDrawCall.mesh !== md[0].primitive
-            ) {
+            if (!previousDrawCall || previousDrawCall.slot !== md.slot || previousDrawCall.mesh !== md.comp.primitive) {
                 previousDrawCall = {
                     firstInstance: instance,
                     nInstances: 1,
-                    mat: md[0].material,
-                    mesh: md[0].primitive,
-                    shadow: md[0].castShadow,
+                    mat: md.comp.material,
+                    slot: md.slot,
+                    alpha: md.alpha,
+                    passes: md.passes,
+                    mesh: md.comp.primitive,
                     distance: 0,
                 };
                 dst.opaque.push(previousDrawCall);
@@ -334,31 +325,27 @@ export class GatherDataPass implements IPass {
             for (; meshIdx < this._sortedMeshes.length; meshIdx++) {
                 const md = this._sortedMeshes[meshIdx];
 
-                if (!md[0].material.renderMain) continue;
+                if (!(md.passes & Pass.Main)) continue;
 
-                if (
-                    !this.cullMesh(
-                        md[1].transform.$glbMtx,
-                        md[0].primitive.halfExtents,
-                    )
-                )
-                    continue;
+                const wrld = md.node.transform.$glbMtx;
+                if (!this.cullMesh(wrld, md.comp.primitive.halfExtents)) continue;
 
                 this.meshInstanceBuffer.set(instance, {
-                    transform: md[1].transform.$glbMtx,
-                    invTransform: md[1].transform.$glbInvMtx,
+                    transform: wrld,
+                    invTransform: md.node.transform.$glbInvMtx,
                 });
 
                 // we don't merge blended draws, since they are Z-sorted
-                const drawCall: ToonDrawCall = {
+                dst.blend.push({
                     firstInstance: instance,
                     nInstances: 1,
-                    mat: md[0].material,
-                    mesh: md[0].primitive,
-                    shadow: false,
-                    distance: this.toCameraDistance(md[1].transform.$glbMtx),
-                };
-                dst.blend.push(drawCall);
+                    mat: md.comp.material,
+                    slot: md.slot,
+                    alpha: md.alpha,
+                    passes: md.passes,
+                    mesh: md.comp.primitive,
+                    distance: this.toCameraDistance(wrld),
+                });
                 instance++;
             }
 
@@ -373,27 +360,14 @@ export class GatherDataPass implements IPass {
 
         let i = 0;
 
-        i = this.gatherDrawsCulled(
-            this.cameraSystem.viewProjMtx,
-            false,
-            this.meshDrawCalls.main,
-            i,
-        );
+        i = this.gatherDrawsCulled(this.cameraSystem.viewProjMtx, false, this.meshDrawCalls.main, i);
 
         for (let j = 0; j < this.uniformData.nShadowmaps; j++) {
-            i = this.gatherDrawsCulled(
-                this.uniformData.shadowmapVPs[j],
-                true,
-                this.meshDrawCalls.shadows[j],
-                i,
-            );
+            i = this.gatherDrawsCulled(this.uniformData.shadowmapVPs[j], true, this.meshDrawCalls.shadows[j], i);
         }
 
         // send instance data to GPU
-        this.meshInstanceBuffer.push(
-            0,
-            i * this.meshInstanceBuffer.elementSize,
-        );
+        this.meshInstanceBuffer.push(0, i * this.meshInstanceBuffer.elementSize);
 
         // this.$debugPrintDraws();
     }
@@ -401,21 +375,13 @@ export class GatherDataPass implements IPass {
     public $debugPrintDraws() {
         const totalMeshes = this._sortedMeshes.length;
 
-        const mainDrawCalls =
-            this.meshDrawCalls.main.opaque.length +
-            (this.meshDrawCalls.main.blend?.length ?? 0);
+        const mainDrawCalls = this.meshDrawCalls.main.opaque.length + (this.meshDrawCalls.main.blend?.length ?? 0);
 
         const instancingEfficiency = totalMeshes / mainDrawCalls;
 
         const drawnInstances =
-            this.meshDrawCalls.main.opaque.reduce(
-                (acc, dc) => acc + dc.nInstances,
-                0,
-            ) +
-            (this.meshDrawCalls.main.blend?.reduce(
-                (acc, dc) => acc + dc.nInstances,
-                0,
-            ) ?? 0);
+            this.meshDrawCalls.main.opaque.reduce((acc, dc) => acc + dc.nInstances, 0) +
+            (this.meshDrawCalls.main.blend?.reduce((acc, dc) => acc + dc.nInstances, 0) ?? 0);
 
         const culled = (1 - drawnInstances / totalMeshes) * 100;
 
@@ -442,15 +408,8 @@ export class GatherDataPass implements IPass {
 
             if (lightInfo.castShadows && shadowIdx >= this.maxNShadowmaps) {
                 console.warn("Max shadowmaps reached");
-            } else if (
-                lightInfo.castShadows &&
-                shadowIdx < this.maxNShadowmaps
-            ) {
-                vp = new Float32Array(
-                    this.lightVPBuffer.cpuBuf,
-                    shadowIdx * this.matrixAlign,
-                    4 * 4,
-                ) as Mat4;
+            } else if (lightInfo.castShadows && shadowIdx < this.maxNShadowmaps) {
+                vp = new Float32Array(this.lightVPBuffer.cpuBuf, shadowIdx * this.matrixAlign, 4 * 4) as Mat4;
 
                 switch (lightInfo.type) {
                     case "point":
@@ -471,13 +430,7 @@ export class GatherDataPass implements IPass {
                         break;
 
                     case "spot":
-                        mat4.perspectiveReverseZ(
-                            lightInfo.outerCone * 2,
-                            1,
-                            0.01,
-                            lightInfo.maxRange,
-                            proj,
-                        );
+                        mat4.perspectiveReverseZ(lightInfo.outerCone * 2, 1, 0.01, lightInfo.maxRange, proj);
                         break;
                 }
 

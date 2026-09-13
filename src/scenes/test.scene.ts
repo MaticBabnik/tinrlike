@@ -7,6 +7,7 @@ import {
     SceneNode,
     ScriptComponent,
 } from "@/honda";
+import { PbrMaterial } from "@/honda/gpu2";
 import { AnimationPlayerScript } from "@/scripts/animplayer.script";
 import { quat } from "wgpu-matrix";
 
@@ -21,8 +22,9 @@ export function createTestScene(): Scene {
         const scn = sc.sceneAsNode();
         const scMesh = scn.assertChildComponent(MeshComponent);
         scMesh.castShadow = false;
-        scMesh.material.emissionFactor = [4, 0, 0];
-        scMesh.material.push();
+        const scMat = scMesh.material.asType(PbrMaterial);
+        scMat.params.emissionFactor = [4, 0, 0];
+        scMat.push();
 
         scn.transform.translation.set([0, 0.1, 0]);
         scn.transform.update();

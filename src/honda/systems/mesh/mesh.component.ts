@@ -4,12 +4,12 @@ import type { SceneNode } from "@/honda";
 import type { IComponent } from "@/honda/core/ecs";
 import type { SkinInfo } from "./skin";
 import { mat4, type Mat4 } from "wgpu-matrix";
-import type { IGPUMat, MeshV2 } from "@/honda/gpu2";
+import type { AnyMaterial, MeshV2 } from "@/honda/gpu2";
 
 export class MeshComponentBase implements IComponent {
     constructor(
         public primitive: MeshV2,
-        public material: IGPUMat,
+        public material: AnyMaterial,
         public name: string,
         public castShadow = true,
     ) {
@@ -26,7 +26,7 @@ export class MeshComponentBase implements IComponent {
 export class MeshComponent extends MeshComponentBase implements IComponent {
     constructor(
         public primitive: MeshV2,
-        public material: IGPUMat,
+        public material: AnyMaterial,
         name: string = `unknownMeshComponent`,
     ) {
         super(primitive, material, name);
@@ -43,7 +43,7 @@ export class SkinnedMeshComponent
 
     constructor(
         public primitive: MeshV2,
-        public material: IGPUMat,
+        public material: AnyMaterial,
         public skin: SkinInfo, // bladee reference
         name: string = `unknownSkinnedMeshComponent`,
     ) {

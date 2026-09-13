@@ -1,9 +1,8 @@
 import type { IGPUBuf, IGPUBufDesc } from "./buffer.interface";
-import type { IGPUMat, IGPUMatDesc } from "./material.interface";
 import type { IGPUTex, IGPUTexDesc } from "./texture.interface";
 import type { IGPUTexData, IGPUTexDataDesc } from "./textureData.interface";
 
-import type { Material as MV2 } from "../material/index";
+import type { Material } from "../material/index";
 import type { AnyMatType } from "../material/materialType";
 
 export interface IGPUResourceLayer {
@@ -15,11 +14,9 @@ export interface IGPUResourceLayer {
 
     createBuffer(d: IGPUBufDesc): IGPUBuf;
 
-    createMaterial(d: IGPUMatDesc): IGPUMat;
+    $allocMaterial<T extends AnyMatType>(m: Material<T>): void;
 
-    $allocMaterial<T extends AnyMatType>(mv2: MV2<T>): void;
-
-    $freeMaterial<T extends AnyMatType>(mv2: MV2<T>): void;
+    $freeMaterial<T extends AnyMatType>(m: Material<T>): void;
 }
 
 export interface IGPUViewportLayer {
@@ -50,5 +47,4 @@ export interface IGPULifecycleLayer {
  *
  * It can be for example implemented as a no-op.
  */
-export interface IGPUImplementation
-    extends IGPUResourceLayer, IGPUViewportLayer, IGPULifecycleLayer {}
+export interface IGPUImplementation extends IGPUResourceLayer, IGPUViewportLayer, IGPULifecycleLayer {}

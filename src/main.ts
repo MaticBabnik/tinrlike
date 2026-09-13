@@ -25,11 +25,14 @@ import { FizSys, FizSystem } from "./honda/systems/fiz";
 import { WGpuComposite } from "./honda/backends/wg";
 import { createScene } from "./scenes/game.scene";
 import { UIManager } from "./honda/ui/ui";
-import { GameStorage } from "./storage";
-import { DEFAULT_SETTINGS } from "./honda/backends/wg";
-import { createToonRP } from "./toonf.rp";
+import { makeToonForward } from "./honda/backends/wg/rp/toonf.rp";
 // import { createMainMenuScene } from "./scenes/mainMenu.scene";
 import { importGltf } from "./assets";
+import {
+    fresnelMaterialHook,
+    GltfLoader,
+    holdoutMaterialHook,
+} from "./honda/util/gltf";
 import { RefCntBase } from "./honda/util/refCountBase";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
@@ -129,10 +132,8 @@ async function mount() {
     Game.ecs.registerService(DebugSrv, new DebugService());
     Game.ecs.registerService(VisualSrv, new VisualService());
 
-    // const wgSettings = GameStorage.getKeyOrDefault("settings", {
-    //     version: 2,
-    //     ...DEFAULT_SETTINGS,
-    // });
+    GltfLoader.addMaterialHook(holdoutMaterialHook);
+    GltfLoader.addMaterialHook(fresnelMaterialHook);
 
     const gpu = await WGpuComposite.obtain({
         canvas,
@@ -140,7 +141,15 @@ async function mount() {
         featuresOptional: [],
         featuresRequired: [],
     });
-    // TODO: setup RP
+
+    gpu.$switchRpImmed(
+        makeToonForward(Game.ecs, {
+            // FIXME: WebGPU devtools blow up when doing multisampling
+            multisample: document.location.hash === "#debug" ? 1 : 4,
+            shadowMapSize: 2048,
+        }),
+        true,
+    );
 
     gpu.onError = (err) => setError(err.toString());
     Game.gpu = gpu;

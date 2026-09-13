@@ -1,64 +1,9 @@
 <script setup lang="ts">
-import { DEFAULT_SETTINGS, type WGSettings } from "@/honda/backends/wg";
-import { ref } from "vue";
-import ButtonOptions from "./components/ButtonOptions.vue";
-import { GameStorage } from "@/storage";
-
 const emit = defineEmits<{ message: [unknown] }>();
-
-const settings = ref<WGSettings>({ ...DEFAULT_SETTINGS });
-
-type Message = { type: "updateSettings"; settings: WGSettings };
-
-defineExpose({
-    onMessage(msg: Message) {
-        switch (msg.type) {
-            case "updateSettings":
-                settings.value = { ...msg.settings };
-                break;
-        }
-    },
-});
 
 function back() {
     emit("message", "menu");
 }
-
-function apply() {
-    GameStorage.storeKey("settings", {
-        version: 2,
-        ...settings.value,
-    });
-    window.location.reload();
-}
-
-const ANISO_OPTS: [number, string][] = [
-    [1, "Off"],
-    [4, "4x"],
-];
-
-const MULTISAMPLE_OPTS: [number, string][] = [
-    [1, "Off"],
-    [4, "4x"],
-];
-
-const RENDER_SCALE_OPTS: [number, string][] = [
-    [0.5, "50%"],
-    [0.75, "75%"],
-    [1, "100%"],
-    [2, "200%"],
-];
-
-const SHADOW_QUALITY_OPTS: [number, string][] = [
-    [512, "Low"],
-    [1024, "Medium"],
-    [2048, "High"],
-];
-
-const DEBUG_RENDERER_OPTS: [number, string][] = [
-    [0, "Off"],
-    [1, "On"],
-];
 </script>
 
 <template>
@@ -67,46 +12,8 @@ const DEBUG_RENDERER_OPTS: [number, string][] = [
     <div class="full">
         <h1 class="pxfont">Settings</h1>
 
-        <div class="settings-grid">
-            <span>Anisotropic Filtering</span>
-            <ButtonOptions
-                :defs="ANISO_OPTS"
-                :value="settings.anisotropy"
-                @value="(val) => (settings.anisotropy = val as 1 | 4)"
-            />
-
-            <span>Multisampling</span>
-            <ButtonOptions
-                :defs="MULTISAMPLE_OPTS"
-                :value="settings.multisample"
-                @value="(val) => (settings.multisample = val as 1 | 4)"
-            />
-
-            <span>Render Scale</span>
-            <ButtonOptions
-                :defs="RENDER_SCALE_OPTS"
-                :value="settings.renderScale"
-                @value="(val) => (settings.renderScale = val)"
-            />
-
-            <span>Shadow Quality</span>
-            <ButtonOptions
-                :defs="SHADOW_QUALITY_OPTS"
-                :value="settings.shadowMapSize"
-                @value="(val) => (settings.shadowMapSize = val)"
-            />
-
-            <span>Debug renderers</span>
-            <ButtonOptions
-                :defs="DEBUG_RENDERER_OPTS"
-                :value="settings.debugRenderers ? 1 : 0"
-                @value="(val) => (settings.debugRenderers = !!val)"
-            />
-        </div>
-
         <div class="hstack">
             <button @click="back">Back</button>
-            <button @click="apply">Apply</button>
         </div>
 
         <!-- <button @click="emit('message', 'play')"> Play </button> -->

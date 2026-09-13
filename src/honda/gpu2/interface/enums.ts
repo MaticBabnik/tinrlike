@@ -229,9 +229,3 @@ export const enum GPUTexAddr {
     Repeat = 1,
     Mirror = 2,
 }
-
-export enum GPUMatAlpha {
-    OPAQUE = 0,
-    MASK = 1,
-    BLEND = 2,
-}

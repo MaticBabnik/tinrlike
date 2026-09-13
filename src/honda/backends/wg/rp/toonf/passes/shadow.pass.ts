@@ -1,52 +1,35 @@
-import { MeshIndexType } from "@/honda/gpu2";
 import type { StructArrayBuffer } from "../../../buffer";
-import type { WGpu } from "../../../gpu";
-import { getDepthPipeline } from "../pipelines/depth.pipeline";
 import type { ShadowMapTexture } from "../../../texture";
-import type { UniformData } from "../def1";
 import type { IPass } from "../../common/passes/pass.interface";
-import type { MeshDraws2 } from "./gather.pass";
-import type { WGBuf, WGMat } from "../../../resources";
+import type { ToonContext } from "../context";
+import type { MeshDraws2, UniformData } from "./gather.pass";
 import { align } from "../../../utils";
-
-// const MATRIX_ARRAY = { matrix: { offset: 0, type: { size: 64 } } };
+import { DrawBinder, drawMesh } from "./draw-util";
 
 export class ShadowPass implements IPass {
-    private depthAlphaClipPipeline: GPURenderPipeline;
     private meshBindGroup: GPUBindGroup;
     private matrixAlign: number;
 
     public constructor(
-        private g: WGpu,
+        private ctx: ToonContext,
 
         private uniforms: UniformData,
         private meshDraws: MeshDraws2,
-        private meshInstanceBuffer: StructArrayBuffer,
+        meshInstanceBuffer: StructArrayBuffer,
 
         private shadowMaps: ShadowMapTexture,
-        private lightVPBuffer: GPUBuffer,
+        lightVPBuffer: GPUBuffer,
     ) {
-        this.matrixAlign = align(
-            4 * 4 * 4,
-            this.g.device.limits.minUniformBufferOffsetAlignment,
-        );
+        this.matrixAlign = align(4 * 4 * 4, ctx.device.limits.minUniformBufferOffsetAlignment);
 
-        this.depthAlphaClipPipeline = getDepthPipeline(
-            g,
-            "depthAlphaClip",
-            shadowMaps.format,
-            1,
-            true,
-        );
-
-        this.meshBindGroup = g.device.createBindGroup({
-            label: "depthMeshBG",
-            layout: g.bindGroupLayouts["toonf/depth"],
+        this.meshBindGroup = ctx.device.createBindGroup({
+            label: "shadowMeshBG",
+            layout: ctx.layouts["toonf/depth"],
             entries: [
                 {
                     binding: 0,
                     resource: {
-                        buffer: this.lightVPBuffer,
+                        buffer: lightVPBuffer,
                         offset: 0,
                         size: 4 * 4 * 4, // one 4x4 matrix per dynamic offset
                     },
@@ -60,11 +43,10 @@ export class ShadowPass implements IPass {
     }
 
     apply(): void {
-        //FIXME: ???
-        void this.meshInstanceBuffer;
+        const n = Math.min(this.uniforms.nShadowmaps, this.shadowMaps.nLights);
 
-        for (let i = 0; i < this.uniforms.nShadowmaps; i++) {
-            const rp = this.g.cmdEncoder.beginRenderPass({
+        for (let i = 0; i < n; i++) {
+            const rp = this.ctx.wg.encoder.beginRenderPass({
                 label: `shadowmap:${i}`,
                 colorAttachments: [],
                 depthStencilAttachment: {
@@ -73,41 +55,23 @@ export class ShadowPass implements IPass {
                     depthLoadOp: "clear",
                     depthStoreOp: "store",
                 },
-                timestampWrites: this.g.timestamp(`shadowmaps`),
+                timestampWrites: this.ctx.wg.timestamp(`shadowmaps`),
             });
 
-            rp.setPipeline(this.depthAlphaClipPipeline);
             rp.setBindGroup(0, this.meshBindGroup, [i * this.matrixAlign]);
 
-            for (const c of this.meshDraws.shadows[i].opaque) {
-                if (!c.shadow || !c.mat.renderShadow) continue;
-                rp.setVertexBuffer(0, (c.mesh.position as WGBuf).buffer);
-                rp.setVertexBuffer(1, (c.mesh.texCoord as WGBuf).buffer);
+            const binder = new DrawBinder(rp);
 
-                rp.setBindGroup(1, (c.mat as unknown as WGMat).alphaClipGroup);
-
-                const iType = c.mesh.indexType;
-                if (iType !== MeshIndexType.None) {
-                    rp.setIndexBuffer(
-                        (c.mesh.index as WGBuf).buffer,
-                        iType === MeshIndexType.U16 ? "uint16" : "uint32",
-                    );
-
-                    rp.drawIndexed(
-                        c.mesh.drawCount,
-                        c.nInstances,
-                        0,
-                        0,
-                        c.firstInstance,
-                    );
-                } else {
-                    rp.draw(c.mesh.drawCount, c.nInstances, 0, c.firstInstance);
-                }
+            // gather only puts shadow casters in here
+            for (const draw of this.meshDraws.shadows[i].opaque) {
+                binder.bind(draw.slot.impl.depthPipeline(draw.alpha, true), draw.slot.bindGroup);
+                drawMesh(rp, draw, false);
             }
 
             // TODO: skinned meshes
             rp.end();
         }
+
         if (this.uniforms.nShadowmaps > this.shadowMaps.nLights) {
             console.warn("Not all shadowmaps could be rendered");
         }

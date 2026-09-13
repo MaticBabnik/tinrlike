@@ -33,6 +33,6 @@ export function isManagedResource(thing: unknown): thing is TrackableResource {
     return (
         ("rcRelease" in thing && typeof thing.rcRelease === "function") ||
         ("dispose" in thing && typeof thing.dispose === "function") ||
-        ("delete" in thing && typeof thing.delete === "function")
+        ("destroy" in thing && typeof thing.destroy === "function")
     );
 }

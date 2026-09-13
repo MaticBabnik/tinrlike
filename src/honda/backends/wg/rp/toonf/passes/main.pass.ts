@@ -1,17 +1,11 @@
-import { MeshIndexType } from "@/honda/gpu2";
+import { Pass } from "@/honda/gpu2";
 import { StructBuffer, type StructArrayBuffer } from "../../../buffer";
-import type { WGpu } from "../../../gpu";
-import type {
-    IMultiSamplable,
-    ITViewable,
-    ShadowMapTexture,
-} from "../../../texture";
-import type { UniformData } from "../def1";
+import type { IMultiSamplable, ITViewable, ShadowMapTexture } from "../../../texture";
 import type { IPass } from "../../common/passes/pass.interface";
-import type { MeshDraws2 } from "./gather.pass";
-import type { WGBuf, WGMat } from "../../../resources";
-import { getMainPipeline } from "../pipelines/main.pipeline";
+import type { ToonContext } from "../context";
+import type { MeshDraws2, ToonDrawCall, UniformData } from "./gather.pass";
 import type { Mat4 } from "wgpu-matrix";
+import { DrawBinder, drawMesh } from "./draw-util";
 
 type MainUniforms = {
     vp: Mat4;
@@ -21,13 +15,11 @@ type MainUniforms = {
 };
 
 export class MainPass implements IPass {
-    private mainAlphaClipPipeline: GPURenderPipeline;
-    private mainAlphaBlendPipeline: GPURenderPipeline;
     private meshBindGroup: GPUBindGroup;
     private uniformBuf: StructBuffer<MainUniforms>;
 
     public constructor(
-        private g: WGpu,
+        private ctx: ToonContext,
         private uniforms: UniformData,
         private meshDraws: MeshDraws2,
         meshInstanceBuffer: StructArrayBuffer,
@@ -37,32 +29,16 @@ export class MainPass implements IPass {
         private depth: ITViewable & IMultiSamplable,
         private shadowmaps: ShadowMapTexture,
     ) {
-        this.mainAlphaClipPipeline = getMainPipeline(
-            g,
-            "mainAlphaClip",
-            color.format,
-            depth.format,
-            depth.multisample,
-        );
-
-        this.mainAlphaBlendPipeline = getMainPipeline(
-            g,
-            "mainAlphaBlend",
-            color.format,
-            depth.format,
-            depth.multisample,
-        );
-
         this.uniformBuf = new StructBuffer<MainUniforms>(
-            g,
-            g.getStruct("toonf/toon", "MainUniforms"),
+            ctx.wg,
+            ctx.struct("MainUniforms"),
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
             "mainUniformBuffer",
         );
 
-        this.meshBindGroup = g.device.createBindGroup({
+        this.meshBindGroup = ctx.device.createBindGroup({
             label: "mainMeshBG",
-            layout: g.bindGroupLayouts["toonf/main"],
+            layout: ctx.layouts["toonf/main"],
             entries: [
                 {
                     binding: 0,
@@ -82,7 +58,7 @@ export class MainPass implements IPass {
                 },
                 {
                     binding: 4,
-                    resource: this.g.device.createSampler({
+                    resource: ctx.device.createSampler({
                         label: "shadowmapSampler",
                         compare: "greater",
                         minFilter: "linear",
@@ -91,6 +67,15 @@ export class MainPass implements IPass {
                 },
             ],
         });
+    }
+
+    private drawList(binder: DrawBinder, rp: GPURenderPassEncoder, list: ToonDrawCall[]) {
+        for (const draw of list) {
+            if (!(draw.passes & Pass.Main)) continue;
+
+            binder.bind(draw.slot.impl.mainPipeline(draw.alpha), draw.slot.bindGroup);
+            drawMesh(rp, draw, true);
+        }
     }
 
     public apply(): void {
@@ -103,7 +88,7 @@ export class MainPass implements IPass {
         });
         this.uniformBuf.push();
 
-        const rp = this.g.cmdEncoder.beginRenderPass({
+        const rp = this.ctx.wg.encoder.beginRenderPass({
             label: "mainPass",
             colorAttachments: [
                 {
@@ -118,88 +103,25 @@ export class MainPass implements IPass {
                 depthLoadOp: "load",
                 depthStoreOp: "store",
             },
-            timestampWrites: this.g.timestamp("main"),
+            timestampWrites: this.ctx.wg.timestamp("main"),
         });
 
-        rp.pushDebugGroup("opaque");
-
         rp.setBindGroup(0, this.meshBindGroup);
-        rp.setPipeline(this.mainAlphaClipPipeline);
 
-        for (let i = 0; i < this.meshDraws.main.opaque.length; i++) {
-            const draw = this.meshDraws.main.opaque[i];
-            if (!draw.mat.renderMain) continue;
+        const binder = new DrawBinder(rp);
 
-            rp.setVertexBuffer(0, (draw.mesh.position as WGBuf).buffer);
-            rp.setVertexBuffer(1, (draw.mesh.texCoord as WGBuf).buffer);
-            rp.setVertexBuffer(2, (draw.mesh.normal as WGBuf).buffer);
-            rp.setBindGroup(1, (draw.mat as WGMat).bindGroup);
-
-            const iType = draw.mesh.indexType;
-            if (iType !== MeshIndexType.None) {
-                rp.setIndexBuffer(
-                    (draw.mesh.index as WGBuf).buffer,
-                    iType === MeshIndexType.U16 ? "uint16" : "uint32",
-                );
-
-                rp.drawIndexed(
-                    draw.mesh.drawCount,
-                    draw.nInstances,
-                    0,
-                    0,
-                    draw.firstInstance,
-                );
-            } else {
-                rp.draw(
-                    draw.mesh.drawCount,
-                    draw.nInstances,
-                    0,
-                    draw.firstInstance,
-                );
-            }
-        }
-
+        rp.pushDebugGroup("opaque");
+        this.drawList(binder, rp, this.meshDraws.main.opaque);
         rp.popDebugGroup();
+
         rp.pushDebugGroup("blend");
-
-        rp.setPipeline(this.mainAlphaBlendPipeline);
-
-        for (let i = 0; i < this.meshDraws.main.blend!.length; i++) {
-            const draw = this.meshDraws.main.blend![i];
-
-            if (!draw.mat.renderMain) continue;
-
-            rp.setVertexBuffer(0, (draw.mesh.position as WGBuf).buffer);
-            rp.setVertexBuffer(1, (draw.mesh.texCoord as WGBuf).buffer);
-            rp.setVertexBuffer(2, (draw.mesh.normal as WGBuf).buffer);
-            rp.setBindGroup(1, (draw.mat as WGMat).bindGroup);
-
-            const iType = draw.mesh.indexType;
-            if (iType !== MeshIndexType.None) {
-                rp.setIndexBuffer(
-                    (draw.mesh.index as WGBuf).buffer,
-                    iType === MeshIndexType.U16 ? "uint16" : "uint32",
-                );
-
-                rp.drawIndexed(
-                    draw.mesh.drawCount,
-                    draw.nInstances,
-                    0,
-                    0,
-                    draw.firstInstance,
-                );
-            } else {
-                rp.draw(
-                    draw.mesh.drawCount,
-                    draw.nInstances,
-                    0,
-                    draw.firstInstance,
-                );
-            }
-        }
-
+        this.drawList(binder, rp, this.meshDraws.main.blend ?? []);
         rp.popDebugGroup();
 
         rp.end();
+    }
+
+    public destroy(): void {
+        this.uniformBuf.destroy();
     }
 }
