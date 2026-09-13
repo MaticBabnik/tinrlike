@@ -30,10 +30,6 @@ struct FresnelMaterial {
     power: f32,
 }
 
-struct WireframeMaterial {
-    color: vec3f,
-}
-
 struct Light {
     position: vec3f,
     direction: vec3f,
@@ -131,21 +127,12 @@ const L_POINT = 0u;
 const L_DIR = 1u;
 const L_SPOT = 2u;
 
-// mirrors MeshIndexType
-const IDX_NONE = 0u;
-const IDX_U16 = 1u;
-const IDX_U32 = 2u;
-
-// line-list corners of a triangle's edges: 01, 12, 20
-const WIRE_EDGES = array(0u, 1u, 1u, 2u, 2u, 0u);
-
 const PI: f32 = 3.14159265358979323846264338327950288;
 
 //#endregion common constants
 
 //#region overrides
 override m_camera_is_ortho: bool = true;
-override mw_index_type: u32 = IDX_NONE;
 //#endregion overrides
 
 //#region common bindgroups
@@ -193,14 +180,6 @@ var m_sEms: sampler;
 // Fresnel materials only have their uniforms
 @group(1) @binding(0)
 var<uniform> mf_material: FresnelMaterial;
-
-// Wireframe materials pull the mesh themselves, so it gets its own group
-@group(1) @binding(0)
-var<uniform> mw_material: WireframeMaterial;
-@group(2) @binding(0)
-var<storage, read> mw_positions: array<f32>;
-@group(2) @binding(1)
-var<storage, read> mw_indices: array<u32>;
 
 @group(0) @binding(0)
 var<uniform> bm_cfg: BloomCfg;
@@ -456,7 +435,6 @@ fn mab_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
 
 //#region main fresnel
 
-// invisible surface that only emits on the fresnel term; drawn additively
 @fragment
 fn mf_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
     let v = normalize(getViewVector(input.wpos));
@@ -468,39 +446,6 @@ fn mf_fragment(input: VOPosWposUvNorm) -> @location(0) vec4f {
 }
 
 //#endregion main fresnel
-
-//#region main wireframe
-
-// vertex index of the triangle corner behind line vertex `v`
-fn mw_meshIndex(v: u32) -> u32 {
-    let corner = (v / 6u) * 3u + WIRE_EDGES[v % 6u];
-
-    if mw_index_type == IDX_U16 {
-        // two indices per u32, little endian
-        return (mw_indices[corner / 2u] >> ((corner & 1u) * 16u)) & 0xffffu;
-    }
-    else if mw_index_type == IDX_U32 {
-        return mw_indices[corner];
-    }
-
-    return corner;
-}
-
-// non-indexed line-list, 6 vertices per triangle
-@vertex
-fn mw_vertex(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> @builtin(position) vec4f {
-    let i = mw_meshIndex(vertexIndex) * 3u;
-    let position = vec3f(mw_positions[i], mw_positions[i + 1u], mw_positions[i + 2u]);
-
-    return m_uni.vp * instances[instanceIndex].transform * vec4f(position, 1.0);
-}
-
-@fragment
-fn mw_fragment() -> @location(0) vec4f {
-    return vec4f(mw_material.color, 1.0);
-}
-
-//#endregion main wireframe
 
 //#region bloom
 

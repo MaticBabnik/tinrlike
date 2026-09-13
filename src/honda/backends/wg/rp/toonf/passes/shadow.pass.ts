@@ -4,7 +4,7 @@ import type { IPass } from "../../common/passes/pass.interface";
 import type { ToonContext } from "../context";
 import type { MeshDraws2, UniformData } from "./gather.pass";
 import { align } from "../../../utils";
-import { DrawBinder, drawMesh } from "./draw";
+import { DrawBinder, drawMesh } from "./draw-util";
 
 export class ShadowPass implements IPass {
     private meshBindGroup: GPUBindGroup;

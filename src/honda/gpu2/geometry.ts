@@ -83,14 +83,13 @@ export function createSphereMesh(gpu: IGPUResourceLayer, opts: SphereOpts = {}):
     }
 
     return new MeshV2(
-        // storage: shaders may pull vertices themselves (wireframe)
-        createBuf(gpu, position, GPUBufUsage.Vertex | GPUBufUsage.Storage, `${label}:position`),
+        createBuf(gpu, position, GPUBufUsage.Vertex, `${label}:position`),
         createBuf(gpu, normal, GPUBufUsage.Vertex, `${label}:normal`),
         createBuf(gpu, texCoord, GPUBufUsage.Vertex, `${label}:uv`),
         undefined,
         undefined,
         undefined,
-        createBuf(gpu, index, GPUBufUsage.Index | GPUBufUsage.Storage, `${label}:index`),
+        createBuf(gpu, index, GPUBufUsage.Index, `${label}:index`),
         MeshIndexType.U32,
         index.length,
         [radius, radius, radius],

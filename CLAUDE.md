@@ -36,28 +36,21 @@ The engine is exposed entirely through `src/honda/index.ts`.
 
 ### GPU backend (`src/honda/backends/wg/`)
 
-The only backend is WebGPU (`WGpu`). It is abstract enough that `src/honda/gpu2/` defines interfaces (`IGPUImplementation`, `IGPUBuf`, `IGPUTex`, `IGPUMat`) that the rest of the engine uses.
+The only backend is WebGPU (`WGpuComposite`, `backends/wg/gpu/gpu.ts`). The rest of the engine talks to it through the interfaces in `src/honda/gpu2/` (`IGPUImplementation`, `IGPUBuf`, `IGPUTex`, ...). `backends/noop/` is a placeholder implementation.
 
-`WGpu` owns:
+`WGpuComposite` owns the device, the canvas surface, deferred resource destruction, GPU timestamp queries, and the active **render path** (`IWGRenderPipeline`). Each frame it opens a command encoder, calls `rp.frame()`, and submits. Render paths are swapped with `switchRp()` (at the next frame) or `$switchRpImmed()`.
 
-- **Viewport textures** — resizable render targets (`ViewportTexture`, `ViewportMipTexture`, `ShadowMapTexture`) that are automatically reallocated on canvas resize.
-- **Bind group layouts** — created once in `createBindGroupLayouts()` and reused across passes.
-- **Shader loading** — all `.wgsl` files under `src/honda/backends/wg/shaders/` are eagerly imported as strings via `import.meta.glob`, parsed by `webgpu-utils` `makeShaderDataDefinitions` to produce struct reflection data. Shaders are accessed by path without the `.wgsl` suffix (e.g. `"toonf/toon"`).
-- **Passes** — `IPass` objects added via `gpu.addPass()`; called in order each frame.
-- **GPU timestamp queries** — performance profiling with per-pass labels.
+### Render path (`backends/wg/rp/`)
 
-### Render pipelines (Render Paths)
+`rp/common/` has the render path interface, `WGRenderPipelineBase`, and `IPass`. The only render path is **ToonF** (toon-shaded forward), created by `makeToonForward(ecs, settings)` in `rp/toonf.rp.ts`, which builds all buffers, viewport textures and passes. `rp/toonf/` holds its passes, pipelines, material implementations, and the single shader `toon.wgsl` (reflected with `webgpu-utils` by `ToonContext`, which also caches pipelines and bind group layouts).
 
-Two render paths exist under `src/honda/backends/wg/passes/`:
+Pass order: GatherData → Depth → Shadows → Main → (Resolve if MSAA) → Bloom (if enabled) → Post → Glitch (if enabled).
 
-| Path    | Directory                            | Description                      |
-|---------|--------------------------------------|----------------------------------|
-| `toonF` | `passes/toonf/` + `pipelines/toonf/` | Active toon-shaded deferred path |
-| `def1`  | `passes/def1/` + `pipelines/def1/`   | Legacy deferred path             |
+**GatherDataPass** reads from ECS systems each frame (camera matrices, mesh instances, lights, materials), culls, sorts draws, and uploads them to GPU buffers for downstream passes.
 
-The active path is assembled in `src/toonf.rp.ts`, which creates all buffers and passes and wires them together. Pass order: GatherData → Depth → Shadowmaps → Main → (Resolve if MSAA) → Bloom → Post.
+### Materials (`src/honda/gpu2/material/`)
 
-**GatherDataPass** reads from ECS systems each frame (camera matrices, mesh instances, lights) and uploads them to GPU buffers for downstream passes.
+A `MaterialType` declares params, their defaults, and a fixed render state (alpha mode, passes); `Material<T>` is a refcounted instance of one. Types: `PbrMaterial`, `FresnelMaterial`. Backends allocate their data lazily; in ToonF, `ToonMaterialRegistry` maps each type to an `IToonMatImpl` (`rp/toonf/materials/`), and meshes whose type has no implementation are skipped.
 
 ### Animation system (`src/honda/animation/`)
 
@@ -70,9 +63,11 @@ Two generations coexist:
 
 `GltfBinary` loads raw glTF binary; `GltfLoader` parses it into engine objects (scene nodes, meshes, materials, lights, animations, skins). Loaded assets are cached and registered with `AssetService` by name. Nodes get `meta.gltfId` and `meta.gltfNodeId` for animation binding.
 
-### Settings persistence
+Material creation can be customized with hooks (`materialHooks.ts`), registered in `main.ts` via `GltfLoader.addMaterialHook()`. The first hook to return a material wins; otherwise the default PBR material is used. Built-in hooks: `holdoutMaterialHook` (`__holdout__` material name or `holdout: true` in extras → depth only) and `fresnelMaterialHook` (`fresnelColor`, `fresnelPower` in extras).
 
-`WGSettings` (anisotropy, multisample, renderScale, shadowMapSize, debugRenderers) is stored in `localStorage` via `GameStorage` (`src/storage.ts`) under the key `"settings"`.
+### Settings
+
+There are currently no user settings: the settings menu is an empty placeholder and nothing is loaded from storage. Render settings are hardcoded in `main.ts` (passed to `WGpuComposite.obtain()` and `makeToonForward()`). Debug renderers are planned to come back.
 
 ### Path alias
 

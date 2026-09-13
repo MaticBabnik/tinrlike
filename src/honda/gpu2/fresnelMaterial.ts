@@ -1,5 +1,5 @@
 import type { Three } from "../util/types";
-import { AlphaMode, MaterialType, Pass, type TEmpty } from "./material";
+import { AlphaMode, MaterialType, Pass } from "./material";
 
 export type FresnelMaterialProps = {
     color: Three<number>;
@@ -12,9 +12,9 @@ export type FresnelMaterialProps = {
  *
  * Fixed render state: alpha blended, main pass only.
  */
-export const FresnelMaterial = new MaterialType<FresnelMaterialProps, TEmpty>(
+export const FresnelMaterial = new MaterialType<FresnelMaterialProps, Pick<FresnelMaterialProps, "power">>(
     "fresnel",
-    {},
+    { power: 3 },
     {
         alphaMode: AlphaMode.AlphaBlend,
         passes: Pass.Main,

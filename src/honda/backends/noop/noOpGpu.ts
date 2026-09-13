@@ -9,7 +9,7 @@ import type {
 import { NoOpBuf } from "./noOpBuf";
 import { NoOpTex } from "./noOpTex";
 import { NoOpTexData } from "./noOpTexData";
-import type { Material as MV2, AnyMatType } from "@/honda/gpu2/material";
+import type { Material, AnyMatType } from "@/honda/gpu2/material";
 
 /**
  * A no-operation GPU implementation that serves as a placeholder.
@@ -52,15 +52,14 @@ export class NoOpGpu implements IGPUImplementation {
         return r;
     }
 
-    public $allocMaterial<T extends AnyMatType>(mv2: MV2<T>): void {
-        // nothing to allocate, but track it so it shows up in printRcStats
-        mv2.$alloced = true;
-        this.rcResources.add(mv2);
+    public $allocMaterial<T extends AnyMatType>(m: Material<T>): void {
+        m.$alloced = true;
+        this.rcResources.add(m);
     }
 
-    public $freeMaterial<T extends AnyMatType>(mv2: MV2<T>): void {
-        mv2.$alloced = false;
-        this.rcResources.delete(mv2);
+    public $freeMaterial<T extends AnyMatType>(m: Material<T>): void {
+        m.$alloced = false;
+        this.rcResources.delete(m);
     }
 
     public printRcStats(): void {

@@ -8,7 +8,6 @@ import type { IToonMatImpl, ToonMatSlot, ToonMatSlotBase, ToonMatTargets } from 
 
 type FresnelMat = Material<typeof FresnelMaterial>;
 
-/** mirrors `struct FresnelMaterial` in toon.wgsl */
 type FresnelUniforms = {
     color: Three<number>;
     power: number;

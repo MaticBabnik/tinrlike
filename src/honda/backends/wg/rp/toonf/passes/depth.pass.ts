@@ -4,7 +4,7 @@ import type { IMultiSamplable, ITViewable } from "../../../texture";
 import type { IPass } from "../../common/passes/pass.interface";
 import type { ToonContext } from "../context";
 import type { MeshDraws2, UniformData } from "./gather.pass";
-import { DrawBinder, drawMesh } from "./draw";
+import { DrawBinder, drawMesh } from "./draw-util";
 
 export class DepthPass implements IPass {
     private meshBindGroup: GPUBindGroup;

@@ -7,7 +7,6 @@ import {
 } from "@/honda";
 import MainMenu from "../ui/MainMenu.vue";
 import SettingsMenu from "../ui/SettingsMenu.vue";
-import type { WGpu } from "@/honda/backends/wg";
 
 export class MenuScript extends Script {
     protected queueNextSceneTime = Infinity;
@@ -30,12 +29,6 @@ export class MenuScript extends Script {
 
             case "settings":
                 Game.ui.setView(SettingsMenu, true);
-
-                Game.ui.sendMessage({
-                    type: "updateSettings",
-                    settings: (Game.gpu as WGpu).settings,
-                });
-
                 break;
 
             case "pastRuns":

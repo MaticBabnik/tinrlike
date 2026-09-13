@@ -28,6 +28,11 @@ import { UIManager } from "./honda/ui/ui";
 import { makeToonForward } from "./honda/backends/wg/rp/toonf.rp";
 // import { createMainMenuScene } from "./scenes/mainMenu.scene";
 import { importGltf } from "./assets";
+import {
+    fresnelMaterialHook,
+    GltfLoader,
+    holdoutMaterialHook,
+} from "./honda/util/gltf";
 import { RefCntBase } from "./honda/util/refCountBase";
 
 const MAX_STEP = 0.0166; // Aim for 60 tick/frames per second
@@ -126,6 +131,9 @@ async function mount() {
     Game.ecs.registerService(AssetSrv, new AssetService());
     Game.ecs.registerService(DebugSrv, new DebugService());
     Game.ecs.registerService(VisualSrv, new VisualService());
+
+    GltfLoader.addMaterialHook(holdoutMaterialHook);
+    GltfLoader.addMaterialHook(fresnelMaterialHook);
 
     const gpu = await WGpuComposite.obtain({
         canvas,

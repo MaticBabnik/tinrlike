@@ -21,7 +21,6 @@ import { WGRenderPipelineBase } from "./common/rpbase";
 import { ToonContext } from "./toonf/context";
 import { ToonFresnelImpl } from "./toonf/materials/fresnel";
 import { ToonPbrImpl } from "./toonf/materials/pbr";
-import { ToonWireframeImpl } from "./toonf/materials/wireframe";
 import { ToonMaterialRegistry } from "./toonf/materials/registry";
 import { BloomPass } from "./toonf/passes/bloom.pass";
 import { DepthPass } from "./toonf/passes/depth.pass";
@@ -220,7 +219,6 @@ export class ToonForwardRP
         };
         this.materials.register(new ToonPbrImpl(ctx, matTargets));
         this.materials.register(new ToonFresnelImpl(ctx, matTargets));
-        this.materials.register(new ToonWireframeImpl(ctx, matTargets));
 
         const meshDraws: MeshDraws2 = {
             main: {

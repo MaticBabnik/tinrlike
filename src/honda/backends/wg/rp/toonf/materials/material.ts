@@ -1,6 +1,4 @@
 import type { AlphaMode, AnyMatType, Material } from "@/honda/gpu2/material";
-import type { DrawBinder } from "../passes/draw";
-import type { ToonDrawCall } from "../passes/gather.pass";
 import type { ToonMaterialRegistry } from "./registry";
 
 /**
@@ -44,12 +42,6 @@ export interface IToonMatImpl<T extends AnyMatType = AnyMatType, S extends ToonM
     free(s: S): void;
 
     mainPipeline(alpha: AlphaMode): GPURenderPipeline;
-
-    /**
-     * Custom main pass draw (own topology, extra bind groups...).
-     * When missing, the pass binds `mainPipeline` + the slot's bind group and draws the triangles.
-     */
-    drawMain?(rp: GPURenderPassEncoder, draw: ToonDrawCall, binder: DrawBinder): void;
 
     depthPipeline(alpha: AlphaMode, shadow: boolean): GPURenderPipeline;
 }

@@ -20,7 +20,7 @@ import {
     PI_2,
     MeshComponent,
 } from "@/honda";
-import { createSphereMesh, FresnelMaterial, Material, WireframeMaterial } from "@/honda/gpu2";
+import { createSphereMesh, FresnelMaterial, Material } from "@/honda/gpu2";
 import { quat } from "wgpu-matrix";
 import { TL_LAYER_PLAYER } from "../constants";
 import { PlayerScript } from "../scripts/player.script";
@@ -139,20 +139,6 @@ export function createScene() {
             ),
         );
         player.addChild(shell);
-
-        // wireframe orb floating next to the player
-        const orb = new SceneNode();
-        orb.name = "PlayerOrb";
-        orb.transform.translation.set([1.6, 2, 1.6]);
-        orb.transform.update();
-        orb.addComponent(
-            new MeshComponent(
-                createSphereMesh(Game.gpu, { radius: 0.35, rings: 8, segments: 12, label: "playerOrb" }),
-                new Material(WireframeMaterial, { color: [2, 0.4, 2.5] }, "playerOrb"),
-                "playerOrb",
-            ),
-        );
-        player.addChild(orb);
 
         scene.addChild(player);
 

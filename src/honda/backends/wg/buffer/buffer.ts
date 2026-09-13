@@ -43,9 +43,6 @@ export class Buffer {
         this.gpuBuf.unmap();
     }
 
-    /**
-     * Deferred to the end of the frame when called mid-frame
-     */
     public destroy() {
         this.gpu.resources.safeDestroy(this.gpuBuf);
         this.cpuBuf = null!;

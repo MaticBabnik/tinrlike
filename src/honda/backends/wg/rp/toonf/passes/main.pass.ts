@@ -5,7 +5,7 @@ import type { IPass } from "../../common/passes/pass.interface";
 import type { ToonContext } from "../context";
 import type { MeshDraws2, ToonDrawCall, UniformData } from "./gather.pass";
 import type { Mat4 } from "wgpu-matrix";
-import { DrawBinder, drawMesh } from "./draw";
+import { DrawBinder, drawMesh } from "./draw-util";
 
 type MainUniforms = {
     vp: Mat4;
@@ -73,13 +73,7 @@ export class MainPass implements IPass {
         for (const draw of list) {
             if (!(draw.passes & Pass.Main)) continue;
 
-            const impl = draw.slot.impl;
-            if (impl.drawMain) {
-                impl.drawMain(rp, draw, binder);
-                continue;
-            }
-
-            binder.bind(impl.mainPipeline(draw.alpha), draw.slot.bindGroup);
+            binder.bind(draw.slot.impl.mainPipeline(draw.alpha), draw.slot.bindGroup);
             drawMesh(rp, draw, true);
         }
     }

@@ -10,7 +10,6 @@ import type { IToonMatImpl, ToonMatSlot, ToonMatSlotBase, ToonMatTargets } from 
 
 type PbrMat = Material<typeof PbrMaterial>;
 
-/** mirrors `struct Material` in toon.wgsl */
 type PbrUniforms = {
     baseFactor: Four<number>;
     emissionFactor: Three<number>;
